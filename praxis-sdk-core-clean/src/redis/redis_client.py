@@ -161,13 +161,6 @@ class RedisDB:
         """
         return [key.decode('utf-8') for key in self.r.keys(pattern)]
 
-    @property
-    def max_tools_calls(self) -> int:
-        """
-        Returns the value of 'agi_tools:max_tools_calls' or 10 if not set.
-        """
-        return self.get('agi_tools:max_tools_calls', 10)
-
     def __getitem__(self, item: str) -> Any:
         return self.get(item)
 
