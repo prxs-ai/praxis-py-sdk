@@ -1,0 +1,58 @@
+import logging
+
+# import claude
+
+
+async def format_text(text: str) -> str:
+    text = await add_blank_lines(text)
+    for _ in range(20):
+        if len(text) <= 500:
+            return text
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a text shortener. Your task is to reduce the text length, keeping "
+                           "its meaning and style unchanged. You can remove some sentences as long as it "
+                           "doesn't harm the overall meaning of the text. Also remove emojis. DO NOT REMOVE HASHTAGS"
+            },
+            {
+                "role": "user",
+                "content": text
+            }
+        ]
+        # text = await claude(messages=messages)
+        logging.info(f'Tweet validating 1 {text}')
+        text = await add_blank_lines(text)
+
+    raise ValueError('Generated text is too long')
+
+
+async def add_blank_lines(text) -> str:
+    messages=[
+        {
+            "role": "system",
+            "content": """You are a text formatter. Your task is only to format the text. 
+The text should be split into several paragraphs with a blank line between them. 
+Do not change the content of the text, just insert blank lines to divide it into paragraphs.
+
+EXAMPLE INPUT:
+Discover $AGX, where sci-fi meets reality! With AGIX, even your dog's to-do list becomes autonomous. Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just sticks but ROI. 🐶🔥 #AGIX @0xAgix
+
+EXAMPLE OUTPUT:
+Discover $AGX, where sci-fi meets reality!
+
+With AGIX, even your dog's to-do list becomes autonomous.
+
+Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just sticks but ROI. 🐶🔥 
+
+#AGIX @0xAgix 🚀
+"""
+        },
+        {
+            "role": "user",
+            "content": text
+        }
+    ]
+    text = await claude(messages=messages)
+    logging.info(f'Tweet validating 2 {text}')
+    return text
