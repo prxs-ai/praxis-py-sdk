@@ -20,9 +20,12 @@ class InfrastructureConfig(BaseSettings):
     postgres_dsn: PostgresDsn | None = None
     redis_dsn: RedisDsn | None = None
 
+    # FAL AI
+    fal_ai_api_key: str = ""
+
     @field_validator('postgres_dsn', mode='before')
     @classmethod
-    def get_postres_dsn(cls, _, info: ValidationInfo):
+    def get_postgres_dsn(cls, _, info: ValidationInfo):
         return PostgresDsn.build(
             scheme='postgresql+asyncpg',
             username=info.data['postgres_user'],
