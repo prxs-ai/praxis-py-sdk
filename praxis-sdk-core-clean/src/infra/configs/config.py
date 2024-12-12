@@ -1,6 +1,7 @@
 from pydantic import field_validator, ValidationInfo, PostgresDsn, RedisDsn
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
+from cryptography.fernet import Fernet
 
 
 load_dotenv()
@@ -19,6 +20,8 @@ class InfrastructureConfig(BaseSettings):
 
     postgres_dsn: PostgresDsn | None = None
     redis_dsn: RedisDsn | None = None
+    fernet_key: bytes = b"glEo_3r7sSMy8tIxqRyvwLW0CrKD44ADJ7qIgWVeOOI="
+
 
     @field_validator('postgres_dsn', mode='before')
     @classmethod
@@ -45,6 +48,20 @@ class InfrastructureConfig(BaseSettings):
 
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
+    ambassador_username: str = ""
+    CREATE_POST_INTERVAL: int = 12 * 60 * 60
+    GORILLA_MARKETING_INTERVAL: int = 4 * 60 * 60
+    COMMENT_AGIX_INTERVAL: int = 60 * 60
+    ANSWER_DIRECT_INTERVAL: int = 10 * 60
+    ANSWER_COMMENT_INTERVAL: int = 2 * 60 * 60
+    ANSWER_MY_COMMENT_INTERVAL: int = 30 * 60
+    LIKES_INTERVAL: int = 6 * 60 * 60
+    PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
+    TWITTER_CLIENT_ID: str = ''
+    TWITTER_CLIENT_SECRET: str = ''
+    TWITTER_BASIC_BEARER_TOKEN: str = ''
+    TWITTER_REDIRECT_URI: str = 'http://127.0.0.1:8000/api/authenticate/twitter/callback'
 
 
 settings = Settings()
+cipher = Fernet(settings.infrastructure.fernet_key)
