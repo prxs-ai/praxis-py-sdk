@@ -28,7 +28,8 @@ async def format_text(text: str) -> str:
         "doesn't harm the overall meaning of the text. Also remove emojis. DO NOT REMOVE HASHTAGS\n\n"
         f"{text}"
 )
-        text = await client.generate_response(prompt=system_prompt, temperature=1.1)
+        text = await client.generate_response(messages=messages, temperature=1.0)
+
         logging.info(f'Tweet validating 1 {text}')
         text = await add_blank_lines(text)
 
@@ -75,6 +76,6 @@ Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just 
             "#NFINITY @nfinityAI 🚀\n\n"
             f"{text}"
             )
-    text = await client.generate_response(prompt=formatter_prompt)
+    text = await client.generate_response(messages=messages, temperature=1.0)
     logging.info(f'Tweet validating 2 {text}')
     return text
