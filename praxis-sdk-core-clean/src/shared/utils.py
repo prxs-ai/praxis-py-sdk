@@ -1,12 +1,12 @@
 import logging
-
-# import claude
+import json
+from services.ai_tools.openai_client import send_openai_request
 
 
 async def format_text(text: str) -> str:
     text = await add_blank_lines(text)
     for _ in range(20):
-        if len(text) <= 500:
+        if len(text) <= 280:
             return text
         messages=[
             {
@@ -20,7 +20,8 @@ async def format_text(text: str) -> str:
                 "content": text
             }
         ]
-        # text = await claude(messages=messages)
+
+        text = await send_openai_request(messages=messages)
         logging.info(f'Tweet validating 1 {text}')
         text = await add_blank_lines(text)
 
@@ -36,16 +37,16 @@ The text should be split into several paragraphs with a blank line between them.
 Do not change the content of the text, just insert blank lines to divide it into paragraphs.
 
 EXAMPLE INPUT:
-Discover $AGX, where sci-fi meets reality! With AGIX, even your dog's to-do list becomes autonomous. Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just sticks but ROI. 🐶🔥 #AGIX @0xAgix
+Discover $NFNT, where sci-fi meets reality! With NFINITY, even your dog's to-do list becomes autonomous. Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just sticks but ROI. 🐶🔥 #NFINITY 
 
 EXAMPLE OUTPUT:
-Discover $AGX, where sci-fi meets reality!
+Discover $NFNT, where sci-fi meets reality!
 
-With AGIX, even your dog's to-do list becomes autonomous.
+With NFINITY, even your dog's to-do list becomes autonomous.
 
 Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just sticks but ROI. 🐶🔥 
 
-#AGIX @0xAgix 🚀
+#NFINITY @nfinityAI 🚀
 """
         },
         {
@@ -53,6 +54,6 @@ Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just 
             "content": text
         }
     ]
-    text = await claude(messages=messages)
+    text = await send_openai_request(messages=messages)
     logging.info(f'Tweet validating 2 {text}')
     return text

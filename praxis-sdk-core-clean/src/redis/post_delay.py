@@ -2,12 +2,19 @@ import asyncio
 import logging
 import time
 from random import randint
+from datetime import datetime
 
-from database.redis.redis_client import db
+from database.redis.redis_client import db, Post
 
 
 async def ensure_delay_between_posts(username: str, delay: int = None):
-    posts = db.get_user_posts(username)
+    past_date = datetime(2023, 1, 1, 12, 0)
+    past_timestamp = int(past_date.timestamp())
+    posts = [
+        Post(id="1", text="Mock tweet 1", sender_username=username, timestamp=past_timestamp),
+        Post(id="2", text="Mock tweet 2", sender_username=username, timestamp=past_timestamp,
+             is_news_summary_tweet=True),
+    ]
     logging.info(f'ensure_delay_between_posts {username=} {len(posts)=}')
     if posts:
         last_post = posts[-1]

@@ -48,8 +48,8 @@ class InfrastructureConfig(BaseSettings):
 
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
-    ambassador_username: str = ""
-    CREATE_POST_INTERVAL: int = 12 * 60 * 60
+    ambassador_username: str = "ebalblacklist"
+    CREATE_POST_INTERVAL: int = 60
     GORILLA_MARKETING_INTERVAL: int = 4 * 60 * 60
     COMMENT_AGIX_INTERVAL: int = 60 * 60
     ANSWER_DIRECT_INTERVAL: int = 10 * 60
@@ -57,10 +57,14 @@ class Settings(BaseSettings):
     ANSWER_MY_COMMENT_INTERVAL: int = 30 * 60
     LIKES_INTERVAL: int = 6 * 60 * 60
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
-    TWITTER_CLIENT_ID: str = ''
-    TWITTER_CLIENT_SECRET: str = ''
-    TWITTER_BASIC_BEARER_TOKEN: str = ''
-    TWITTER_REDIRECT_URI: str = 'http://127.0.0.1:8000/api/authenticate/twitter/callback'
+    TWITTER_CLIENT_ID: str = 'VkJqN214MlppTFB0ZlkzOUhDRm86MTpjaQ'
+    TWITTER_CLIENT_SECRET: str = 'S9UjDIt5xxPbs9_N0U0X7E-kkGy98n35sOklz0TiVTkIyXJuKT'
+    TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAABwGxgEAAAAA93ij3WY9ZF3%2BP84iLbQBCmRwKEI%3Dx80S2gNi7EYFOQ5OU10c1ZV0psOwbc3NC4WLZdIbOAnjivHs7Q'
+    TWITTER_REDIRECT_URI: str = 'http://localhost:8228/api/authenticate/twitter/callback'
+    OPENAI_API_KEY: str = '***REMOVED***'
+    OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
+    LOGS_DIR: str = "../logs"
+    TWEETSCOUT_API_KEY:str = "***REMOVED***"
 
 
 settings = Settings()
