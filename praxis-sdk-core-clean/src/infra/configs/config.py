@@ -48,7 +48,7 @@ class InfrastructureConfig(BaseSettings):
 
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
-    ambassador_username: str = "ebalblacklist"
+    ambassador_username: str = "shuib420"
     CREATE_POST_INTERVAL: int = 60
     GORILLA_MARKETING_INTERVAL: int = 4 * 60 * 60
     COMMENT_AGIX_INTERVAL: int = 60 * 60
@@ -57,9 +57,9 @@ class Settings(BaseSettings):
     ANSWER_MY_COMMENT_INTERVAL: int = 30 * 60
     LIKES_INTERVAL: int = 6 * 60 * 60
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
-    TWITTER_CLIENT_ID: str = 'VkJqN214MlppTFB0ZlkzOUhDRm86MTpjaQ'
-    TWITTER_CLIENT_SECRET: str = 'S9UjDIt5xxPbs9_N0U0X7E-kkGy98n35sOklz0TiVTkIyXJuKT'
-    TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAABwGxgEAAAAA93ij3WY9ZF3%2BP84iLbQBCmRwKEI%3Dx80S2gNi7EYFOQ5OU10c1ZV0psOwbc3NC4WLZdIbOAnjivHs7Q'
+    TWITTER_CLIENT_ID: str = 'eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ'
+    TWITTER_CLIENT_SECRET: str = 'TeK9tRPPirYbpGhiyb_yaOMYJA7ijvCQaU6O5vu5VioA8knBAA'
+    TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
     TWITTER_REDIRECT_URI: str = 'http://localhost:8228/api/authenticate/twitter/callback'
     OPENAI_API_KEY: str = '***REMOVED***'
     OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
