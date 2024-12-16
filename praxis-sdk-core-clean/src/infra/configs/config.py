@@ -23,9 +23,12 @@ class InfrastructureConfig(BaseSettings):
     fernet_key: bytes = b"glEo_3r7sSMy8tIxqRyvwLW0CrKD44ADJ7qIgWVeOOI="
 
 
+    # FAL AI
+    fal_ai_api_key: str = ""
+
     @field_validator('postgres_dsn', mode='before')
     @classmethod
-    def get_postres_dsn(cls, _, info: ValidationInfo):
+    def get_postgres_dsn(cls, _, info: ValidationInfo):
         return PostgresDsn.build(
             scheme='postgresql+asyncpg',
             username=info.data['postgres_user'],

@@ -1,0 +1,46 @@
+version: 1
+formatters:
+  formatter_json:
+    format: '{asctime} - {name}:{filename} - {module} - {funcName}-{lineno} - {levelname} - {message}'
+    style: '{'
+    (): pythonjsonlogger.jsonlogger.JsonFormatter
+    json_ensure_ascii: False
+  simple:
+    format: '{asctime} - {name}:{filename} - {module} - {funcName}-{lineno} - {levelname} - {message}'
+    style: '{'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: formatter_json
+    stream: ext://sys.stdout
+  default:
+    class: logging.StreamHandler
+    formatter: formatter_json
+    level: DEBUG
+    stream: ext://sys.stderr
+loggers:
+  server:
+    handlers: [ console ]
+    level: DEBUG
+    propagate: False
+  uvicorn:
+    handlers: []
+    level: DEBUG
+    propagate: False
+  uvicorn.access:
+    handlers: []
+    level: DEBUG
+    propagate: False
+  uvicorn.error:
+    handlers: []
+    level: DEBUG
+    propagate: False
+  default:
+    handlers: [ console ]
+    level: DEBUG
+    propagate: False
+root:
+  level: DEBUG
+  handlers: [ console ]
+disable_existing_loggers: False
