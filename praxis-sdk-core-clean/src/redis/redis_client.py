@@ -6,12 +6,26 @@ import time
 from datetime import datetime
 from typing import Any, List, Optional, Union
 from enum import Enum
+from dataclasses import dataclass
+from dataclasses import asdict
 
 import redis
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+
+@dataclass
+class Post:
+    id: str
+    text: str
+    sender_username: str
+    timestamp: int
+    quoted_tweet_id: str | None = None
+    is_reply_to: str | None = None
+    is_news_summary_tweet: bool = False
 
 
 class RedisDB:
@@ -189,6 +203,40 @@ class RedisDB:
             else:
                 return chat_ids.split(',')
         raise ValueError(f'Unknown type of chat_ids: {type(chat_ids)} {chat_ids=}')
+
+    def get_twitter_data_keys(self):
+        keys = []
+        for key in self.r.scan_iter(match="twitter_data:*"):
+            keys.append(key)
+        return [k.decode() for k in keys]
+
+    def add_to_sorted_set(self, key: str, score: int, value: str):
+        self.r.zadd(key, {value: score})
+
+    def get_sorted_set(self, key: str, start: int = 0, end: int = -1):
+        return [item.decode('utf-8') for item in self.r.zrange(key, start, end)]
+
+    def add_user_post(self, username: str, post: Post):
+        post_json = json.dumps(asdict(post))
+        self.add_to_sorted_set(f'posted_tweets:{username}', post.timestamp, post_json)
+
+    def get_user_posts(self, username: str) -> list[Post]:
+        posts = self.get_sorted_set(f'posted_tweets:{username}')
+        return [Post(**json.loads(post)) for post in posts]
+
+    def get_user_posts_by_create_time(self, username: str, second_ago: int = 3 * 60 * 60) -> list[Post]:
+        """Newest in the end of list"""
+        current_timestamp = int(time.time())
+        min_score = current_timestamp - second_ago
+        posts = self.r.zrangebyscore(f'posted_tweets:{username}', min_score, current_timestamp)
+        return [Post(**json.loads(post)) for post in posts]
+
+    def add_send_partnership(self, username: str, partner_user_id: str):
+        self.add_to_sorted_set(f'send_partnership:{username}', int(time.time()), partner_user_id)
+
+    def get_send_partnership(self, username: str) -> list[str]:
+        return self.get_sorted_set(f'send_partnership:{username}')
+
 
 # Initialize a default instance
 db = RedisDB()
