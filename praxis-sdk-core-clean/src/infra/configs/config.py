@@ -1,4 +1,6 @@
-from pydantic import field_validator, ValidationInfo, PostgresDsn, RedisDsn
+from functools import lru_cache
+
+from pydantic import field_validator, ValidationInfo, PostgresDsn, RedisDsn, Field
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
@@ -11,8 +13,9 @@ class InfrastructureConfig(BaseSettings):
     postgres_user: str = "postgres"
     postgres_password: str = "postgres"
     postgres_db: str = "postgres"
-    postgres_host: str = "postgres"
+    postgres_host: str = Field(default="localhost", validation_alias="POSTGRES_HOST")
     postgres_port: int = 5432
+    postgres_logs: bool = False
 
     redis_host: str = "redis"
     redis_port: int = 6379
@@ -21,10 +24,6 @@ class InfrastructureConfig(BaseSettings):
     postgres_dsn: PostgresDsn | None = None
     redis_dsn: RedisDsn | None = None
     fernet_key: bytes = b"glEo_3r7sSMy8tIxqRyvwLW0CrKD44ADJ7qIgWVeOOI="
-
-
-    # FAL AI
-    fal_ai_api_key: str = ""
 
     @field_validator('postgres_dsn', mode='before')
     @classmethod
@@ -67,9 +66,22 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = '***REMOVED***'
     OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
     LOGS_DIR: str = "../logs"
-    TWEETSCOUT_API_KEY:str = "***REMOVED***"
+    TWEETSCOUT_API_KEY: str = "***REMOVED***"
     ANTHROPIC_API_KEY: str = '***REMOVED***'
 
+    # FAL AI
+    fal_ai_api_key: str = ""
 
-settings = Settings()
-cipher = Fernet(settings.infrastructure.fernet_key)
+    # SIWE
+    domain: str = "localhost"
+    jwt_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expires_in: int = 1440
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()  # type: ignore
+
+
+cipher = Fernet(get_settings().infrastructure.fernet_key)
