@@ -25,6 +25,12 @@ class InfrastructureConfig(BaseSettings):
     redis_dsn: RedisDsn | None = None
     fernet_key: bytes = b"glEo_3r7sSMy8tIxqRyvwLW0CrKD44ADJ7qIgWVeOOI="
 
+    # S3 storage
+    s3_bucket_prefix: str = "praxis"
+    s3_region: str = Field(validation_alias="S3_REGION")
+    s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(validation_alias="S3_SECRET")
+
     @field_validator('postgres_dsn', mode='before')
     @classmethod
     def get_postgres_dsn(cls, _, info: ValidationInfo):
@@ -46,6 +52,10 @@ class InfrastructureConfig(BaseSettings):
             port=info.data['redis_port'],
             path=info.data['redis_db'],
         )
+
+    @property
+    def s3_base_url(self):
+        return f"https://{self.s3_region}.digitaloceanspaces.com"
 
 
 class Settings(BaseSettings):
