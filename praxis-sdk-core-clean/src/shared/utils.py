@@ -1,7 +1,11 @@
-import logging
 import json
 # from services.ai_tools.openai_client import send_openai_request OPENAI
 from services.ai_tools.claude_client_instance import client
+
+from infrastructure.configs.logger import configure_logging, get_logger
+
+configure_logging()
+logger = get_logger(__name__)
 
 
 async def format_text(text: str) -> str:
@@ -30,7 +34,7 @@ async def format_text(text: str) -> str:
 )
         text = await client.generate_response(messages=messages, temperature=1.0)
 
-        logging.info(f'Tweet validating 1 {text}')
+        logger.info(f'Tweet validating 1 {text}')
         text = await add_blank_lines(text)
 
     raise ValueError('Generated text is too long')
@@ -77,5 +81,5 @@ Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just 
             f"{text}"
             )
     text = await client.generate_response(messages=messages, temperature=1.0)
-    logging.info(f'Tweet validating 2 {text}')
+    logger.info(f'Tweet validating 2 {text}')
     return text
