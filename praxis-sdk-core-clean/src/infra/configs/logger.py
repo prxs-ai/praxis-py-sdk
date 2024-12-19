@@ -1,59 +1,34 @@
 import logging
-import os.path
+import sys
 
-from infrastructure.configs.config import get_settings
+import structlog
+from structlog import get_logger
 
-settings = get_settings()
 
-
-def init_logging(
-    fname='logs.log',
-    debug_fname='debug.log',
-    mode='a',
-    level=logging.DEBUG,
-):
-    logger = logging.getLogger()
-    # Удаление предыдущих обработчиков
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-
-    # Создание директории для логов, если она не существует
-    if not os.path.exists(settings.LOGS_DIR):
-        os.makedirs(settings.LOGS_DIR)
-
-    logger.setLevel(level)
-
-    # Формат логов
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s'
+def configure_logging(level=None):
+    logging.basicConfig(
+        format="%(message)s",
+        stream=sys.stdout,
+        level=logging.INFO if level is None else level,
     )
 
-    # FileHandler для записи всех логов, кроме DEBUG
-    file_handler = logging.FileHandler(f'{settings.LOGS_DIR}/{fname}', mode=mode, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)  # Логи INFO и выше
-    file_handler.setFormatter(formatter)
-
-    # FileHandler для записи только DEBUG-логов
-    debug_file_handler = logging.FileHandler(
-        f'{settings.LOGS_DIR}/{debug_fname}', mode=mode, encoding='utf-8'
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.StackInfoRenderer(),
+            structlog.dev.set_exc_info,
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+            structlog.dev.ConsoleRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(logging.NOTSET),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False,
     )
-    debug_file_handler.setLevel(logging.DEBUG)  # Только DEBUG логи
-    debug_file_handler.setFormatter(formatter)
 
-    # FileHandler для записи ошибок (ERROR и выше)
-    error_file_handler = logging.FileHandler(
-        f'{settings.LOGS_DIR}/error.{fname}', mode=mode, encoding='utf-8'
-    )
-    error_file_handler.setLevel(logging.ERROR)  # Логи ERROR и выше
-    error_file_handler.setFormatter(formatter)
 
-    # StreamHandler для вывода в консоль (INFO и выше)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)  # Логи INFO и выше для консоли
-    console_handler.setFormatter(formatter)
-
-    # Добавляем обработчики
-    logger.addHandler(file_handler)
-    logger.addHandler(debug_file_handler)
-    logger.addHandler(error_file_handler)
-    logger.addHandler(console_handler)
+__all__ = (
+    "configure_logging",
+    "get_logger",
+)

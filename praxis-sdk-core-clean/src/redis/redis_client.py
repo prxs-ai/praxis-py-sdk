@@ -1,20 +1,17 @@
 # fmt: off
 import json
-import logging
 import os
 import time
-from datetime import datetime
-from typing import Any, List, Optional, Union
-from enum import Enum
+from typing import Any, List
 from dataclasses import dataclass
 from dataclasses import asdict
 
 import redis
 
+from infrastructure.configs.logger import configure_logging, get_logger
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
+configure_logging()
+logger = get_logger(__name__)
 
 
 @dataclass
