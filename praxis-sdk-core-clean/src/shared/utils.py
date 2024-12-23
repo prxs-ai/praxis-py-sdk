@@ -1,6 +1,6 @@
 import json
 # from services.ai_tools.openai_client import send_openai_request OPENAI
-from services.ai_tools.claude_client_instance import client
+from services.ai_connectors.claude_client_instance import client
 
 from infrastructure.configs.logger import configure_logging, get_logger
 
