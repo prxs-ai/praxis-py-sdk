@@ -4,8 +4,10 @@ from botocore.exceptions import ClientError
 from fastapi import UploadFile
 
 from infrastructure.configs.config import get_settings
+from infrastructure.configs.logger import get_logger
 
 settings = get_settings()
+logger = get_logger()
 
 
 class S3Service:
@@ -39,14 +41,14 @@ class S3Service:
             await self.s3_client.head_bucket(Bucket=self.bucket_name)
         except ClientError as e:
             if e.response['Error']['Code'] == '404':
-                # logger.info(f"Bucket '{self.bucket_name}' does not exist. Creating bucket.")  # TODO
+                logger.info(f"Bucket '{self.bucket_name}' does not exist. Creating bucket.")
                 try:
                     await self.s3_client.create_bucket(Bucket=self.bucket_name)
                 except ClientError as create_err:
-                    # logger.exception(f"Failed to create bucket '{self.bucket_name}'.")  # TODO
+                    logger.exception(f"Failed to create bucket '{self.bucket_name}'.")
                     raise Exception(f"Creation bucket error: {create_err}")
             else:
-                # logger.exception(f"Failed to access bucket '{self.bucket_name}'.")  # TODO
+                logger.exception(f"Failed to access bucket '{self.bucket_name}'.")
                 raise
 
     async def upload_file(self, file: UploadFile, file_key: str) -> str:
@@ -59,7 +61,7 @@ class S3Service:
             )
             return f"{self.s3_bucket_url}/{file_key}"
         except ClientError as e:
-            # logger.exception("Failed to upload file to S3.")  # TODO
+            logger.exception("Failed to upload file to S3.")
             raise Exception(f"Uploading file error: {e}")
         finally:
             await self.__aexit__(None, None, None)
@@ -68,7 +70,7 @@ class S3Service:
         try:
             await self.s3_client.delete_object(Bucket=self.bucket_name, Key=file_key)
         except ClientError as e:
-            # logger.exception("Failed to delete file from S3.")  # TODO
+            logger.exception("Failed to delete file from S3.")
             raise Exception(f"Deleting file error: {e}")
         finally:
             await self.__aexit__(None, None, None)
@@ -90,7 +92,7 @@ class S3Service:
             )
             return self.get_file_url(file_key)
         except ClientError as e:
-            # logger.exception("Failed to upload bytes to S3.")  # TODO
+            logger.exception("Failed to upload bytes to S3.")
             raise Exception(f"Uploading bytes error: {e}")
         finally:
             await self.__aexit__(None, None, None)
@@ -100,7 +102,7 @@ class S3Service:
             response = await self.s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix)
             return [item["Key"] for item in response.get("Contents", [])]
         except ClientError as e:
-            # logger.exception("Failed to list files in S3 bucket.")  # TODO
+            logger.exception("Failed to list files in S3 bucket.")
             raise Exception(f"Listing files error: {e}")
         finally:
             await self.__aexit__(None, None, None)
