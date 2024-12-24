@@ -1,14 +1,12 @@
 from functools import lru_cache
 
 from pydantic import field_validator, ValidationInfo, PostgresDsn, RedisDsn, Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
 
 load_dotenv()
-
-
 class InfrastructureConfig(BaseSettings):
     postgres_user: str = "postgres"
     postgres_password: str = "postgres"
@@ -100,10 +98,15 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expires_in: int = 1440
 
+class CoingeckoSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra='ignore')
+    api_key: str = Field(validation_alias="COINGECKO_API_KEY")
+    base_url: str = Field(validation_alias="COINGECKO_API_URL")
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore
+
 
 
 cipher = Fernet(get_settings().infrastructure.fernet_key)

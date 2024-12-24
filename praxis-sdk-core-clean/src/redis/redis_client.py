@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from dataclasses import asdict
 
 import redis
+from redis.asyncio import Redis
 
 from infrastructure.configs.logger import configure_logging, get_logger
 
@@ -235,7 +236,35 @@ class RedisDB:
         return self.get_sorted_set(f'send_partnership:{username}')
 
 
+class AsyncRedis:
+    def __init__(self):
+        self.client = Redis(
+            host=os.environ.get('REDIS_HOST', 'localhost'),
+            port=int(os.environ.get('REDIS_PORT', 6379)),
+            db=int(os.environ.get('REDIS_DB', 0))
+        )
+
+    async def set(
+        self, key: str, value: Any,
+        log: bool = True, keep_ttl: bool = False
+    ) -> None:
+        if log:
+            logger.info(f'Set {key} to {value}')
+        await self.client.set(key, json.dumps(value), keepttl=keep_ttl)
+
+    async def wait_for_key(self, key, timeout=120) -> dict | None:
+        result = await self.client.blpop(key, timeout=timeout)
+        if result:
+            key_name, value = result
+            return value
+
+        else:
+            logger.error("Redis key not awaited")
+            return None
+
+
 # Initialize a default instance
+async_redis = AsyncRedis()
 db = RedisDB()
 
 
