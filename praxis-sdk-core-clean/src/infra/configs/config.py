@@ -112,8 +112,8 @@ class RedisSettings(InterfaceSettings):
     redis_db: int = Field(validation_alias="REDIS_DB")
 
 class ServerSettings(InterfaceSettings):
-    coingecko = CoingeckoSettings()
-    redis = RedisSettings()
+    coingecko: CoingeckoSettings = CoingeckoSettings()
+    redis: RedisSettings = RedisSettings()
 
 
 
