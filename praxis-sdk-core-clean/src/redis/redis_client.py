@@ -9,6 +9,7 @@ from dataclasses import asdict
 import redis
 from redis.asyncio import Redis
 
+from infrastructure.configs.config import server
 from infrastructure.configs.logger import configure_logging, get_logger
 
 configure_logging()
@@ -239,9 +240,9 @@ class RedisDB:
 class AsyncRedis:
     def __init__(self):
         self.client = Redis(
-            host=os.environ.get('REDIS_HOST', 'localhost'),
-            port=int(os.environ.get('REDIS_PORT', 6379)),
-            db=int(os.environ.get('REDIS_DB', 0))
+            host=server.redis.redis_host,
+            port=server.redis.redis_port,
+            db=server.redis.redis_db
         )
 
     async def set(

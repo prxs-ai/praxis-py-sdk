@@ -98,15 +98,29 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expires_in: int = 1440
 
-class CoingeckoSettings(BaseSettings):
+
+class InterfaceSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra='ignore')
+
+class CoingeckoSettings(InterfaceSettings):
     api_key: str = Field(validation_alias="COINGECKO_API_KEY")
     base_url: str = Field(validation_alias="COINGECKO_API_URL")
+
+class RedisSettings(InterfaceSettings):
+    redis_host: str = Field(validation_alias="REDIS_HOST")
+    redis_port: int = Field(validation_alias="REDIS_PORT")
+    redis_db: int = Field(validation_alias="REDIS_DB")
+
+class ServerSettings(InterfaceSettings):
+    coingecko = CoingeckoSettings()
+    redis = RedisSettings()
+
+
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore
 
 
-
+server = ServerSettings()
 cipher = Fernet(get_settings().infrastructure.fernet_key)

@@ -1,6 +1,6 @@
 from aiohttp import ClientSession
 
-from infrastructure.configs.config import CoingeckoSettings
+from infrastructure.configs.config import CoingeckoSettings, server
 from pandas import DataFrame
 import pandas as pd
 
@@ -67,8 +67,8 @@ async def prepare_historical_prices(data: dict[str, list]) -> DataFrame:
 
 
 async def get_coingecko_manager():
-    config = CoingeckoSettings()
     async with ClientSession() as session:
         yield CoinGeckoApiManager(
-            api_key=config.api_key, session=session, base_url=config.base_url
+            api_key=server.coingecko.api_key,
+            session=session, base_url=server.coingecko.base_url
         )
