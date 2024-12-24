@@ -246,12 +246,12 @@ class AsyncRedis:
         )
 
     async def set(
-        self, key: str, value: Any,
+        self, key: str, value: str,
         log: bool = True, keep_ttl: bool = False
     ) -> None:
         if log:
             logger.info(f'Set {key} to {value}')
-        await self.client.set(key, json.dumps(value), keepttl=keep_ttl)
+        await self.client.set(key, value, keepttl=keep_ttl)
 
     async def wait_for_key(self, key, timeout=120) -> dict | None:
         result = await self.client.blpop(key, timeout=timeout)

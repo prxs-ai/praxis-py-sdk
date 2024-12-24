@@ -26,23 +26,23 @@ class CoinGeckoApiManager:
         return await response.json()
 
     async def get_historical_prices(
-        self, token_name: str, days: int = 3, vs_currency: str = "usd"
+        self, token_name: str, days: int = 10, vs_currency: str = "usd"
     ) -> DataFrame:
         token_df = await self.get_tokens(token_name=token_name)
         token_id = token_df["id"].iloc[0]
-        endpoint = f"/coins/{token_id}/markets"
+        endpoint = f"/coins/{token_id}/market_chart"
         params = {
             'vs_currency': vs_currency, 'days': days
         }
-        historical_data = await self._send_response(endpoint, params=params)
+        historical_data = await self._send_response(
+            method="GET", endpoint=endpoint, params=params)
         return await prepare_historical_prices(data=historical_data)
 
     async def get_tokens(
         self, token_name:str | None = None
     ) -> DataFrame:
         endpoint = "/coins/list"
-        response = await self._send_response(method="GET", endpoint=endpoint)
-        data = await response.json()
+        data = await self._send_response(method="GET", endpoint=endpoint)
         df = DataFrame(data)
         if token_name is not None:
             df = df[df.name == token_name]
