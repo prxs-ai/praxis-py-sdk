@@ -237,3 +237,7 @@ class RedisDB:
 
 # Initialize a default instance
 db = RedisDB()
+
+
+def get_redis_db() -> RedisDB:
+    return db
