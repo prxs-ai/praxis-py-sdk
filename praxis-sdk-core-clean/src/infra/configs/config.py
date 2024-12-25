@@ -58,7 +58,7 @@ class InfrastructureConfig(BaseSettings):
         return f"https://{self.s3_region}.digitaloceanspaces.com"
 
 
-class TelegramSetupServiceConfig(BaseSettings):
+class TelegramAppSetupServiceConfig(BaseSettings):
     base_url: str = "https://my.telegram.org"
     send_password_endpoint: str = "/auth/send_password"
     login_endpoint: str = "/auth/login"
@@ -71,7 +71,7 @@ class TelegramSetupServiceConfig(BaseSettings):
 
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
-    telegram_config: TelegramSetupServiceConfig = TelegramSetupServiceConfig()
+    telegram_config: TelegramAppSetupServiceConfig = TelegramAppSetupServiceConfig()
     ambassador_username: str = "shuib420"
     CREATE_POST_INTERVAL: int = 4 * 60 * 60
     GORILLA_MARKETING_INTERVAL: int = 4 * 60 * 60
