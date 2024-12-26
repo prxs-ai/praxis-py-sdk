@@ -107,6 +107,16 @@ class S3Service:
         finally:
             await self.__aexit__(None, None, None)
 
+    async def get_file_bytes(self, file_key: str) -> bytes:
+        try:
+            response = await self.s3_client.get_object(Bucket=self.bucket_name, Key=file_key)
+            return await response["Body"].read()
+        except ClientError as e:
+            logger.exception(f"Failed to get file bytes from S3 for key {file_key}.")
+            raise Exception(f"Error getting file bytes: {e}")
+        finally:
+            await self.__aexit__(None, None, None)
+
 
 async def get_s3_service(bucket_name: str) -> S3Service:
     async with S3Service(bucket_name) as service:
