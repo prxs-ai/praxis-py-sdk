@@ -18,7 +18,7 @@ class InfrastructureConfig(BaseSettings):
     postgres_logs: bool = False
 
     redis_host: str = "redis"
-    redis_port: int = 6379
+    redis_port: int = 6228
     redis_db: str = "0"
 
     postgres_dsn: PostgresDsn | None = None
@@ -60,7 +60,7 @@ class InfrastructureConfig(BaseSettings):
 
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
-    ambassador_username: str = "shuib420"
+    ambassador_username: str = "ebalblacklist"
     CREATE_POST_INTERVAL: int = 4 * 60 * 60
     GORILLA_MARKETING_INTERVAL: int = 4 * 60 * 60
     COMMENT_AGIX_INTERVAL: int = 60 * 60

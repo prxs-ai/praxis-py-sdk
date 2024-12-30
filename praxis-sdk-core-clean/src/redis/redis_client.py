@@ -41,12 +41,12 @@ class RedisDB:
         Initialize the Redis connection.
         """
         logger.info(
-            f'Redis: {os.environ.get("REDIS_HOST", "localhost")}:{os.environ.get("REDIS_PORT", 6379)} '
+            f'Redis: {os.environ.get("REDIS_HOST", "localhost")}:{os.environ.get("REDIS_PORT", 6228)} '
             f'db={os.environ.get("REDIS_DB", 0)}'
         )
         self.r = redis.Redis(
             host=os.environ.get('REDIS_HOST', 'localhost'),
-            port=int(os.environ.get('REDIS_PORT', 6379)),
+            port=int(os.environ.get('REDIS_PORT', 6228)),
             db=int(os.environ.get('REDIS_DB', 0))  # 0 - main, 1 - test
         )
 
