@@ -3,7 +3,7 @@ from typing import Final
 
 
 class Topics(StrEnum):
-    SOCIAL_GENERIC: Final[str] = "GENERIC"
+    SOCIALS: Final[str] = "SOCIALS"
 
     TELEGRAM: Final[str] = "TELEGRAM"
     TWITTER: Final[str] = "TWITTER"

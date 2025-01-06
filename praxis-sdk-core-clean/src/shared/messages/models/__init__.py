@@ -1,3 +1,3 @@
-__all__ = ("Generic",)
+__all__ = ("SocialsData",)
 
-from .generic import Generic
+from .socials import SocialsData
