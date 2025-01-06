@@ -1,3 +1,3 @@
-__all__ = ("Generic",)
+__all__ = ("Topics",)
 
-from .generic import Generic
+from .topics import Topics
