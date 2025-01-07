@@ -1,7 +1,11 @@
 __all__ = (
-    "Topics",
-    "News",
+    "Service",
+    "init_client",
+    "NewsMessage",
+    "AvroSettings",
 )
 
-from .news import News
-from .topics import Topics
+from .client import init_client
+from .messages import NewsMessage
+from .settings import AvroSettings
+from .types import Service
