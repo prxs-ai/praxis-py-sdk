@@ -17,4 +17,4 @@ def init_client(
     max_retries: int | None = None,
 ) -> SchemaRegistryClient:
     conf = {_Arg2ConfKey[key]: val for key, val in vars().items() if val is not None}
-    return SchemaRegistryClient(**conf)
+    return SchemaRegistryClient(conf)

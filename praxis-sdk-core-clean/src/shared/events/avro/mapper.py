@@ -13,7 +13,7 @@ from services.shared.events.messages import Message, NewsMessage
 news_schema = """
 {
   "type": "record",
-  "name": "Post",
+  "name": "news",
   "fields": [
     {
       "name": "name",
@@ -36,10 +36,14 @@ news_schema = """
     },
     {
       "name": "metadata",
-      "type": {
-        "type": "map",
-        "values": "string"
-      }
+      "type": [
+        "null",
+        {
+          "type": "map",
+          "values": "string"
+        }
+      ],
+      "default": null
     }
   ]
 }
