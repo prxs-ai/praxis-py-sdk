@@ -1,10 +1,11 @@
 from typing import Any, ClassVar
 
 from .base import Message
+from .topics import Topics
 
 
 class NewsMessage(Message):
-    __topic__: ClassVar[str] = "news"
+    __topic__: ClassVar[str] = Topics.NEWS
     id: str
     name: str
     source: str
