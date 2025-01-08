@@ -31,6 +31,13 @@ class InfrastructureConfig(BaseSettings):
     s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY")
     s3_secret_key: str = Field(validation_alias="S3_SECRET")
 
+    QDRANT_HOST: str = "qdrant"
+    QDRANT_PORT: int = 6333
+
+    @property
+    def qdrant_url(self) -> str:
+        return f"http://{self.QDRANT_HOST}:{self.QDRANT_PORT}"
+
     @field_validator('postgres_dsn', mode='before')
     @classmethod
     def get_postgres_dsn(cls, _, info: ValidationInfo):
