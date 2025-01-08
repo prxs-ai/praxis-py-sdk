@@ -111,9 +111,13 @@ class RedisSettings(InterfaceSettings):
     redis_port: int = Field(validation_alias="REDIS_PORT")
     redis_db: int = Field(validation_alias="REDIS_DB")
 
+class HyperLiquidSettings(InterfaceSettings):
+    base_url: str = Field(validation_alias="HYPERLIQUD_API_URL")
+
 class ServerSettings(InterfaceSettings):
     coingecko: CoingeckoSettings = CoingeckoSettings()
     redis: RedisSettings = RedisSettings()
+    hyperliquid: HyperLiquidSettings = HyperLiquidSettings()
 
 
 

@@ -1,5 +1,5 @@
 from aiohttp import ClientSession
-
+from fastapi import HTTPException
 from infrastructure.configs.config import server
 from pandas import DataFrame
 import pandas as pd
@@ -29,6 +29,8 @@ class CoinGeckoApiManager:
         self, token_name: str, days: int = 10, vs_currency: str = "usd"
     ) -> DataFrame:
         token_df = await self.get_tokens(token_name=token_name)
+        if token_df.empty:
+            raise HTTPException(detail="Did not find any historical data", status_code=400)
         token_id = token_df["id"].iloc[0]
         endpoint = f"/coins/{token_id}/market_chart"
         params = {
@@ -45,7 +47,8 @@ class CoinGeckoApiManager:
         data = await self._send_request(method="GET", endpoint=endpoint)
         df = DataFrame(data)
         if token_name is not None:
-            df = df[df.name == token_name]
+            token_name = token_name.lower()
+            df = df[(df == token_name).any(axis=1)]
         return df
 
 
