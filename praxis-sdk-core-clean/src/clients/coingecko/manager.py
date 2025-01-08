@@ -1,6 +1,6 @@
 from aiohttp import ClientSession
 
-from infrastructure.configs.config import CoingeckoSettings, server
+from infrastructure.configs.config import server
 from pandas import DataFrame
 import pandas as pd
 
@@ -14,7 +14,7 @@ class CoinGeckoApiManager:
         self.session = session
         self.base_url = base_url
 
-    async def _send_response(
+    async def _send_request(
         self, endpoint: str, params: dict | None = None,
         method: str = "POST"
     ):
@@ -34,7 +34,7 @@ class CoinGeckoApiManager:
         params = {
             'vs_currency': vs_currency, 'days': days
         }
-        historical_data = await self._send_response(
+        historical_data = await self._send_request(
             method="GET", endpoint=endpoint, params=params)
         return await prepare_historical_prices(data=historical_data)
 
@@ -42,7 +42,7 @@ class CoinGeckoApiManager:
         self, token_name:str | None = None
     ) -> DataFrame:
         endpoint = "/coins/list"
-        data = await self._send_response(method="GET", endpoint=endpoint)
+        data = await self._send_request(method="GET", endpoint=endpoint)
         df = DataFrame(data)
         if token_name is not None:
             df = df[df.name == token_name]
