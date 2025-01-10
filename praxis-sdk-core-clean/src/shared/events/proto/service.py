@@ -1,13 +1,12 @@
-from datetime import datetime
-
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from services.shared.events.models import Model
+from services.shared.events.types import Service
 
 from .map import fill_message, get_message_type
 
 
-class ProtoService:
+class ProtoService(Service[Model, bytes]):
     def serialize[C: Model](self, model: C) -> bytes:
         return fill_message(
             get_message_type(type(model))(), model.dump()

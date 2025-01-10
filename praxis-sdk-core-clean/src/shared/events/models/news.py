@@ -14,9 +14,9 @@ class Source(IntEnum):
 
 
 class NewsMeta(Model):
-    replies: int
-    views: int
-    reactions: int
+    replies: int | None = None
+    views: int | None = None
+    reactions: int | None = None
 
     created_at: datetime | None = None
 

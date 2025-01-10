@@ -13,9 +13,9 @@ enum Source {
 
 
 message NewsMeta {
-    int32 replies = 1;
-    int32 views = 2;
-    int32 reactions = 3;
+    optional int32 replies = 1;
+    optional int32 views = 2;
+    optional int32 reactions = 3;
 
     optional google.protobuf.Timestamp created_at = 4;
 }
