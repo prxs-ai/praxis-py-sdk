@@ -5,5 +5,5 @@ __all__ = (
     "NewsMeta",
 )
 
-from .gen.meta_pb2 import EventMeta
-from .gen.news_pb2 import News, NewsMeta, Source
+from .meta_pb2 import EventMeta
+from .news_pb2 import News, NewsMeta, Source

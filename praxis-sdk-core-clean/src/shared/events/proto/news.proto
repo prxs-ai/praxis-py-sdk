@@ -3,7 +3,7 @@ package news;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/any.proto";
-import "meta.proto";
+import "services/shared/events/proto/meta.proto";
 
 enum Source {
     OTHER = 0;
