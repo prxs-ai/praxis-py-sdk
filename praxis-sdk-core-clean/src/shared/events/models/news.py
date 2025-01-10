@@ -21,7 +21,7 @@ class NewsMeta(Model):
     views: int
     reactions: int
 
-    created_at: datetime | None
+    created_at: datetime | None  
 
 
 @register(_News)

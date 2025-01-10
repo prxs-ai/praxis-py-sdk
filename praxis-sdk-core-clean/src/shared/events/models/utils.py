@@ -1,13 +1,14 @@
-from typing import Any, Callable
+from typing import Callable
 
 from services.shared.events.proto import Proto
 
-ModelRegistry: dict[type[Any], type[Proto]] = {}
+from .topic import Topic
 
 
-def register[C](proto: Proto) -> Callable[[type[C]], type[C]]:
+def register[C](proto: Proto, *topics: Topic) -> Callable[[type[C]], type[C]]:
     def wrapper(cls: type[C]) -> type[C]:
-        ModelRegistry[cls] = proto
+        cls.__proto__ = proto
+        cls.__topics__ = topics
         return cls
 
     return wrapper
