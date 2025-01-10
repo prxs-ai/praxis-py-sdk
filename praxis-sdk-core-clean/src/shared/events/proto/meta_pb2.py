@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'services/shared/events/proto/meta.proto\x12\x04meta\x1a\x1fgoogle/protobuf/timestamp.proto\"G\n\tEventMeta\x12\n\n\x02id\x18\x01 \x01(\x0c\x12.\n\ncreated_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestampb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'services/shared/events/proto/meta.proto\x12\x04meta\x1a\x1fgoogle/protobuf/timestamp.proto\"g\n\tEventMeta\x12\x0f\n\x02id\x18\x01 \x01(\x0cH\x00\x88\x01\x01\x12\x33\n\ncreated_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampH\x01\x88\x01\x01\x42\x05\n\x03_idB\r\n\x0b_created_atb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,5 +33,5 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'services.shared.events.prot
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_EVENTMETA']._serialized_start=82
-  _globals['_EVENTMETA']._serialized_end=153
+  _globals['_EVENTMETA']._serialized_end=185
 # @@protoc_insertion_point(module_scope)
