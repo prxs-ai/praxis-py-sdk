@@ -1,12 +1,10 @@
 from datetime import datetime
 from enum import IntEnum
-from typing import Any
+from typing import Any, ClassVar
 
-from services.shared.events.proto import NewsMeta as _NewsMeta
-from services.shared.events.proto import News as _News
-from .meta import EventMeta
 from .base import Model
-from .utils import register
+from .meta import EventMeta
+from .topic import Topic
 
 
 class Source(IntEnum):
@@ -15,18 +13,18 @@ class Source(IntEnum):
     TWITTER = 2
 
 
-@register(_NewsMeta)
 class NewsMeta(Model):
     replies: int
     views: int
     reactions: int
 
-    created_at: datetime | None  
+    created_at: datetime | None = None
 
 
-@register(_News)
 class News(Model):
-    event_meta: EventMeta | None
+    __topics__: ClassVar[tuple[Topic, ...]] = (Topic.NEWS,)
+
     news_meta: NewsMeta
     content: dict[str, Any]
     source: Source = Source.OTHER
+    event_meta: EventMeta | None = None

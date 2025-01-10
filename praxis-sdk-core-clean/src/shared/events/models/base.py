@@ -1,12 +1,12 @@
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
-from services.shared.events.proto import Proto
-
-from .topic import Topics
+from .topic import Topic
 
 
 class Model(BaseModel):
-    __proto__: ClassVar[type[Proto] | None] = None
-    __topics__: ClassVar[tuple[Topics, ...] | None] = None
+    __topics__: ClassVar[tuple[Topic, ...] | None] = None
+
+    def dump(self) -> dict[str, Any]:
+        return self.model_dump(exclude_none=True)
