@@ -26,9 +26,9 @@ class News(Model):
 
     content: str
     meta: NewsMeta
+    event_meta: EventMeta
     tags: list[str] = Field(default_factory=list)
     source: Source = Source.OTHER
-    event_meta: EventMeta | None = None
 
     @property
     def source_as_string(self) -> str:

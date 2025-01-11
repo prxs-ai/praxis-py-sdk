@@ -21,7 +21,7 @@ message NewsMeta {
 
 
 message News {
-    optional meta.EventMeta event_meta = 1;
+    meta.EventMeta event_meta = 1;
 
     Source source = 2;
     string content = 3;
