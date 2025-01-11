@@ -31,6 +31,9 @@ class InfrastructureConfig(BaseSettings):
     s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY")
     s3_secret_key: str = Field(validation_alias="S3_SECRET")
 
+    kafka_host: str = "localhost"
+    kafka_port: int = 9092
+
     @field_validator('postgres_dsn', mode='before')
     @classmethod
     def get_postgres_dsn(cls, _, info: ValidationInfo):

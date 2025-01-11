@@ -5,8 +5,9 @@ __all__ = (
     "NewsMeta",
     "EventMeta",
     "Source",
+    "Topic",
 )
 
-from .models import EventMeta, News, NewsMeta, Source
+from .models import EventMeta, News, NewsMeta, Source, Topic
 from .proto import ProtoService
 from .types import Service
