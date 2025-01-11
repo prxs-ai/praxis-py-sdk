@@ -34,6 +34,13 @@ class InfrastructureConfig(BaseSettings):
     kafka_host: str = "localhost"
     kafka_port: int = 9092
 
+    QDRANT_HOST: str = "qdrant"
+    QDRANT_PORT: int = 6333
+
+    @property
+    def qdrant_url(self) -> str:
+        return f"http://{self.QDRANT_HOST}:{self.QDRANT_PORT}"
+
     @field_validator('postgres_dsn', mode='before')
     @classmethod
     def get_postgres_dsn(cls, _, info: ValidationInfo):
@@ -75,7 +82,7 @@ class TelegramAppSetupServiceConfig(BaseSettings):
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
     telegram_config: TelegramAppSetupServiceConfig = TelegramAppSetupServiceConfig()
-    ambassador_username: str = "shuib420"
+    ambassador_username: str = "ebalblacklist"
     CREATE_POST_INTERVAL: int = 4 * 60 * 60
     GORILLA_MARKETING_INTERVAL: int = 4 * 60 * 60
     COMMENT_AGIX_INTERVAL: int = 60 * 60
