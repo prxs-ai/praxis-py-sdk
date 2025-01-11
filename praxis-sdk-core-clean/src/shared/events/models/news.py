@@ -1,9 +1,9 @@
-from datetime import datetime
 from enum import IntEnum
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from .base import Model
 from .meta import EventMeta
+from .timedelta import Timedelta
 from .topic import Topic
 
 
@@ -18,13 +18,13 @@ class NewsMeta(Model):
     views: int | None = None
     reactions: int | None = None
 
-    created_at: datetime | None = None
+    created_at: Timedelta | None = None
 
 
 class News(Model):
     __topics__: ClassVar[tuple[Topic, ...]] = (Topic.NEWS,)
 
-    news_meta: NewsMeta
-    content: dict[str, Any]
+    content: str
+    meta: NewsMeta
     source: Source = Source.OTHER
     event_meta: EventMeta | None = None

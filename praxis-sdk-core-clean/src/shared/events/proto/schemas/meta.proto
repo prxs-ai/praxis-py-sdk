@@ -4,6 +4,6 @@ package meta;
 import "google/protobuf/timestamp.proto";
 
 message EventMeta {
-    optional bytes id = 1;
+    optional string id = 1;
     optional google.protobuf.Timestamp created_at = 2;
 }

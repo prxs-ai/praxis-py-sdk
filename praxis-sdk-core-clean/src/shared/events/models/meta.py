@@ -1,8 +1,7 @@
-from datetime import datetime
-
 from .base import Model
+from .timedelta import Timedelta
 
 
 class EventMeta(Model):
-    id: bytes | None = None
-    created_at: datetime | None = None
+    id: str | None = None
+    created_at: Timedelta | None = None

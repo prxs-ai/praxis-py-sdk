@@ -1,14 +1,12 @@
 __all__ = (
     "Service",
-    "init_client",
-    "NewsMessage",
-    "AvroService",
-    "BasicService",
-    "Topics",
+    "ProtoService",
+    "News",
+    "NewsMeta",
+    "EventMeta",
+    "Source",
 )
 
-from .avro import AvroService
-from .basic import BasicService
-from .client import init_client
-from .messages import NewsMessage, Topics
+from .models import EventMeta, News, NewsMeta, Source
+from .proto import ProtoService
 from .types import Service
