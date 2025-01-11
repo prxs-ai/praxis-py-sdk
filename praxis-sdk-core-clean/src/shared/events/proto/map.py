@@ -1,4 +1,4 @@
-from typing import Any, Final
+from typing import Final
 
 from services.shared.events import models
 
@@ -17,9 +17,3 @@ def get_message_type[C: models.Message](cls: type[C]) -> type[schemas.Message]:
         return _Model2Message[cls]
     except KeyError as exc:
         raise ValueError(f"No protobuf message found for model: {cls}") from exc
-
-
-def fill_message[M: schemas.Message](msg: M, data: dict[str, Any]) -> M:
-    for key, val in data.items():
-        setattr(msg, key, val)
-    return msg
