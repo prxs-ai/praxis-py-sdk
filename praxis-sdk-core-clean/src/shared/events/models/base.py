@@ -9,4 +9,4 @@ class Model(BaseModel):
     __topics__: ClassVar[tuple[Topic, ...] | None] = None
 
     def dump(self) -> dict[str, Any]:
-        return self.model_dump(exclude_none=True)
+        return self.model_dump(exclude_unset=True)
