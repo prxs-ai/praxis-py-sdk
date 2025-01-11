@@ -13,6 +13,7 @@ class ProtoService(Service[Model, bytes]):
     def deserialize[C: Model](self, data: bytes, type_: type[C]) -> C:
         msg = get_message_type(type_)()
         msg.ParseFromString(data)
+
         return type_(
             **MessageToDict(
                 msg,

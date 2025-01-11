@@ -1,6 +1,6 @@
 from enum import IntEnum
 from typing import ClassVar
-
+from  pydantic import Field
 from .base import Model
 from .meta import EventMeta
 from .timedelta import Timedelta
@@ -26,5 +26,10 @@ class News(Model):
 
     content: str
     meta: NewsMeta
+    tags: list[str] = Field(default_factory=list)
     source: Source = Source.OTHER
     event_meta: EventMeta | None = None
+
+    @property
+    def source_as_string(self) -> str:
+        return self.source.name

@@ -26,4 +26,5 @@ message News {
     Source source = 2;
     string content = 3;
     NewsMeta meta = 4;
+    repeated string tags = 5;
 }
