@@ -6,7 +6,7 @@ from services.shared.api_client.types import Client, Command
 from .session import Session
 
 
-class AiohttpClient(Client[Session]):
+class Client(Client[Session]):
     __slots__ = ("_session",)
 
     def __init__(self, session: Session) -> None:
