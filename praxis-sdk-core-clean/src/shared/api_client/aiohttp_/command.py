@@ -7,6 +7,8 @@ from .session import Session
 
 
 class AbstractCommand[R](Command[Session, Awaitable[R]]):
+    __slots__ = ()
+
     async def execute(self, session: Session) -> R:
         return await self._execute(session)
 
