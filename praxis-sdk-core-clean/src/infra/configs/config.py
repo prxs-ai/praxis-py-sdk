@@ -31,6 +31,9 @@ class InfrastructureConfig(BaseSettings):
     s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY")
     s3_secret_key: str = Field(validation_alias="S3_SECRET")
 
+    kafka_host: str = "localhost"
+    kafka_port: int = 9092
+
     QDRANT_HOST: str = "qdrant"
     QDRANT_PORT: int = 6333
 
