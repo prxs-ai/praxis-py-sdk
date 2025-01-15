@@ -16,7 +16,8 @@ class AiohttpAPI[S: AiohttpSession](API[S]):
         return command.execute(self._session)
 
     async def __aenter__(self) -> Self:
-        return await self._session.__aenter__()
+        await self._session.__aenter__()
+        return self
 
     async def __aexit__(
         self,
