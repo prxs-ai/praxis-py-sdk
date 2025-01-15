@@ -50,17 +50,17 @@ class RetweetedStatus(Response):
 class Tweet(Response):
     conversation_id_str: str
     created_at: str
-    entities: list[Entity]
+    entities: list[Entity] | None
     favorite_count: int
     full_text: str
     id_str: str
-    in_reply_to_status_id_str: str
+    in_reply_to_status_id_str: str | None
     is_quote_status: bool
     quote_count: int
-    quoted_status: QuoteStatus
+    quoted_status: QuoteStatus | None
     reply_count: int
     retweet_count: int
-    retweeted_status: RetweetedStatus
+    retweeted_status: RetweetedStatus | None
     view_count: int
     user: User
 
