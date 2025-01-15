@@ -1,5 +1,6 @@
-from typing import ClassVar, Unpack, override
+from typing import Callable, ClassVar, Unpack, override
 
+from aiohttp import ClientSession
 from aiohttp.client import _RequestOptions
 from multidict import CIMultiDict
 
@@ -11,7 +12,7 @@ class TweetScoutSession(AiohttpSession):
 
     __slots__ = ("__api_key",)
 
-    def __init__(self, api_key: str, session_provider=None) -> None:
+    def __init__(self, api_key: str, session_provider: Callable[[], ClientSession] | None = None) -> None:
         super().__init__(session_provider, self.BASE_URL)
         self.__api_key = api_key
 
