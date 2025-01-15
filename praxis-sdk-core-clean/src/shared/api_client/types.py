@@ -13,7 +13,7 @@ class Command[R, O](Protocol):
         raise NotImplementedError
 
 
-class Client[R](Protocol):
+class API[R](Protocol):
     __slots__ = ()
 
     @abstractmethod
@@ -21,7 +21,7 @@ class Client[R](Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    async def __aenter__(self) -> Client:
+    async def __aenter__(self) -> API[R]:
         raise NotImplementedError
 
     @abstractmethod

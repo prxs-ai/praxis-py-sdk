@@ -1,5 +1,5 @@
 __all__ = (
-    "TweetScoutClient",
+    "TweetScoutAPI",
     "TweetScoutSession",
     "APIError",
 )
@@ -7,5 +7,5 @@ __all__ = (
 
 from services.shared.api_client import APIError
 
-from .client import TweetScoutClient
+from .api import TweetScoutAPI
 from .session import TweetScoutSession

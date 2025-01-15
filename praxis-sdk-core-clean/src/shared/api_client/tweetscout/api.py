@@ -1,10 +1,10 @@
-from services.shared.api_client.aiohttp_ import AiohttpClient
+from services.shared.api_client.aiohttp_ import AiohttpAPI
 
 from .commands import Search, SearchRequest, SearchResponse
 from .session import TweetScoutSession
 
 
-class TweetScoutClient(AiohttpClient[TweetScoutSession]):
+class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
     async def search(
         self, query: str, next_cursor: str | None = None
     ) -> SearchResponse:
