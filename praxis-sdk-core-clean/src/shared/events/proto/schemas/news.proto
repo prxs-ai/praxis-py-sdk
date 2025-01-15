@@ -1,0 +1,30 @@
+syntax = "proto3";
+package news;
+
+import "google/protobuf/timestamp.proto";
+import "services/shared/events/proto/schemas/meta.proto";
+
+enum Source {
+    OTHER = 0;
+    TELEGRAM = 1;
+    TWITTER = 2;
+}
+
+
+message NewsMeta {
+    optional int32 replies = 1;
+    optional int32 views = 2;
+    optional int32 reactions = 3;
+
+    optional google.protobuf.Timestamp created_at = 4;
+}
+
+
+message News {
+    meta.EventMeta event_meta = 1;
+
+    Source source = 2;
+    string content = 3;
+    NewsMeta meta = 4;
+    repeated string tags = 5;
+}
