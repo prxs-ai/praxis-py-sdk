@@ -61,8 +61,8 @@ class Tweet(Response):
     reply_count: int
     retweet_count: int
     retweeted_status: RetweetedStatus
-    user: User
     view_count: int
+    user: User
 
 
 class SearchResponse(Response):

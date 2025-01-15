@@ -1,12 +1,12 @@
 from types import TracebackType
 from typing import Self
 
-from services.shared.api_client.types import Client, Command
+from services.shared.api_client.types import API, Command
 
 from .session import AiohttpSession
 
 
-class AiohttpAPI[S: AiohttpSession](Client[S]):
+class AiohttpAPI[S: AiohttpSession](API[S]):
     __slots__ = ("_session",)
 
     def __init__(self, session: S) -> None:
