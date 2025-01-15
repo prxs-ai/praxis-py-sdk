@@ -63,7 +63,7 @@ class AiohttpSession:
     trace = _factory("trace", get)
     connect = _factory("connect", get)
 
-    async def __enter__(self) -> Self:
+    async def __aenter__(self) -> Self:
         if not self._session or self._session.closed:
             self._create_session()
         await self._session.__aenter__()
