@@ -1,9 +1,9 @@
 __all__ = (
-    "Session",
-    "Client",
+    "AiohttpSession",
+    "AiohttpClient",
     "AbstractCommand",
 )
 
-from .client import Client
+from .client import AiohttpClient
 from .command import AbstractCommand
-from .session import Session
+from .session import AiohttpSession

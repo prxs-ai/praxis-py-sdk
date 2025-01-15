@@ -3,16 +3,16 @@ from typing import Self
 
 from services.shared.api_client.types import Client, Command
 
-from .session import Session
+from .session import AiohttpSession
 
 
-class Client(Client[Session]):
+class AiohttpClient[S: AiohttpSession](Client[S]):
     __slots__ = ("_session",)
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: S) -> None:
         self._session = session
 
-    def __call__[O](self, command: Command[Session, O]) -> O:
+    def __call__[O](self, command: Command[S, O]) -> O:
         return command.execute(self._session)
 
     async def __aenter__(self) -> Self:

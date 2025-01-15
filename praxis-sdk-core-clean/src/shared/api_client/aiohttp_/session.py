@@ -1,4 +1,6 @@
-from functools import partial
+from __future__ import annotations
+
+from functools import partialmethod
 from types import TracebackType
 from typing import Callable, Self, Unpack
 from urllib.parse import urlparse
@@ -7,7 +9,15 @@ from aiohttp import ClientResponse, ClientSession
 from aiohttp.client import _BaseRequestContextManager, _RequestOptions
 
 
-class Session:
+def _factory[**P, R](verb: str, _: Callable[P, R]) -> Callable[P, R]:
+    @partialmethod
+    def method(*args: P.args, **kwargs: P.kwargs) -> R:
+        return args[0].request(verb, *args[1:], **kwargs)
+
+    return method
+
+
+class AiohttpSession:
     __slots__ = (
         "_session_provider",
         "_base_url",
@@ -33,17 +43,25 @@ class Session:
     ) -> _BaseRequestContextManager[ClientResponse]:
         if not urlparse(url).netloc:
             url = self._base_url + url
+        kwargs = self._handle_kwargs(**kwargs)
         return self._session.request(method, url, **kwargs)
 
-    get = partial(request, method="GET")
-    post = partial(request, method="POST")
-    delete = partial(request, method="DELETE")
-    put = partial(request, method="PUT")
-    patch = partial(request, method="PATCH")
-    head = partial(request, method="HEAD")
-    options = partial(request, method="OPTIONS")
-    trace = partial(request, method="TRACE")
-    connect = partial(request, method="CONNECT")
+    def _handle_kwargs(self, **kwargs: Unpack[_RequestOptions]) -> _RequestOptions:
+        return kwargs
+
+    def get(
+        self, url: str, **kwargs: Unpack[_RequestOptions]
+    ) -> _BaseRequestContextManager[ClientResponse]:
+        return self.request("GET", url, **kwargs)
+
+    post = _factory("post", get)
+    delete = _factory("delete", get)
+    put = _factory("put", get)
+    patch = _factory("patch", get)
+    head = _factory("head", get)
+    options = _factory("options", get)
+    trace = _factory("trace", get)
+    connect = _factory("connect", get)
 
     async def __enter__(self) -> Self:
         if not self._session or self._session.closed:
