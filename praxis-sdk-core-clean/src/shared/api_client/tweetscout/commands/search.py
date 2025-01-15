@@ -1,5 +1,3 @@
-from typing import Any
-
 from services.shared.api_client import APIError
 
 from .base import AbstractCommand, Request, Response, TweetScoutSession
@@ -10,9 +8,66 @@ class SearchRequest(Request):
     next_cursor: str | None = None
 
 
+class Entity(Response):
+    link: str
+    preview: str
+    type: str
+
+
+class User(Response):
+    avatar: str
+    can_dm: bool
+    created_at: str
+    description: str
+    followers_count: int
+    friends_count: int
+    id_str: str
+    name: str
+    screen_name: str
+    statuses_count: int
+
+
+class QuoteStatus(Response):
+    created_at: str
+    favorite_count: int
+    full_text: str
+    id_str: str
+    quote_count: int
+    retweet_count: int
+    user: User
+
+
+class RetweetedStatus(Response):
+    created_at: str
+    favorite_count: int
+    full_text: str
+    id_str: str
+    quote_count: int
+    retweet_count: int
+    user: User
+
+
+class Tweet(Response):
+    conversation_id_str: str
+    created_at: str
+    entities: list[Entity]
+    favorite_count: int
+    full_text: str
+    id_str: str
+    in_reply_to_status_id_str: str
+    is_quote_status: bool
+    quote_count: int
+    quoted_status: QuoteStatus
+    reply_count: int
+    retweet_count: int
+    retweeted_status: RetweetedStatus
+    user: User
+    view_count: int
+
+
 class SearchResponse(Response):
     next_cursor: str
-    tweets: list[dict[str, Any]]
+    tweets: list[Tweet]
 
 
 class Search(AbstractCommand[SearchRequest, SearchResponse]):
