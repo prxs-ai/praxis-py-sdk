@@ -6,4 +6,4 @@ from .session import RSSSession
 
 class RSSAPI(AiohttpAPI[RSSSession]):
     async def get_feedspot(self, url: str) -> list[FeedspotResponse]:
-        return self(Feedspot(FeedspotRequest(url=url)))
+        return await self(Feedspot(FeedspotRequest(url=url)))
