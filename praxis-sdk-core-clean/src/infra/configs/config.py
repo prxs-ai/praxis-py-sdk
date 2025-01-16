@@ -82,7 +82,7 @@ class TelegramAppSetupServiceConfig(BaseSettings):
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
     telegram_config: TelegramAppSetupServiceConfig = TelegramAppSetupServiceConfig()
-    ambassador_username: str = "ebalblacklist"
+    ambassador_username: str = "testandoo6"
     CREATE_POST_INTERVAL: int = 4 * 60 * 60
     GORILLA_MARKETING_INTERVAL: int = 4 * 60 * 60
     COMMENT_AGIX_INTERVAL: int = 60 * 60
