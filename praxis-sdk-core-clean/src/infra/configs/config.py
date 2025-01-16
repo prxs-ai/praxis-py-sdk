@@ -94,7 +94,7 @@ class Settings(BaseSettings):
     TWITTER_CLIENT_ID: str = 'eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ'
     TWITTER_CLIENT_SECRET: str = 'TeK9tRPPirYbpGhiyb_yaOMYJA7ijvCQaU6O5vu5VioA8knBAA'
     TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
-    TWITTER_REDIRECT_URI: str = 'http://185.53.46.123:8000/twitter/oauth/link/'
+    TWITTER_REDIRECT_URI: str = 'http://185.53.46.123:8000/twitter/oauth/callback/'
     OPENAI_API_KEY: str = '***REMOVED***'
     OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
     LOGS_DIR: str = "../logs"
