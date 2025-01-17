@@ -234,6 +234,52 @@ class RedisDB:
     def get_send_partnership(self, username: str) -> list[str]:
         return self.get_sorted_set(f'send_partnership:{username}')
 
+    def get_active_twitter_accounts(self) -> list[str]:
+        """Получаем все активные твиттер аккаунты"""
+        accounts = []
+        for key in self.get_keys_by_pattern("twitter_data:*"):
+            username = key.split(":")[1]
+            accounts.append(username)
+        return accounts
+
+    def get_account_last_action_time(self, username: str, action_type: str) -> float:
+        """Получаем время последнего действия для аккаунта"""
+        key = f"{action_type}:{username}"
+        return float(self.get(key) or 0)
+
+    def update_account_last_action_time(self, username: str, action_type: str, timestamp: float):
+        """Обновляем время последнего действия для аккаунта"""
+        key = f"{action_type}:{username}"
+        self.set(key, timestamp)
+
+    def is_account_active(self, username: str) -> bool:
+        """Проверяем активен ли аккаунт"""
+        return bool(self.r.exists(f"twitter_data:{username}"))
+
+    def remove_account(self, username: str):
+        """Удаляем все данные аккаунта"""
+        # Удаляем основные данные аккаунта
+        self.delete(f"twitter_data:{username}")
+
+        # Удаляем все временные метки
+        for action_type in [
+            "last_create_post_time",
+            "last_gorilla_marketing_time",
+            "last_likes_time",
+            "last_comment_agix_time",
+            "last_answer_my_comment_time",
+            "last_answer_comment_time"
+        ]:
+            self.delete(f"{action_type}:{username}")
+
+        # Удаляем историю постов
+        self.delete(f"posted_tweets:{username}")
+
+        # Удаляем историю ответов
+        self.delete(f"gorilla_marketing_answered:{username}")
+
+        logger.info(f"Account {username} removed from Redis")
+
 
 # Initialize a default instance
 db = RedisDB()
