@@ -18,7 +18,7 @@ async def format_text(text: str) -> str:
                 "role": "system",
                 "content": "You are a text shortener. Your task is to reduce the text length, keeping "
                            "its meaning and style unchanged. You can remove some sentences as long as it "
-                           "doesn't harm the overall meaning of the text. Also remove emojis. DO NOT REMOVE HASHTAGS"
+                           "doesn't harm the overall meaning of the text. Also remove emojis. REMOVE HASHTAGS"
             },
             {
                 "role": "user",
@@ -29,7 +29,7 @@ async def format_text(text: str) -> str:
         system_prompt = (
         "You are a text shortener. Your task is to reduce the text length, keeping "
         "its meaning and style unchanged. You can remove some sentences as long as it "
-        "doesn't harm the overall meaning of the text. Also remove emojis. DO NOT REMOVE HASHTAGS\n\n"
+        "doesn't harm the overall meaning of the text. Also remove emojis. REMOVE HASHTAGS\n\n"
         f"{text}"
 )
         text = await send_openai_request(messages=messages, temperature=1.0)
