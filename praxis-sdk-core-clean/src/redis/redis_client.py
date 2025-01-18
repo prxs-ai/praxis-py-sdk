@@ -286,6 +286,16 @@ class RedisDB:
 
         logger.info(f"Account {username} removed from Redis")
 
+    def get_function_variables(self) -> dict[str, list[str]]:
+
+        function_vars_dict = {key: list(value) for key, value in FUNCTION_VARIABLES.items()}
+
+        # Сохраняем в Redis
+        self.set("function_variables", function_vars_dict)
+
+        # И возвращаем то, что записали
+        return function_vars_dict
+
 
 # Initialize a default instance
 db = RedisDB()
