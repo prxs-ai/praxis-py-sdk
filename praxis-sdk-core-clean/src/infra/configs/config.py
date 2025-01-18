@@ -83,11 +83,11 @@ class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
     telegram_config: TelegramAppSetupServiceConfig = TelegramAppSetupServiceConfig()
     ambassador_username: str = "testandoo6"
-    CREATE_POST_INTERVAL: int = 4 * 60
-    GORILLA_MARKETING_INTERVAL: int = 4 * 60
-    COMMENT_AGIX_INTERVAL: int = 4 * 60
-    ANSWER_DIRECT_INTERVAL: int = 4 * 60
-    ANSWER_COMMENT_INTERVAL: int = 2 * 60
+    CREATE_POST_INTERVAL: int = 60 * 60
+    GORILLA_MARKETING_INTERVAL: int = 60 * 60
+    COMMENT_AGIX_INTERVAL: int = 60 * 60
+    ANSWER_DIRECT_INTERVAL: int = 60 * 60
+    ANSWER_COMMENT_INTERVAL: int = 60 * 60
     ANSWER_MY_COMMENT_INTERVAL: int = 60
     LIKES_INTERVAL: int = 6 * 60 * 60
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
