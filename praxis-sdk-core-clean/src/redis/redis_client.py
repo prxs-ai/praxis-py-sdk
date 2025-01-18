@@ -1,6 +1,7 @@
 # fmt: off
 import json
 import os
+import threading
 import time
 from typing import Any, List
 from dataclasses import dataclass
@@ -295,18 +296,35 @@ def get_redis_db() -> RedisDB:
 
 
 class PromptManager:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, redis_db: RedisDB):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super(PromptManager, cls).__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+
     def __init__(self, redis_db: RedisDB):
+        if self._initialized:
+            return
+
         self.redis = redis_db
         self.prompt_cache = {}
-        self._start_subscriber()
+        self._subscriber_thread = None
+        self._running = True
+        self._start_subscriber_thread()
+        self._initialized = True
 
-    def _start_subscriber(self):
-        """Запускает Redis подписчика для отслеживания обновлений промптов"""
-        pubsub = self.redis.r.pubsub()
-        pubsub.subscribe('prompt_updates')
+    def _start_subscriber_thread(self):
+        """Запускает Redis подписчика в отдельном потоке"""
 
-        async def listener():
-            while True:
+        def subscriber_worker():
+            pubsub = self.redis.r.pubsub()
+            pubsub.subscribe('prompt_updates')
+
+            while self._running:
                 try:
                     message = pubsub.get_message()
                     if message and message['type'] == 'message':
@@ -315,67 +333,41 @@ class PromptManager:
                             del self.prompt_cache[prompt_key]
                             logger.info(f"Промпт обновлен: {prompt_key}")
                 except Exception as e:
-                    logger.error(f"Ошибка в pub/sub listener: {e}")
-                await asyncio.sleep(0.1)
+                    logger.error(f"Ошибка в subscriber_worker: {e}")
+                time.sleep(0.1)
 
-        asyncio.create_task(listener())
+            pubsub.close()
+
+        self._subscriber_thread = threading.Thread(
+            target=subscriber_worker,
+            daemon=True
+        )
+        self._subscriber_thread.start()
 
     def get_prompt(self, function_name: str) -> str:
         """Получает актуальный промпт для функции из Redis"""
-        if function_name not in self.prompt_cache:
-            prompt = self.redis.get(f'prompt:{function_name}')
+        # Добавляем префикс к ключу
+        redis_key = f'prompt:{function_name}'
+
+        if redis_key not in self.prompt_cache:
+            prompt = self.redis.get(redis_key)
             if not prompt:
                 prompt = DEFAULT_PROMPTS.get(function_name, "")
                 if prompt:
-                    self.redis.set(f'prompt:{function_name}', prompt)
+                    self.redis.set(redis_key, prompt)
                 else:
                     raise ValueError(f"Промпт для функции {function_name} не найден")
-            self.prompt_cache[function_name] = prompt
-        return self.prompt_cache[function_name]
+            self.prompt_cache[redis_key] = prompt
+        return self.prompt_cache[redis_key]
 
-
-class PromptFormatter:
-    """Класс для форматирования промптов с поддержкой внутренних переменных"""
-
-    def __init__(self, function_name: str, template: str):
-        self.function_name = function_name
-        self.template = template
-
-    async def format(self, func, args, kwargs) -> str:
-        # Получаем значения аргументов функции
-        sig = inspect.signature(func)
-        bound_args = sig.bind(*args, **kwargs)
-        bound_args.apply_defaults()
-        format_dict = dict(bound_args.arguments)
-
-        # Выполняем функцию для получения внутренних переменных
-        result = await func(*args, **kwargs)
-
-        # Добавляем внутренние переменные в словарь форматирования
-        if isinstance(result, tuple) and len(result) == 2:
-            internal_vars, final_result = result
-            format_dict.update(internal_vars)
-
-        try:
-            formatted_prompt = self.template.format(**format_dict)
-            return formatted_prompt, final_result
-        except KeyError as e:
-            logger.error(f"Отсутствует переменная для форматирования промпта: {e}")
-            raise
-
-
-def get_internal_variables(func_name: str) -> Set[str]:
-    """Возвращает список внутренних переменных, которые создаются внутри функции"""
-    internal_vars = {
-        'create_comment_to_post': {'relevant_knowledge'},
-        'create_comment_to_comment': {'relevant_knowledge'},
-        # Добавьте другие функции и их внутренние переменные
-    }
-    return internal_vars.get(func_name, set())
+    def __del__(self):
+        self._running = False
+        if self._subscriber_thread and self._subscriber_thread.is_alive():
+            self._subscriber_thread.join(timeout=1.0)
 
 
 def use_dynamic_prompt(function_name: str):
-    """Декоратор для использования динамических промптов из Redis с поддержкой внутренних переменных"""
+    """Декоратор для использования динамических промптов из Redis"""
 
     def decorator(func):
         @wraps(func)
@@ -383,35 +375,42 @@ def use_dynamic_prompt(function_name: str):
             prompt_manager = PromptManager(db)
             template = prompt_manager.get_prompt(function_name)
 
-            async def modified_func(*args, **kwargs):
-                if 'relevant_knowledge' in get_internal_variables(function_name):
-                    # Получаем knowledge_base и query из аргументов
-                    bound_args = inspect.signature(func).bind(*args, **kwargs)
-                    bound_args.apply_defaults()
-                    knowledge_base = bound_args.arguments.get('knowledge_base')
-                    # query = bound_args.arguments.get('twitter_post') or bound_args.arguments.get('comment_text')
-                    query = 'What is the project about?'
-                    # Получаем relevant_knowledge
+            # Получаем значения параметров функции
+            sig = inspect.signature(func)
+            bound_args = sig.bind(*args, **kwargs)
+            bound_args.apply_defaults()
+            format_dict = dict(bound_args.arguments)
+
+            # Если функция требует relevant_knowledge, получаем его
+            if 'relevant_knowledge' in template:
+                knowledge_base = bound_args.arguments.get('knowledge_base')
+                # query = bound_args.arguments.get('twitter_post') or \
+                #         bound_args.arguments.get('comment_text')
+                query = "What is the project about?"
+                if knowledge_base and query:
+                    from schemas.knowledgebase.knowledgetype import KnowledgeType
                     relevant_knowledge = await knowledge_base.search_knowledge(
                         query=query,
                         k=2,
                         # knowledge_type=KnowledgeType.PROJECT_INFO
                     )
+                    format_dict['relevant_knowledge'] = relevant_knowledge
 
-                    return {'relevant_knowledge': relevant_knowledge}, None
-
-                return {}, None
-
-            formatter = PromptFormatter(function_name, template)
-            formatted_prompt, _ = await formatter.format(modified_func, args, kwargs)
-
-            kwargs['prompt'] = formatted_prompt
-            return await func(*args, **kwargs)
+            # Форматируем промпт
+            try:
+                formatted_prompt = template.format(**format_dict)
+                kwargs['prompt'] = formatted_prompt
+                return await func(*args, **kwargs)
+            except KeyError as e:
+                logger.error(f"Отсутствует переменная для форматирования промпта: {e}")
+                raise ValueError(f"В промпте используется неизвестная переменная: {e}")
+            except Exception as e:
+                logger.error(f"Ошибка при применении промпта для {function_name}: {e}")
+                raise
 
         return wrapper
 
     return decorator
-
 
 DEFAULT_PROMPTS = {
     'create_comment_to_post': """You are an AI and crypto enthusiast...
