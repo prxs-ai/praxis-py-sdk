@@ -312,6 +312,11 @@ class RedisDB:
         # И возвращаем то, что записали
         return function_vars_dict
 
+    def save_tweet_link(self, function_name: str, tweet_id: str) -> None:
+        """Сохраняет ссылку на твит для конкретной функции"""
+        key = f"created_tweet:{function_name}"
+        link = f"https://twitter.com/i/web/status/{tweet_id}"
+        self.set(key, link)
 
 # Initialize a default instance
 db = RedisDB()
