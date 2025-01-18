@@ -37,7 +37,7 @@ FUNCTION_VARIABLES = {
     'create_quoted_tweet': {'tweet_for_quote', 'my_tweets', 'relevant_knowledge'},
     'create_news_tweet': {'news_tweets', 'my_tweets', 'relevant_knowledge'},
     'check_answer_is_needed': {'twitter_comment'},
-    'check_tweet_for_marketing': {'tweets', 'relevant_knowledge'},
+    'check_tweet_for_marketing': {'tweet_text', 'relevant_knowledge'},
     'create_marketing_comment': {'tweet_text', 'relevant_knowledge', 'question_prompt'},
 }
 
@@ -680,7 +680,7 @@ Do not engage with:
 - Non-technical discussions
 
 Tweet to evaluate:
-{tweets}
+{tweet_text}
 
 Respond with one word - True or False.""",
 
