@@ -61,6 +61,11 @@ class RedisDB:
         else:
             logger.error('Failed to connect to Redis after the timeout.')
             raise ConnectionError('Failed to connect to Redis.')
+        self._save_function_variables_on_startup()
+
+    def _save_function_variables_on_startup(self):
+        function_vars_dict = {key: list(value) for key, value in FUNCTION_VARIABLES.items()}
+        self.set("function_variables", function_vars_dict, log=False)
 
     def add_to_set(self, key: str, value: str) -> None:
         """
