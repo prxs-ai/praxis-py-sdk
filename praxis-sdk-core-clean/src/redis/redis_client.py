@@ -416,7 +416,6 @@ def use_dynamic_prompt(function_name: str):
             prompt_manager = PromptManager(db)
             template = prompt_manager.get_prompt(function_name)
 
-            # Проверяем, что используются только разрешенные переменные
             variables = prompt_manager._extract_fstring_vars(template)
             allowed_vars = FUNCTION_VARIABLES.get(function_name, set())
             if not variables.issubset(allowed_vars):
@@ -426,24 +425,26 @@ def use_dynamic_prompt(function_name: str):
                     f"Разрешенные переменные: {allowed_vars}"
                 )
 
-            # Получаем значения параметров функции
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)
             bound_args.apply_defaults()
             format_dict = dict(bound_args.arguments)
 
+            if 'tweet_text' in variables and 'tweets' in format_dict:
+
+                if function_name == 'check_tweet_for_marketing':
+                    kwargs['prompt'] = template
+                    return await func(*args, **kwargs)
+
             # Если функция требует relevant_knowledge, получаем его
             if 'relevant_knowledge' in variables:
                 knowledge_base = bound_args.arguments.get('knowledge_base')
-                # query = bound_args.arguments.get('twitter_post') or \
-                #         bound_args.arguments.get('comment_text')
                 query = "What is the project about?"
                 if knowledge_base and query:
                     from schemas.knowledgebase.knowledgetype import KnowledgeType
                     relevant_knowledge = await knowledge_base.search_knowledge(
                         query=query,
                         k=2,
-                        # knowledge_type=KnowledgeType.PROJECT_INFO
                     )
                     format_dict['relevant_knowledge'] = relevant_knowledge
 
