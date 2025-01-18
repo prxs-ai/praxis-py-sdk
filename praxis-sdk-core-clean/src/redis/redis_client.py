@@ -354,11 +354,27 @@ class PromptManager:
             if not prompt:
                 prompt = DEFAULT_PROMPTS.get(function_name, "")
                 if prompt:
+                    # Проверяем, что в промпте используются только разрешенные переменные
+                    variables = self._extract_fstring_vars(prompt)
+                    allowed_vars = FUNCTION_VARIABLES.get(function_name, set())
+                    if not variables.issubset(allowed_vars):
+                        invalid_vars = variables - allowed_vars
+                        raise ValueError(
+                            f"Промпт для {function_name} содержит недопустимые переменные: {invalid_vars}. "
+                            f"Разрешенные переменные: {allowed_vars}"
+                        )
                     self.redis.set(redis_key, prompt)
                 else:
                     raise ValueError(f"Промпт для функции {function_name} не найден")
             self.prompt_cache[redis_key] = prompt
         return self.prompt_cache[redis_key]
+
+    @staticmethod
+    def _extract_fstring_vars(template: str) -> Set[str]:
+        """Extract variable names from f-string"""
+        import re
+        pattern = r'{([^{}:]+)(?::[^{}]+)?}'
+        return set(re.findall(pattern, template))
 
     def __del__(self):
         self._running = False
@@ -375,6 +391,16 @@ def use_dynamic_prompt(function_name: str):
             prompt_manager = PromptManager(db)
             template = prompt_manager.get_prompt(function_name)
 
+            # Проверяем, что используются только разрешенные переменные
+            variables = prompt_manager._extract_fstring_vars(template)
+            allowed_vars = FUNCTION_VARIABLES.get(function_name, set())
+            if not variables.issubset(allowed_vars):
+                invalid_vars = variables - allowed_vars
+                raise ValueError(
+                    f"Промпт для {function_name} содержит недопустимые переменные: {invalid_vars}. "
+                    f"Разрешенные переменные: {allowed_vars}"
+                )
+
             # Получаем значения параметров функции
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)
@@ -382,7 +408,7 @@ def use_dynamic_prompt(function_name: str):
             format_dict = dict(bound_args.arguments)
 
             # Если функция требует relevant_knowledge, получаем его
-            if 'relevant_knowledge' in template:
+            if 'relevant_knowledge' in variables:
                 knowledge_base = bound_args.arguments.get('knowledge_base')
                 # query = bound_args.arguments.get('twitter_post') or \
                 #         bound_args.arguments.get('comment_text')
@@ -403,7 +429,10 @@ def use_dynamic_prompt(function_name: str):
                 return await func(*args, **kwargs)
             except KeyError as e:
                 logger.error(f"Отсутствует переменная для форматирования промпта: {e}")
-                raise ValueError(f"В промпте используется неизвестная переменная: {e}")
+                raise ValueError(
+                    f"В промпте для {function_name} отсутствует значение для переменной {e}. "
+                    f"Проверьте, что все необходимые параметры переданы в функцию."
+                )
             except Exception as e:
                 logger.error(f"Ошибка при применении промпта для {function_name}: {e}")
                 raise
@@ -412,15 +441,64 @@ def use_dynamic_prompt(function_name: str):
 
     return decorator
 
+
+# Соответствие функций и их доступных переменных
+FUNCTION_VARIABLES = {
+    'create_comment_to_post': {'twitter_post', 'relevant_knowledge'},
+    'create_comment_to_comment': {'comment_text', 'relevant_knowledge'},
+}
+
+# Дефолтные промпты
 DEFAULT_PROMPTS = {
-    'create_comment_to_post': """You are an AI and crypto enthusiast...
+    'create_comment_to_post': """You are an AI and crypto enthusiast with a vision for the future of decentralized tech.    
+You need to create one comment for the twitter post.
+You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
+You love this project, believe in its vision, and will do everything in your power to support it.
+
+Use this context from our knowledge base to inform your response:
+{relevant_knowledge}
+
+The comments should be positive, bullish, and as human-like as possible. Use simple, natural language, as if it's a genuine opinion from a person. 
+Max length of comment is 1 sentence. Make comment as short as possible. DO NOT USE ROCKET EMOJI. Use hashtags from our knowledge base if appropriate.
+
 TWITTER POST: {twitter_post}
-Context from knowledge base: {relevant_knowledge}
+
+Be Positive: Always maintain a positive tone, but avoid being overly pushy or intense. Keep replies natural, like a genuine community member. Humor can be used, but only if it fits the context and feels appropriate.
+Conciseness: Replies should be short and to the point—1-2 sentences maximum.
+No Rocket Emoji: DO NOT USE THIS EMOJI 🚀 or similar cliché symbols.
 """,
-    'create_comment_to_comment': """You are a technology community manager...
-Conversation to respond to: {comment_text}
-Context from knowledge base: {relevant_knowledge}
+    'create_comment_to_comment': """You are a technology community manager. Your task is to create a reply to the conversation using provided knowledge base context.
+You need to create one comment for the twitter post.
+You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
+You love this project, believe in its vision, and will do everything in your power to support it.
+
+Context from knowledge base:
+{relevant_knowledge}
+
+Conversation to respond to:
+{comment_text}
+
+Reply Guidelines:
+1. Response Format:
+  - Very short (maximum 1-2 sentences)
+  - Write in simple, human language
+  - Use hashtags from knowledge base when relevant
+  - No emojis
+
+2. Tone and Style:
+  - Always positive and constructive
+  - Not pushy or intense
+  - Reply to the point
+  - Natural and human-like
+  - Add humor only if appropriate for context
+
+3. Content Rules:
+  - Base response on knowledge base context
+  - Address the specific points in conversation
+  - Keep it authentic and engaging
+  - Be helpful and informative
 """
 }
 
+# Создаём singleton инстанс
 prompt_manager = PromptManager(db)
