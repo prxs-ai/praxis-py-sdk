@@ -3,6 +3,7 @@ import json
 import os
 import threading
 import time
+from random import random
 from typing import Any, List
 from dataclasses import dataclass
 from dataclasses import asdict
@@ -416,6 +417,7 @@ def use_dynamic_prompt(function_name: str):
             prompt_manager = PromptManager(db)
             template = prompt_manager.get_prompt(function_name)
 
+            # Проверяем разрешенные переменные
             variables = prompt_manager._extract_fstring_vars(template)
             allowed_vars = FUNCTION_VARIABLES.get(function_name, set())
             if not variables.issubset(allowed_vars):
@@ -425,30 +427,29 @@ def use_dynamic_prompt(function_name: str):
                     f"Разрешенные переменные: {allowed_vars}"
                 )
 
+            # Получаем значения параметров функции
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)
             bound_args.apply_defaults()
             format_dict = dict(bound_args.arguments)
 
-            if 'tweet_text' in variables and 'tweets' in format_dict:
+            if function_name == 'check_tweet_for_marketing' and 'tweets' in format_dict:
+                kwargs['prompt'] = template
+                return await func(*args, **kwargs)
 
-                if function_name == 'check_tweet_for_marketing':
-                    kwargs['prompt'] = template
-                    return await func(*args, **kwargs)
+            if function_name == 'create_marketing_comment':
+                format_dict['question_prompt'] = " or sometimes combine your thoughts with a relevant question." if random() < 0.45 else ""
 
-            # Если функция требует relevant_knowledge, получаем его
             if 'relevant_knowledge' in variables:
                 knowledge_base = bound_args.arguments.get('knowledge_base')
                 query = "What is the project about?"
                 if knowledge_base and query:
-                    from schemas.knowledgebase.knowledgetype import KnowledgeType
                     relevant_knowledge = await knowledge_base.search_knowledge(
                         query=query,
                         k=2,
                     )
                     format_dict['relevant_knowledge'] = relevant_knowledge
 
-            # Форматируем промпт
             try:
                 formatted_prompt = template.format(**format_dict)
                 kwargs['prompt'] = formatted_prompt
@@ -464,7 +465,6 @@ def use_dynamic_prompt(function_name: str):
                 raise
 
         return wrapper
-
     return decorator
 
 
