@@ -30,6 +30,13 @@ class Post:
     is_reply_to: str | None = None
     is_news_summary_tweet: bool = False
 
+FUNCTION_VARIABLES = {
+    'create_comment_to_post': {'twitter_post', 'relevant_knowledge'},
+    'create_comment_to_comment': {'comment_text', 'relevant_knowledge'},
+    'create_tweet': {'project_tweets', 'my_tweets', 'relevant_knowledge'},
+    'create_quoted_tweet': {'tweet_for_quote', 'my_tweets', 'relevant_knowledge'},
+    'create_news_tweet': {'news_tweets', 'my_tweets', 'relevant_knowledge'},
+}
 
 class RedisDB:
     """
@@ -456,15 +463,6 @@ def use_dynamic_prompt(function_name: str):
 
     return decorator
 
-
-# Соответствие функций и их доступных переменных
-FUNCTION_VARIABLES = {
-    'create_comment_to_post': {'twitter_post', 'relevant_knowledge'},
-    'create_comment_to_comment': {'comment_text', 'relevant_knowledge'},
-    'create_tweet': {'project_tweets', 'my_tweets', 'relevant_knowledge'},
-    'create_quoted_tweet': {'tweet_for_quote', 'my_tweets', 'relevant_knowledge'},
-    'create_news_tweet': {'news_tweets', 'my_tweets', 'relevant_knowledge'},
-}
 
 # Дефолтные промпты
 DEFAULT_PROMPTS = {
