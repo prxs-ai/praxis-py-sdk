@@ -34,7 +34,7 @@ class InfrastructureConfig(BaseSettings):
     kafka_host: str = "localhost"
     kafka_port: int = 9092
 
-    QDRANT_HOST: str = "qdrant"
+    QDRANT_HOST: str = Field(default="localhost", validation_alias="QDRANT_HOST")
     QDRANT_PORT: int = 6333
 
     @property
@@ -45,14 +45,14 @@ class InfrastructureConfig(BaseSettings):
     @classmethod
     def get_postgres_dsn(cls, _, info: ValidationInfo):
         return f"postgresql+asyncpg://{info.data['postgres_user']}:{info.data['postgres_password']}@{info.data['postgres_host']}:{info.data['postgres_port']}/{info.data['postgres_db']}"
-        return PostgresDsn.build(
-            scheme='postgresql+asyncpg',
-            username=info.data['postgres_user'],
-            password=info.data['postgres_password'],
-            host=info.data['postgres_host'],
-            port=info.data['postgres_port'],
-            path=info.data['postgres_db'],
-        )
+        # return PostgresDsn.build(
+        #     scheme='postgresql+asyncpg',
+        #     username=info.data['postgres_user'],
+        #     password=info.data['postgres_password'],
+        #     host=info.data['postgres_host'],
+        #     port=info.data['postgres_port'],
+        #     path=info.data['postgres_db'],
+        # )
 
     @field_validator('redis_dsn', mode='before')
     @classmethod
