@@ -34,7 +34,7 @@ class InfrastructureConfig(BaseSettings):
     kafka_host: str = "localhost"
     kafka_port: int = 9092
 
-    QDRANT_HOST: str = Field(default="localhost", validation_alias="QDRANT_HOST")
+    QDRANT_HOST: str = Field(default="qdrant", validation_alias="QDRANT_HOST")
     QDRANT_PORT: int = 6333
 
     @property
