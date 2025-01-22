@@ -21,7 +21,7 @@ class InfrastructureConfig(BaseSettings):
     redis_port: int = 6379
     redis_db: str = "0"
 
-    postgres_dsn: PostgresDsn | None = None
+    postgres_dsn: str | None = None
     redis_dsn: RedisDsn | None = None
     fernet_key: bytes = b"glEo_3r7sSMy8tIxqRyvwLW0CrKD44ADJ7qIgWVeOOI="
 
