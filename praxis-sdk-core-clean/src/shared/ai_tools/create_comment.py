@@ -22,7 +22,7 @@ async def check_answer_is_needed(message: str, social_media_type: SocialMediaTyp
         },
     ]
     result = await send_openai_request(messages=messages, temperature=1.1)
-    logging.info(f"Check answer is needed: {result=} {messages=} {social_media_type=}")
+    # logging.info(f"Check answer is needed: {result=} {messages=} {social_media_type=}")
     return "true" in result.lower()
 
 
