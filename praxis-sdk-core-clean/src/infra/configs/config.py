@@ -111,6 +111,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expires_in: int = 1440
 
+    # Creativity
+    creativity_api_id: str = Field(validation_alias="CREATIVITY_API_ID")
+    creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
+    creativity_base_url: str = "https://api.creatify.ai/api"
+
 
 @lru_cache
 def get_settings() -> Settings:
