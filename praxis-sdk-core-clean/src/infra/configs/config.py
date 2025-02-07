@@ -100,7 +100,15 @@ class Settings(BaseSettings):
     LOGS_DIR: str = "../logs"
     TWEETSCOUT_API_KEY: str = "***REMOVED***"
     ANTHROPIC_API_KEY: str = '***REMOVED***'
+
     HEYGEN_API_KEY: str = "***REMOVED***"
+
+    LIVEKIT_URL: str = "wss://streamingavatar-o51wm8kk.livekit.cloud"
+    LIVEKIT_API_KEY: str = "***REMOVED***"
+    LIVEKIT_API_SECRET: str = "***REMOVED***"
+
+    TWITCH_CLIENT_ID: str = "d39qf2fhjamywvevtsctdxnrflma20"
+    TWITCH_CLIENT_SECRET: str = "51fkl9bclgwamyfot69wlcrnkz1ajq"
 
     # FAL AI
     fal_ai_api_key: str = ""
