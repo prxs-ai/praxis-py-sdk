@@ -110,6 +110,9 @@ class Settings(BaseSettings):
     TWITCH_CLIENT_ID: str = "d39qf2fhjamywvevtsctdxnrflma20"
     TWITCH_CLIENT_SECRET: str = "51fkl9bclgwamyfot69wlcrnkz1ajq"
 
+    AVATAR_INTERNAL_REDIS_HOST: str = "localhost"
+    AVATAR_INTERNAL_REDIS_PORT: int = 6379
+
     # FAL AI
     fal_ai_api_key: str = ""
 
