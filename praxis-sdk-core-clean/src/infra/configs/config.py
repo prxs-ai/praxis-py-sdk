@@ -119,6 +119,10 @@ class Settings(BaseSettings):
     creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
     creativity_base_url: str = "https://api.creatify.ai/api"
 
+    confluent_api_key: str
+    confluent_api_secret: str
+    confluent_bootstrap_server: str
+    confluent_rest_endpoint: str
 
 @lru_cache
 def get_settings() -> Settings:
