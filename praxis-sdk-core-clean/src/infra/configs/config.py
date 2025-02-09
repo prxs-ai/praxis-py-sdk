@@ -27,9 +27,9 @@ class InfrastructureConfig(BaseSettings):
 
     # S3 storage
     s3_bucket_prefix: str = "praxis"
-    s3_region: str = Field(validation_alias="S3_REGION", default="")
-    s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY", default="")
-    s3_secret_key: str = Field(validation_alias="S3_SECRET", default="")
+    s3_region: str = Field(validation_alias="S3_REGION")
+    s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(validation_alias="S3_SECRET")
 
     kafka_host: str = "localhost"
     kafka_port: int = 9092
@@ -115,8 +115,8 @@ class Settings(BaseSettings):
     jwt_access_token_expires_in: int = 1440
 
     # Creativity
-    creativity_api_id: str = Field(validation_alias="CREATIVITY_API_ID", default="")
-    creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY", default="")
+    creativity_api_id: str = Field(validation_alias="CREATIVITY_API_ID")
+    creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
     creativity_base_url: str = "https://api.creatify.ai/api"
 
 
