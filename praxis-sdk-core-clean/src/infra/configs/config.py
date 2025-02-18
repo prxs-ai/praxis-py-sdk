@@ -102,8 +102,7 @@ class Settings(BaseSettings):
     LOGS_DIR: str = "../logs"
     TWEETSCOUT_API_KEY: str = "***REMOVED***"
     ANTHROPIC_API_KEY: str = '***REMOVED***'
-    TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
-    TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
+    ENSO_API_TEST_KEY: str = "1e02632d-6feb-4a75-a157-documentation"
 
     # FAL AI
     fal_ai_api_key: str = ""
@@ -118,6 +117,11 @@ class Settings(BaseSettings):
     creativity_api_id: str = Field(validation_alias="CREATIVITY_API_ID")
     creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
     creativity_base_url: str = "https://api.creatify.ai/api"
+
+    # Telegram
+    TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
+    TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
+    TELEGRAM_BOT_TOKEN_2: str = "7633131821:AAForOPCLS045IFHihMf49UozGwKL7IMbpU"
 
 
 @lru_cache
