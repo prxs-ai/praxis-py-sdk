@@ -102,7 +102,6 @@ class Settings(BaseSettings):
     LOGS_DIR: str = "../logs"
     TWEETSCOUT_API_KEY: str = "***REMOVED***"
     ANTHROPIC_API_KEY: str = '***REMOVED***'
-    ENSO_API_TEST_KEY: str = "1e02632d-6feb-4a75-a157-documentation"
 
     # FAL AI
     fal_ai_api_key: str = ""
