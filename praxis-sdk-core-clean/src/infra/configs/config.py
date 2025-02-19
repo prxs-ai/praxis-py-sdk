@@ -117,11 +117,6 @@ class Settings(BaseSettings):
     creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
     creativity_base_url: str = "https://api.creatify.ai/api"
 
-    # Telegram
-    TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
-    TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
-    TELEGRAM_BOT_TOKEN_2: str = "7633131821:AAForOPCLS045IFHihMf49UozGwKL7IMbpU"
-
 
 @lru_cache
 def get_settings() -> Settings:
