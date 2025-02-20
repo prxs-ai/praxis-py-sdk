@@ -3,7 +3,7 @@ current_version = "0.0.1"
 message = "Bump version of base-agent: {current_version} → {new_version}"
 commit = false
 tag = false
-tag_name = "base-agent-v{new_version}"
+tag_name = "agents/base-agent-v{new_version}"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
