@@ -1,6 +1,6 @@
 [project]
 name = "base-agent"
-version = "0.0.2"
+version = "0.0.3"
 description = "Base agent for Ray Serve"
 authors = [
     {name = "Your Name",email = "you@example.com"}
