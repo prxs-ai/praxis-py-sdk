@@ -1,0 +1,1 @@
+FROM rayproject/ray:latest
