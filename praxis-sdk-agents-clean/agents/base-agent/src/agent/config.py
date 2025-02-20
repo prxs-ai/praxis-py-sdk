@@ -1,13 +1,14 @@
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel
 
 
-class AgentConfig(BaseSettings):
+class BasicAgentConfig(BaseModel):
     group_name: str = "agent.entrypoint"
-    entrypoint: str = "basic"
+    target_entrypoint: str = "target"
+    default_entrypoint: str = "basic"
 
 
 @lru_cache
-def get_agent_config() -> AgentConfig:
-    return AgentConfig()
+def get_agent_config() -> BasicAgentConfig:
+    return BasicAgentConfig()
