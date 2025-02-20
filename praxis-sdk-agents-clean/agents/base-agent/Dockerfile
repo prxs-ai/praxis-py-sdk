@@ -28,6 +28,9 @@ RUN pip install --no-cache-dir -r ./requirements.txt && \
 # Clean the environment variables
 ENV PIP_EXTRA_INDEX_URL=
 
+# Install keyring and keyrings.codeartifact
+RUN pip install keyring keyrings.codeartifact
+
 WORKDIR /serve_app
 
 COPY src/agent /serve_app/agent
