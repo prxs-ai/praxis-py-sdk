@@ -1,5 +1,5 @@
 [tool.bumpversion]
-current_version = "0.0.1"
+current_version = "0.0.2"
 message = "Bump version of example-package: {current_version} -> {new_version}"
 tag_name = "packages/example-package-v{new_version}"
 commit = false
