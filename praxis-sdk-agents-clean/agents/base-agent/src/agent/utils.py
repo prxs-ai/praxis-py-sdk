@@ -1,6 +1,9 @@
 
 import sys
+import uuid
 from importlib.metadata import EntryPoint, entry_points
+
+import ray
 
 
 def get_entry_points(group: str) -> list[EntryPoint]:
@@ -12,3 +15,10 @@ def get_entry_points(group: str) -> list[EntryPoint]:
         return entrypoints.get(group, [])
     except AttributeError:
         return entrypoints.select(group=group)
+
+
+
+@ray.remote
+def generate_request_id() -> str:
+   # Generate a unique idempotency token.
+   return uuid.uuid4().hex
