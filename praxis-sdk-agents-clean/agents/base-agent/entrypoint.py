@@ -1,22 +1,24 @@
-from agent.config import get_agent_config
-from agent.utils import get_entry_points
+from base_agent.config import get_agent_config
+from base_agent.utils import get_entrypoint
 
-config = get_agent_config()
-
-
-def get_agent():
-    entrypoints = get_entry_points(config.group_name)
-    try:
-        print(f"Loading {config.target_entrypoint} entrypoint...")
-        return entrypoints[config.target_entrypoint].load()
-    except KeyError:
-        print(f"Entrypoint {config.target_entrypoint} not found. Loading {config.default_entrypoint} entrypoint...")
-        return entrypoints[config.default_entrypoint].load()
-
-app = get_agent()
+app = get_entrypoint(get_agent_config().group_name).load()
 
 
 if __name__ == "__main__":
+    import uvicorn
+    from fastapi import FastAPI
     from ray import serve
 
-    serve.run(app, route_prefix='/')
+    # Run Ray Serve in local testing mode
+    handle = serve.run(app(get_agent_config().model_dump()),
+                      route_prefix='/',
+                      _local_testing_mode=True)
+
+    fastapi_app = FastAPI()
+
+    @fastapi_app.post("/{goal}")
+    async def handle_request(goal: str):
+        return await handle.handle.remote(goal)
+
+    # Run uvicorn server
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)

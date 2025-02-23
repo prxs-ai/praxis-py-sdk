@@ -2,24 +2,30 @@
 name = "base-agent"
 version = "0.0.5"
 description = "Base agent for Ray Serve"
-authors = [
-    {name = "Your Name",email = "you@example.com"}
-]
+authors = [{ name = "Your Name", email = "you@example.com" }]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<4.0"
 dependencies = [
     "fastapi (>=0.115.8,<1.0.0)",
     "openai (>=1.63.2,<2.0.0)",
+    "langchain (>=0.3.19,<0.4.0)",
+    "jinja2 (>=3.1.5,<4.0.0)",
+    "pydantic-settings (>=2.8.0,<3.0.0)",
+    "langfuse (>=2.59.3,<3.0.0)",
+    "langchain-openai (>=0.3.6,<0.4.0)",
 ]
 
 [tool.poetry]
-packages = [{include = "*", from="src"}]
+packages = [{ include = "*", from = "src" }]
+
+[project.entry-points."agent.prompt.entrypoint"]
+basic = "base_agent.prompt:prompt_builder"
 
 [project.entry-points."agent.entrypoint"]
-basic = "agent.ray_entrypoint:agent_builder"
+basic = "base_agent.ray_entrypoint:agent_builder"
 
 [tool.poetry.group.dev.dependencies]
-ray = {extras = ["serve"], version = "^2.42.1"}
+ray = { extras = ["serve"], version = "^2.42.1" }
 pytest = "^8.3.4"
 
 [build-system]
