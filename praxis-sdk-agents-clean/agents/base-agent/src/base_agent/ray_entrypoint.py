@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import urljoin
@@ -7,12 +6,11 @@ import requests
 from fastapi import FastAPI
 
 from base_agent.config import get_agent_config
+from base_agent.dag_runner import DAGRunner
 from base_agent.langchain import agent_executor
 from base_agent.langchain.executor import LangChainExecutor
-from base_agent.models import AgentModel, Task, ToolModel
 from base_agent.prompt import prompt_builder
 from base_agent.prompt.builder import PromptBuilder
-from base_agent.workflows.runner import dag_runner
 
 
 class BaseAgent:
@@ -21,7 +19,6 @@ class BaseAgent:
 
     def __init__(self, *args, **kwargs):
         self.config = get_agent_config()
-        self.dag_runner = dag_runner()
         self.agent_executor = agent_executor()
         self.prompt_builder = prompt_builder()
 
@@ -32,21 +29,21 @@ class BaseAgent:
         agents = self.get_most_relevant_agents(goal)
         tools = self.get_most_relevant_tools(goal)
 
-        plan = self.generate_plan(goal, agents, tools, plan)
+        plan = self.generate_plan(goal, agents, tools)
 
         return self.run_workflow(plan)
 
-    def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
+    def get_most_relevant_agents(self, goal: str) -> list[dict[str, Any]]:
         """This method is used to find the most useful agents for the given goal."""
         return []
 
-    def get_most_relevant_tools(self, goal: str) -> list[ToolModel]:
+    def get_most_relevant_tools(self, goal: str) -> list[dict[str, Any]]:
         """This method is used to find the most useful tools for the given goal."""
         return [
-            ToolModel(
-                name="handoff-tool",
-                version="0.0.1",
-                openai_function_spec={
+            {
+                "name": "handoff-tool",
+                "version": "0.0.1",
+                "openai_function_spec": {
                     "type": "function",
                     "function": {
                         "name": "handoff_tool",
@@ -54,10 +51,10 @@ class BaseAgent:
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "agent": {"type": "string", "description": "The name of the agent to use.", "enum": []},
+                                "endpoint": {"type": "string", "description": "The endpoint of the agent to use."},
                                 "goal": {"type": "string", "description": "The goal to achieve."},
                             },
-                            "required": ["agent", "goal"],
+                            "required": ["endpoint", "goal"],
                         },
                         "output": {
                             "type": "object",
@@ -66,12 +63,12 @@ class BaseAgent:
                             },
                         },
                     },
-                }
-            ),
-            ToolModel(
-                name="return-answer-tool",
-                version="0.0.1",
-                openai_function_spec={
+                },
+            },
+            {
+                "name": "return-answer-tool",
+                "version": "0.0.1",
+                "openai_function_spec": {
                     "type": "function",
                     "function": {
                         "name": "return_answer_tool",
@@ -98,27 +95,24 @@ class BaseAgent:
                         },
                     },
                 },
-            ),
+            },
         ]
 
-    def generate_plan(
-        self, goal: str, agents: Sequence[AgentModel], tools: Sequence[ToolModel], plan: dict | None = None
-    ):
+    def generate_plan(self, goal: str, agents: str, tools: str):
         """This method is used to generate a plan for the given goal."""
-        prompt = self.prompt_builder.generate_plan_prompt(
-            final_answer_tool_name=self.config.final_answer_tool_name,
-            # handoff_tool_name=self.config.handoff_tool_name
-        )
+        prompt = self.prompt_builder.generate_plan_prompt()
 
         return self.agent_executor.generate_plan(
             prompt,
             available_functions=tools,
             available_agents=agents,
+            final_answer_tool_name=self.config.final_answer_tool_name,
+            handoff_tool_name=self.config.handoff_tool_name,
             goal=goal,
         )
 
-    def run_workflow(self, plan: dict[int, Task]):
-        return self.dag_runner.run(plan)
+    def run_workflow(self, plan: dict):
+        return DAGRunner(plan).run()
 
     def reconfigure(self, config: dict[str, Any]):
         pass
