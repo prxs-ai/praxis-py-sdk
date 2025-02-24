@@ -8,18 +8,18 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "ray[serve] (>=2.42.1,<3.0.0)",
     "fastapi (>=0.115.8,<0.116.0)",
+    "pydantic-settings (>=2.7.1,<3.0.0)",
 ]
-
 
 [tool.poetry]
 packages = [{include = "*", from="src"}]
 
 [project.entry-points."agent.entrypoint"]
-basic = "agent.ray_entrypoint:app"
+basic = "agent.ray_entrypoint:agent_builder"
 
 [tool.poetry.group.dev.dependencies]
+ray = {extras = ["serve"], version = "^2.42.1"}
 pytest = "^8.3.4"
 
 [build-system]
