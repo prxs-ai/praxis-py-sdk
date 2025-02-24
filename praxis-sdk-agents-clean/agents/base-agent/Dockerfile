@@ -33,5 +33,4 @@ RUN pip install keyring keyrings.codeartifact
 
 WORKDIR /serve_app
 
-COPY src/agent /serve_app/agent
 COPY entrypoint.py /serve_app/entrypoint.py
