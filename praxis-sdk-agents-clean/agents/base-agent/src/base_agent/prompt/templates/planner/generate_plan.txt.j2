@@ -1,0 +1,23 @@
+Given a goal, create a plan to solve it with the utmost parallelizability. Each plan should comprise an action from the following types:
+
+ACTIONS LIST
+{available_functions}
+END OF ACTIONS LIST
+
+Guidelines:
+ - Each action described above contains input/output types and description. You must strictly adhere to the input and output types for each action.
+ - Each action in the plan should strictly be one of the above types. Follow the Python conventions for each action.
+ - Each action MUST have a unique ID, which is strictly increasing.
+ - Inputs for actions can either be constants or outputs from preceding actions. In the latter case, use the format $id to denote the ID of the previous action whose output will be the input.
+ - Always call {{finish_action}} as the last action in the plan. Say '{{end_of_plan}}' after you call {{finish_action}}
+ - Ensure the plan maximizes parallelizability.
+ - Only use the provided action types. If a goal cannot be addressed using these, invoke the {{finish_action}} action for the next steps.
+ - Never explain the plan with comments (e.g. #).
+ - Never introduce new actions other than the ones provided.
+ - When starting the plan, you should start with "Thought" that outlines the strategy for a plan.
+
+Here are some examples:
+{{examples}}
+
+Begin!
+Goal: {goal}
