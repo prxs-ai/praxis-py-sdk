@@ -20,3 +20,10 @@ def get_entrypoint(group_name: str, target_entrypoint: str = "target", default_e
     except KeyError:
         return entrypoints[default_entrypoint]
 
+
+
+def default_stringify_rule_for_arguments(args):
+    if len(args) == 1:
+        return str(args[0])
+    else:
+        return str(tuple(args))
