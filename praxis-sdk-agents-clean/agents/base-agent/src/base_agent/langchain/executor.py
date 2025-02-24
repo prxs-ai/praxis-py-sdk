@@ -1,3 +1,6 @@
+from typing import Sequence
+from base_agent.models import AgentModel, ToolModel
+from base_agent.prompt.parser import AgentOutputPlanParser
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
@@ -25,6 +28,14 @@ class LangChainExecutor:
         )
 
     def generate_plan(self, prompt: PromptTemplate, **kwargs):
-        chain = prompt | ChatOpenAI(callbacks=self._callbacks) | StrOutputParser()
+        agent = ChatOpenAI(callbacks=self._callbacks)
+        output_parser = StrOutputParser()
+        if 'available_functions' in kwargs:
+            agent.bind_tools(tools=[tool.openai_function_spec for tool in kwargs['available_functions']])
+            output_parser = AgentOutputPlanParser(tools=kwargs['available_functions'])
+
+        kwargs['available_functions'] = "\n".join([tool.render_openai_function_spec() for tool in kwargs['available_functions']])
+
+        chain = prompt | agent | output_parser
 
         return chain.invoke(input=kwargs)
