@@ -26,7 +26,8 @@ RUN pip install --no-cache-dir -r ./requirements.txt && \
     rm ./requirements.txt
 
 # Clean the environment variables
-ENV PIP_EXTRA_INDEX_URL=
+ENV PIP_INDEX_URL=https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple/
+ENV PIP_EXTRA_INDEX_URL=https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/agents/simple/ https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/tools/simple/
 
 # Install keyring and keyrings.codeartifact
 RUN pip install keyring keyrings.codeartifact
