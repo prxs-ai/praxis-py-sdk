@@ -17,7 +17,7 @@ def get_entrypoint(group_name: str, target_entrypoint: str = "target", default_e
     entrypoints = get_entry_points(group_name)
     try:
         return entrypoints.select(name=target_entrypoint)[0]
-    except KeyError:
+    except (KeyError, IndexError):
         return entrypoints.select(name=default_entrypoint)[0]
 
 
