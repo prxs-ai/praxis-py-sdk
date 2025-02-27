@@ -1,5 +1,5 @@
 ## Description
-This is a simple pypi package that retweet post in Twitter
+This is a simple pypi package that likes post in Twitter
 
 ## Input
     token: str,
@@ -8,4 +8,4 @@ This is a simple pypi package that retweet post in Twitter
 
 ## Output
     response: dict
-Post retweeted in Twitter
+Post liked in Twitter
