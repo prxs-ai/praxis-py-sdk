@@ -36,15 +36,14 @@ class DAGRunner:
     def _initialize_workflow_storage(self):
         """Initialize workflow storage for Ray Workflows"""
         # Check if workflow storage is already initialized
-        if not workflow.is_storage_enabled():
-            # Default to a local storage path if not specified in config
-            storage_path = getattr(self.config, "workflow_storage_path", "/tmp/ray/workflow_data")
-            
-            # Ensure directory exists
-            os.makedirs(storage_path, exist_ok=True)
-            
-            # Initialize workflow storage
-            workflow.init(storage=storage_path)
+        # Default to a local storage path if not specified in config
+        storage_path = getattr(self.config, "workflow_storage_path", "/tmp/ray/workflow_data")
+        
+        # Ensure directory exists
+        os.makedirs(storage_path, exist_ok=True)
+        
+        # Initialize workflow storage
+        workflow.init(storage=storage_path)
 
     def create_step(self, task: Task):
         """Creates a remote function for a step"""
