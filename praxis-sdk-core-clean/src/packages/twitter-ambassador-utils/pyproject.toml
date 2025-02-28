@@ -1,7 +1,7 @@
 [project]
-name = "twitter-ambassador-create-post"
+name = "twitter-ambassador-utils"
 version = "0.0.1"
-description = "Package that creating twitter post"
+description = "Package that consists utils for Twitter Ambassador"
 authors = [
     {name = "0xDevZip",email = "noreply@example.com"}
 ]
