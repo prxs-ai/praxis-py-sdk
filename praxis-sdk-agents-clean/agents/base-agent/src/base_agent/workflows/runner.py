@@ -3,6 +3,7 @@ from typing import Any
 
 import ray
 from ray import workflow
+from ray.runtime_env import RuntimeEnv
 
 from base_agent.config import BasicAgentConfig, get_agent_config
 from base_agent.models import Task
@@ -15,6 +16,13 @@ def generate_request_id() -> str:
     return uuid.uuid4().hex
 
 
+def get_tool_entrypoint(group_name: str, tool_name: str):
+    entry_points = get_entry_points(group_name)
+    try:
+        return entry_points[tool_name].load()
+    except KeyError as exc:
+        raise ValueError(f"Tool {tool_name} not found in entry points") from exc
+
 class DAGRunner:
     def __init__(self, config: BasicAgentConfig):
         self.config = config
@@ -22,14 +30,13 @@ class DAGRunner:
 
     def create_step(self, task: Task):
         """Creates a remote function for a step"""
-        return self._get_tool_entrypoint(task.tool.name)
 
-    def _get_tool_entrypoint(self, tool_name: str):
-        entry_points = get_entry_points(self.config.tool_group_name)
-        try:
-            return entry_points[tool_name].load()
-        except KeyError as exc:
-            raise ValueError(f"Tool {tool_name} not found in entry points") from exc
+        @ray.remote(runtime_env=RuntimeEnv(pip=[f"{task.tool.name}=={task.tool.version}"]))
+        def get_tool_entrypoint_wrapper():
+            return get_tool_entrypoint(self.config.group_name, task.tool.name)
+
+        return get_tool_entrypoint_wrapper()
+
 
     def run(self, dag_spec: dict[int, Task]) -> Any:
         """Runs the DAG using Ray Workflows"""
