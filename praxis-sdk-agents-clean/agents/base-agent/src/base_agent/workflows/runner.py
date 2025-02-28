@@ -32,10 +32,10 @@ class DAGRunner:
         """Creates a remote function for a step"""
 
         @ray.remote(runtime_env=RuntimeEnv(pip=[f"{task.tool.name}=={task.tool.version}"]))
-        def get_tool_entrypoint_wrapper():
-            return get_tool_entrypoint(self.config.group_name, task.tool.name)
+        def get_tool_entrypoint_wrapper(*args, **kwargs):
+            return get_tool_entrypoint(self.config.group_name, task.tool.name)(*args, **kwargs)
 
-        return get_tool_entrypoint_wrapper()
+        return get_tool_entrypoint_wrapper
 
 
     def run(self, dag_spec: dict[int, Task]) -> Any:
