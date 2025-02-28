@@ -17,14 +17,6 @@ def generate_request_id() -> str:
     return uuid.uuid4().hex
 
 
-def get_tool_entrypoint(group_name: str, tool_name: str):
-    entry_points = get_entry_points(group_name)
-    try:
-        return entry_points[tool_name].load()
-    except KeyError as exc:
-        raise ValueError(f"Tool {tool_name} not found in entry points") from exc
-
-
 class DAGRunner:
     def __init__(self, config: BasicAgentConfig):
         self.config = config
@@ -35,7 +27,13 @@ class DAGRunner:
 
         @ray.remote(runtime_env=RuntimeEnv(pip=[f"{task.tool.name}=={task.tool.version}"]))
         def get_tool_entrypoint_wrapper(*args, **kwargs):
-            return get_tool_entrypoint(self.config.group_name, task.tool.name)(*args, **kwargs)
+            entry_points = get_entry_points(self.config.tool_group_name)
+            try:
+                tool = entry_points[tool_name].load()
+            except KeyError as exc:
+                raise ValueError(f"Tool {tool_name} not found in entry points") from exc
+
+            return workflow.continuation(tool.bind(*args, **kwargs))
 
         return get_tool_entrypoint_wrapper
 
