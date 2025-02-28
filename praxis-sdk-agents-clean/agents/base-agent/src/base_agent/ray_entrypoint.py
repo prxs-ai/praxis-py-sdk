@@ -45,7 +45,7 @@ class BaseAgent:
         return [
             ToolModel(
                 name="handoff-tool",
-                version="0.0.1",
+                version="0.1.0",
                 openai_function_spec={
                     "type": "function",
                     "function": {
@@ -70,7 +70,7 @@ class BaseAgent:
             ),
             ToolModel(
                 name="return-answer-tool",
-                version="0.0.1",
+                version="0.1.0",
                 openai_function_spec={
                     "type": "function",
                     "function": {
