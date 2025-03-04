@@ -128,7 +128,7 @@ class BaseAgent:
             ),
             ToolModel(
                 name="return-answer-tool",
-                version="0.1.0",
+                version="0.1.1",
                 openai_function_spec={
                     "type": "function",
                     "function": {
