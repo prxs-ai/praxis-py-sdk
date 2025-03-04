@@ -1,5 +1,8 @@
+import ray
 from base_agent.config import get_agent_config
 from base_agent.utils import get_entrypoint
+
+ray.init(storage="/tmp/ray")
 
 app = get_entrypoint(get_agent_config().group_name).load()
 

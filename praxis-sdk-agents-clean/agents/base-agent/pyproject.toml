@@ -27,6 +27,7 @@ basic = "base_agent.ray_entrypoint:agent_builder"
 [tool.poetry.group.dev.dependencies]
 ray = { extras = ["serve"], version = "^2.42.1" }
 pytest = "^8.3.4"
+pyarrow = "^19.0.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

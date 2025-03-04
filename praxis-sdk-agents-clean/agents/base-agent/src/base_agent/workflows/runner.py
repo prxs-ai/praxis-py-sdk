@@ -29,9 +29,9 @@ class DAGRunner:
         def get_tool_entrypoint_wrapper(*args, **kwargs):
             entry_points = get_entry_points(self.config.tool_group_name)
             try:
-                tool = entry_points[tool_name].load()
+                tool = entry_points[task.tool.name].load()
             except KeyError as exc:
-                raise ValueError(f"Tool {tool_name} not found in entry points") from exc
+                raise ValueError(f"Tool {task.tool.name} not found in entry points") from exc
 
             return workflow.continuation(tool.bind(*args, **kwargs))
 
