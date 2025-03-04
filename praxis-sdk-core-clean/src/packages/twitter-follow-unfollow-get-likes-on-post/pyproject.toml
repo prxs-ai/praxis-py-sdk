@@ -1,0 +1,18 @@
+[project]
+name = "get_likes_from_tweet"
+version = "0.0.1"
+description = "This is package for getting likes from tweet"
+authors = [
+     {name = "hexavor",email = "bychynski.valiantsin@gmail.com"}
+]
+requires-python = ">=3.11,<4.0"
+dependencies = []
+readme = "README.md"
+
+[tool.poetry]
+packages = [{include = "*", from="src"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
