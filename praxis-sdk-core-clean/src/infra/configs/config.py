@@ -83,23 +83,26 @@ class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
     telegram_config: TelegramAppSetupServiceConfig = TelegramAppSetupServiceConfig()
     ambassador_username: str = "testandoo6"
-    CREATE_POST_INTERVAL: int = 4 * 60 * 60
-    GORILLA_MARKETING_INTERVAL: int = 4 * 60 * 60
-    COMMENT_AGIX_INTERVAL: int = 60 * 60
-    ANSWER_DIRECT_INTERVAL: int = 10 * 60
-    ANSWER_COMMENT_INTERVAL: int = 2 * 60 * 60
-    ANSWER_MY_COMMENT_INTERVAL: int = 30 * 60
+    CREATE_POST_INTERVAL: int = 60 * 60 * 4
+    GORILLA_MARKETING_INTERVAL: int = 60 * 60 * 4
+    COMMENT_AGIX_INTERVAL: int = 60 * 60 * 4
+    ANSWER_DIRECT_INTERVAL: int = 60 * 60 * 4
+    ANSWER_COMMENT_INTERVAL: int = 60 * 60 * 4
+    ANSWER_MY_COMMENT_INTERVAL: int = 60 * 4
     LIKES_INTERVAL: int = 6 * 60 * 60
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
     TWITTER_CLIENT_ID: str = 'eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ'
     TWITTER_CLIENT_SECRET: str = 'TeK9tRPPirYbpGhiyb_yaOMYJA7ijvCQaU6O5vu5VioA8knBAA'
     TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
+
     TWITTER_REDIRECT_URI: str = 'http://185.53.46.123:8000/twitter/oauth/callback/'
     OPENAI_API_KEY: str = '***REMOVED***'
     OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
     LOGS_DIR: str = "../logs"
     TWEETSCOUT_API_KEY: str = "***REMOVED***"
     ANTHROPIC_API_KEY: str = '***REMOVED***'
+    TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
+    TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
 
     HEYGEN_API_KEY: str = "***REMOVED***"
 
@@ -122,6 +125,15 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expires_in: int = 1440
 
+    # Creativity
+    creativity_api_id: str = Field(validation_alias="CREATIVITY_API_ID")
+    creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
+    creativity_base_url: str = "https://api.creatify.ai/api"
+
+    confluent_api_key: str
+    confluent_api_secret: str
+    confluent_bootstrap_server: str
+    confluent_rest_endpoint: str
 
 @lru_cache
 def get_settings() -> Settings:
