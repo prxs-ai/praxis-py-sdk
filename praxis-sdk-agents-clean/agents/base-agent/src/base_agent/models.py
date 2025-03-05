@@ -1,8 +1,8 @@
 from collections.abc import Collection
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from base_agent.utils import default_stringify_rule_for_arguments
 
@@ -30,6 +30,10 @@ class AgentModel(BaseModel):
     version: str
 
 
+class GoalModel(BaseModel):
+    goal: str = Field(..., description="Goal to reach")
+
+
 @dataclass
 class Task:
     idx: int
@@ -54,32 +58,22 @@ class Task:
         if include_action:
             idx = f"{self.idx}. " if include_action_idx else ""
 
-            thought_action_observation += (
-                f"{idx}{self.name}"
-                f"{default_stringify_rule_for_arguments(self.args)}\n"
-            )
+            thought_action_observation += f"{idx}{self.name}{default_stringify_rule_for_arguments(self.args)}\n"
         if self.observation is not None:
             thought_action_observation += f"Observation: {self.observation}\n"
         return thought_action_observation
 
     @staticmethod
-    def _replace_arg_mask_with_real_value(
-        args, dependencies: list[int], tasks: dict[str, 'Task']
-    ):
+    def _replace_arg_mask_with_real_value(args, dependencies: list[int], tasks: dict[str, "Task"]):
         if isinstance(args, (list, tuple)):
-            return type(args)(
-                Task._replace_arg_mask_with_real_value(item, dependencies, tasks)
-                for item in args
-            )
+            return type(args)(Task._replace_arg_mask_with_real_value(item, dependencies, tasks) for item in args)
         elif isinstance(args, str):
             for dependency in sorted(dependencies, reverse=True):
                 # consider both ${1} and $1 (in case planner makes a mistake)
                 for arg_mask in ["${" + str(dependency) + "}", "$" + str(dependency)]:
                     if arg_mask in args:
                         if tasks[dependency].observation is not None:
-                            args = args.replace(
-                                arg_mask, str(tasks[dependency].observation)
-                            )
+                            args = args.replace(arg_mask, str(tasks[dependency].observation))
             return args
         else:
             return args
