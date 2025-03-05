@@ -6,10 +6,11 @@ from urllib.parse import urljoin
 import requests
 from fastapi import FastAPI
 
+from base_agent.ai_registry import ai_registry_client
 from base_agent.config import get_agent_config
 from base_agent.langchain import agent_executor
 from base_agent.langchain.executor import LangChainExecutor
-from base_agent.models import AgentModel, Task, ToolModel
+from base_agent.models import AgentModel, GoalModel, Task, ToolModel
 from base_agent.prompt import prompt_builder
 from base_agent.prompt.builder import PromptBuilder
 from base_agent.workflows.runner import dag_runner
@@ -25,6 +26,9 @@ class BaseAgent:
         self.agent_executor = agent_executor()
         self.prompt_builder = prompt_builder()
 
+        # ---------- AI Registry ----------#
+        self.ai_registry_client = ai_registry_client()
+
     def handle(self, goal: str, plan: dict | None = None):
         """This is one of the most important endpoint of MAS.
         It handles all requests made by handoff from other agents or by user."""
@@ -38,10 +42,22 @@ class BaseAgent:
 
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
         """This method is used to find the most useful agents for the given goal."""
-        return []
+        response = self.ai_registry_client.post(
+            endpoint=self.ai_registry_client.endpoints.find_agents,
+            json=GoalModel(goal=goal).model_dump(),
+        )
+
+        if not response:
+            return []
+
+        return [AgentModel(**agent) for agent in response]
 
     def get_most_relevant_tools(self, goal: str) -> list[ToolModel]:
-        """This method is used to find the most useful tools for the given goal."""
+        """
+        This method is used to find the most useful tools for the given goal.
+
+        Example:
+
         return [
             ToolModel(
                 name="handoff-tool",
@@ -100,6 +116,16 @@ class BaseAgent:
                 },
             ),
         ]
+        """
+        response = self.ai_registry_client.post(
+            endpoint=self.ai_registry_client.endpoints.find_tools,
+            json=GoalModel(goal=goal).model_dump(),
+        )
+
+        if not response:
+            return []
+
+        return [ToolModel(**tool) for tool in response]
 
     def generate_plan(
         self, goal: str, agents: Sequence[AgentModel], tools: Sequence[ToolModel], plan: dict | None = None
