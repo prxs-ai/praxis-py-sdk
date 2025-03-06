@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 from aiohttp import ClientResponse, ClientSession
 from aiohttp.client import _BaseRequestContextManager, _RequestOptions
 
+from services.shared.clients.exceptions import APIError
+
 
 def _factory[**P, R](verb: str, _: Callable[P, R]) -> Callable[P, R]:
     @partialmethod
@@ -28,7 +30,8 @@ class ResponseWrapper[R: ClientResponse]:
         self,
     ) -> ClientResponse:
         self._resp: R = await self._coro
-        self._resp.raise_for_status()
+        if not self._resp.ok:
+            raise APIError(self._resp.status, repr(await self._resp.read()))
         return await self._resp.__aenter__()
 
     async def __aexit__(
