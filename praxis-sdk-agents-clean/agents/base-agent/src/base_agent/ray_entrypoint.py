@@ -8,9 +8,10 @@ from fastapi import FastAPI
 
 from base_agent.ai_registry import ai_registry_client
 from base_agent.config import get_agent_config
+from base_agent.domain_knowledge import light_rag_client
 from base_agent.langchain import agent_executor
 from base_agent.langchain.executor import LangChainExecutor
-from base_agent.models import AgentModel, GoalModel, Task, ToolModel
+from base_agent.models import AgentModel, GoalModel, InsightModel, QueryData, Task, ToolModel
 from base_agent.prompt import prompt_builder
 from base_agent.prompt.builder import PromptBuilder
 from base_agent.workflows.runner import dag_runner
@@ -29,22 +30,40 @@ class BaseAgent:
         # ---------- AI Registry ----------#
         self.ai_registry_client = ai_registry_client()
 
+        # ---------- LightRAG Memory -------#
+        self.lightrag_client = light_rag_client()
+
     def handle(self, goal: str, plan: dict | None = None):
         """This is one of the most important endpoint of MAS.
         It handles all requests made by handoff from other agents or by user."""
 
+        insights = self.get_relevant_insights(goal)
+
         agents = self.get_most_relevant_agents(goal)
         tools = self.get_most_relevant_tools(goal)
 
-        plan = self.generate_plan(goal, agents, tools, plan)
+        plan = self.generate_plan(goal, agents, tools, plan, insights)
 
         return self.run_workflow(plan)
+
+    def get_relevant_insights(self, goal: str) -> list[str]:
+        """Retrieve relevant insights from LightRAG memory for the given goal."""
+
+        response = self.lightrag_client.post(
+            endpoint=self.lightrag_client.endpoints.query,
+            json=QueryData(query=goal).model_dump(),
+        )
+
+        if not response:
+            return []
+
+        return [InsightModel(**insight) for insight in response]
 
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
         """This method is used to find the most useful agents for the given goal."""
         response = self.ai_registry_client.post(
             endpoint=self.ai_registry_client.endpoints.find_agents,
-            json=GoalModel(goal=goal).model_dump(),
+            json=QueryData(goal=goal).model_dump(),
         )
 
         if not response:
@@ -128,7 +147,12 @@ class BaseAgent:
         return [ToolModel(**tool) for tool in response]
 
     def generate_plan(
-        self, goal: str, agents: Sequence[AgentModel], tools: Sequence[ToolModel], plan: dict | None = None
+        self,
+        goal: str,
+        agents: Sequence[AgentModel],
+        tools: Sequence[ToolModel],
+        insights: Sequence[InsightModel],
+        plan: dict | None = None,
     ):
         """This method is used to generate a plan for the given goal."""
         prompt = self.prompt_builder.generate_plan_prompt(

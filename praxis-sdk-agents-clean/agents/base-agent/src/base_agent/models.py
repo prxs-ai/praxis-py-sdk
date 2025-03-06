@@ -1,6 +1,6 @@
 from collections.abc import Collection
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -32,6 +32,27 @@ class AgentModel(BaseModel):
 
 class GoalModel(BaseModel):
     goal: str = Field(..., description="Goal to reach")
+
+
+class QueryData(BaseModel):
+    query: str = Field(..., description="Query to search for")
+    mode: Literal["local", "global", "hybrid", "naive", "mix"] = Field(
+        default="global",
+        description="Specifies the retrieval mode:\n"
+        "- 'local': Focuses on context-dependent information.\n"
+        "- 'global': Utilizes global knowledge.\n"
+        "- 'hybrid': Combines local and global retrieval methods.\n"
+        "- 'naive': Performs a basic search without advanced techniques.\n"
+        "- 'mix': Integrates knowledge graph and vector retrieval."
+        "  - Uses both structured (KG) and unstructured (vector) information\n"
+        "  - Provides comprehensive answers by analyzing relationships and context\n"
+        "  - Supports image content through HTML img tags\n"
+        "  - Allows control over retrieval depth via top_k parameter",
+    )
+
+
+class InsightModel(BaseModel):
+    domain_knowledge: str = Field(..., description="Insight from the private domain knowledge")
 
 
 @dataclass
