@@ -18,8 +18,24 @@ dependencies = [
 [tool.poetry]
 packages = [{ include = "*", from = "src" }]
 
+
+[project.entry-points."agent.executor.config"]
+basic = "base_agent.langchain.config:get_langchain_config"
+
+[project.entry-points."agent.executor.entrypoint"]
+basic = "base_agent.langchain.executor:agent_executor"
+
+[project.entry-points."agent.prompt.config"]
+basic = "base_agent.prompt.config:get_prompt_config"
+
 [project.entry-points."agent.prompt.entrypoint"]
 basic = "base_agent.prompt:prompt_builder"
+
+[project.entry-points."agent.workflow.config"]
+basic = "base_agent.workflows.config:get_workflow_config"
+
+[project.entry-points."agent.workflow.entrypoint"]
+basic = "base_agent.workflows.runner:dag_runner"
 
 [project.entry-points."agent.entrypoint"]
 basic = "base_agent.ray_entrypoint:agent_builder"

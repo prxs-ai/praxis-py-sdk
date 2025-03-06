@@ -1,11 +1,15 @@
 from functools import lru_cache
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 
-from base_agent.langfuse.config import BasicLangFuseConfig
+from base_agent.langchain.langfuse.config import BasicLangFuseConfig
 
 
 class BasicLangChainConfig(BaseSettings):
+    openai_api_key: SecretStr
+    openai_api_model: str = "gpt-4o"
+
     langfuse_enabled: bool = False
 
 class LangChainConfigWithLangfuse(BasicLangChainConfig, BasicLangFuseConfig):
