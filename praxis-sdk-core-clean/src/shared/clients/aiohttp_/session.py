@@ -18,7 +18,7 @@ def _factory[**P, R](verb: str, _: Callable[P, R]) -> Callable[P, R]:
     return method  # type: ignore
 
 
-class ResponseWrapper[R: ClientResponse](Coroutine[Any, Any, R]):
+class ResponseWrapper[R: ClientResponse]:
     __slots__ = "_coro", "_resp"
 
     def __init__(self, coro: Coroutine[Any, None, R]) -> None:
