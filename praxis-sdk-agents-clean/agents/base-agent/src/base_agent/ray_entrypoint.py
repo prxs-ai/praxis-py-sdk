@@ -11,7 +11,8 @@ from base_agent.config import get_agent_config
 from base_agent.domain_knowledge import light_rag_client
 from base_agent.langchain import agent_executor
 from base_agent.langchain.executor import LangChainExecutor
-from base_agent.models import AgentModel, GoalModel, InsightModel, QueryData, Task, ToolModel
+from base_agent.memory import memory_client
+from base_agent.models import AgentModel, GoalModel, InsightModel, MemoryModel, QueryData, Task, ToolModel
 from base_agent.prompt import prompt_builder
 from base_agent.prompt.builder import PromptBuilder
 from base_agent.workflows.runner import dag_runner
@@ -33,18 +34,40 @@ class BaseAgent:
         # ---------- LightRAG Memory -------#
         self.lightrag_client = light_rag_client()
 
+        # ---------- Redis Memory ----------#
+        self.memory_client = memory_client()
+
     def handle(self, goal: str, plan: dict | None = None):
         """This is one of the most important endpoint of MAS.
         It handles all requests made by handoff from other agents or by user."""
 
         insights = self.get_relevant_insights(goal)
 
+        past_interactions = self.get_past_interactions(goal)
+
         agents = self.get_most_relevant_agents(goal)
         tools = self.get_most_relevant_tools(goal)
 
-        plan = self.generate_plan(goal, agents, tools, plan, insights)
+        plan = self.generate_plan(goal, agents, tools, insights, past_interactions, plan)
 
-        return self.run_workflow(plan)
+        result = self.run_workflow(plan)
+
+        self.store_interaction(goal, plan, result)
+
+        return result
+
+    def get_past_interactions(self, goal: str) -> list[dict]:
+        return self.memory_client.read(key=goal)
+
+    def store_interaction(self, goal: str, plan: dict, result: Any) -> None:
+        interaction = MemoryModel(
+            **{
+                "goal": goal,
+                "plan": plan,
+                "result": result,
+            }
+        )
+        self.memory_client.store(key=goal, interaction=interaction.model_dump())
 
     def get_relevant_insights(self, goal: str) -> list[str]:
         """Retrieve relevant insights from LightRAG memory for the given goal."""
@@ -151,6 +174,7 @@ class BaseAgent:
         goal: str,
         agents: Sequence[AgentModel],
         tools: Sequence[ToolModel],
+        past_interactions: Sequence[MemoryModel],
         insights: Sequence[InsightModel],
         plan: dict | None = None,
     ):
@@ -165,6 +189,9 @@ class BaseAgent:
             available_functions=tools,
             available_agents=agents,
             goal=goal,
+            past_interactions=past_interactions,
+            insights=insights,
+            plan=plan,
         )
 
     def run_workflow(self, plan: dict[int, Task]):

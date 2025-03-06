@@ -24,6 +24,12 @@ class ToolModel(BaseModel):
 """
 
 
+class MemoryModel(BaseModel):
+    goal: str
+    plan: dict
+    result: str
+
+
 class AgentModel(BaseModel):
     name: str
     description: str
