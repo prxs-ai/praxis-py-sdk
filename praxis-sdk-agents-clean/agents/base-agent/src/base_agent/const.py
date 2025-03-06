@@ -3,6 +3,7 @@ from enum import Enum
 
 class EntrypointGroup(str, Enum):
     AGENT_ENTRYPOINT = "agent.entrypoint"
+    TOOL_ENTRYPOINT = "tool.entrypoint"
 
     AGENT_PROMPT_CONFIG_ENTRYPOINT = "agent.prompt.config"
     AGENT_PROMPT_ENTRYPOINT = "agent.prompt.entrypoint"

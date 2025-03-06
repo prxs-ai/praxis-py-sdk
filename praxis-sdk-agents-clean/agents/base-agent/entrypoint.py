@@ -10,15 +10,15 @@ if __name__ == "__main__":
     from ray import serve
 
     # Run Ray Serve in local testing mode
-    handle = serve.run(app,
+    handle = serve.run(app({}),
                       route_prefix='/',
                       _local_testing_mode=True)
 
     fastapi_app = FastAPI()
 
     @fastapi_app.post("/{goal}")
-    async def handle_request(goal: str):
-        return await handle.handle.remote(goal)
+    async def handle_request(goal: str, plan: dict | None = None):
+        return await handle.handle.remote(goal, plan)
 
     # Run uvicorn server
     uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)

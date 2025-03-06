@@ -11,7 +11,7 @@ from base_agent.utils import get_entrypoint
 def determine_template_path() -> str:
     # always exists
     candidate = get_entrypoint(EntrypointGroup.AGENT_ENTRYPOINT)
-    pkg_path, _ = candidate.name.split(":", 1)
+    pkg_path, _ = candidate.value.split(":", 1)
 
     # the templates should be in the root of the package
     return pkg_path.split(".")[0]

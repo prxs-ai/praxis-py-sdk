@@ -1,6 +1,7 @@
 import uuid
 from typing import Any
 
+from base_agent.const import EntrypointGroup
 import ray
 from ray import workflow
 from ray.runtime_env import RuntimeEnv
@@ -26,7 +27,7 @@ class DAGRunner:
 
         @ray.remote(runtime_env=RuntimeEnv(pip=[f"{task.tool.name}=={task.tool.version}"]))
         def get_tool_entrypoint_wrapper(*args, **kwargs):
-            entry_points = get_entry_points(self.config.tool_group_name)
+            entry_points = get_entry_points(EntrypointGroup.TOOL_ENTRYPOINT)
             try:
                 tool = entry_points[task.tool.name].load()
             except KeyError as exc:
