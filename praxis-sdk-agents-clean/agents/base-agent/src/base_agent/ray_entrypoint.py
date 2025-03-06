@@ -1,105 +1,46 @@
 from collections.abc import Sequence
-from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import urljoin
 
 import requests
-from fastapi import FastAPI
 
-from base_agent.ai_registry import ai_registry_client
+from base_agent import abc
+from base_agent.bootstrap import bootstrap_main
 from base_agent.config import get_agent_config
-from base_agent.domain_knowledge import light_rag_client
-from base_agent.langchain import agent_executor
-from base_agent.langchain.executor import LangChainExecutor
-from base_agent.memory import memory_client
-from base_agent.models import AgentModel, GoalModel, InsightModel, MemoryModel, QueryData, Task, ToolModel
+from base_agent.langchain import executor_builder
+from base_agent.models import AgentModel, Task, ToolModel
 from base_agent.prompt import prompt_builder
-from base_agent.prompt.builder import PromptBuilder
 from base_agent.workflows.runner import dag_runner
 
 
-class BaseAgent:
-    prompt_builder: PromptBuilder
-    agent_executor: LangChainExecutor
+class BaseAgent(abc.AbstractAgent):
+    """Base default implementation for all agents."""
+
+    prompt_builder: abc.AbstractPromptBuilder
+    agent_executor: abc.AbstractExecutor
 
     def __init__(self, *args, **kwargs):
-        self.config = get_agent_config()
         self.dag_runner = dag_runner()
-        self.agent_executor = agent_executor()
+        self.agent_executor = executor_builder()
         self.prompt_builder = prompt_builder()
-
-        # ---------- AI Registry ----------#
-        self.ai_registry_client = ai_registry_client()
-
-        # ---------- LightRAG Memory -------#
-        self.lightrag_client = light_rag_client()
-
-        # ---------- Redis Memory ----------#
-        self.memory_client = memory_client()
 
     def handle(self, goal: str, plan: dict | None = None):
         """This is one of the most important endpoint of MAS.
         It handles all requests made by handoff from other agents or by user."""
 
-        insights = self.get_relevant_insights(goal)
-
-        past_interactions = self.get_past_interactions(goal)
-
         agents = self.get_most_relevant_agents(goal)
         tools = self.get_most_relevant_tools(goal)
 
-        plan = self.generate_plan(goal, agents, tools, insights, past_interactions, plan)
+        plan = self.generate_plan(goal, agents, tools, plan)
 
-        result = self.run_workflow(plan)
-
-        self.store_interaction(goal, plan, result)
-
-        return result
-
-    def get_past_interactions(self, goal: str) -> list[dict]:
-        return self.memory_client.read(key=goal)
-
-    def store_interaction(self, goal: str, plan: dict, result: Any) -> None:
-        interaction = MemoryModel(
-            **{
-                "goal": goal,
-                "plan": plan,
-                "result": result,
-            }
-        )
-        self.memory_client.store(key=goal, interaction=interaction.model_dump())
-
-    def get_relevant_insights(self, goal: str) -> list[str]:
-        """Retrieve relevant insights from LightRAG memory for the given goal."""
-
-        response = self.lightrag_client.post(
-            endpoint=self.lightrag_client.endpoints.query,
-            json=QueryData(query=goal).model_dump(),
-        )
-
-        if not response:
-            return []
-
-        return [InsightModel(**insight) for insight in response]
+        return self.run_workflow(plan)
 
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
         """This method is used to find the most useful agents for the given goal."""
-        response = self.ai_registry_client.post(
-            endpoint=self.ai_registry_client.endpoints.find_agents,
-            json=QueryData(goal=goal).model_dump(),
-        )
-
-        if not response:
-            return []
-
-        return [AgentModel(**agent) for agent in response]
+        return []
 
     def get_most_relevant_tools(self, goal: str) -> list[ToolModel]:
-        """
-        This method is used to find the most useful tools for the given goal.
-
-        Example:
-
+        """This method is used to find the most useful tools for the given goal."""
         return [
             ToolModel(
                 name="handoff-tool",
@@ -124,7 +65,7 @@ class BaseAgent:
                             },
                         },
                     },
-                }
+                },
             ),
             ToolModel(
                 name="return-answer-tool",
@@ -158,25 +99,9 @@ class BaseAgent:
                 },
             ),
         ]
-        """
-        response = self.ai_registry_client.post(
-            endpoint=self.ai_registry_client.endpoints.find_tools,
-            json=GoalModel(goal=goal).model_dump(),
-        )
-
-        if not response:
-            return []
-
-        return [ToolModel(**tool) for tool in response]
 
     def generate_plan(
-        self,
-        goal: str,
-        agents: Sequence[AgentModel],
-        tools: Sequence[ToolModel],
-        past_interactions: Sequence[MemoryModel],
-        insights: Sequence[InsightModel],
-        plan: dict | None = None,
+        self, goal: str, agents: Sequence[AgentModel], tools: Sequence[ToolModel], plan: dict | None = None
     ):
         """This method is used to generate a plan for the given goal."""
         prompt = self.prompt_builder.generate_plan_prompt(
@@ -189,9 +114,6 @@ class BaseAgent:
             available_functions=tools,
             available_agents=agents,
             goal=goal,
-            past_interactions=past_interactions,
-            insights=insights,
-            plan=plan,
         )
 
     def run_workflow(self, plan: dict[int, Task]):
@@ -207,21 +129,4 @@ class BaseAgent:
 
 
 def agent_builder(args: dict):
-    from ray import serve
-
-    @asynccontextmanager
-    async def lifespan(app: FastAPI):
-        # launch some tasks on app start
-        yield
-        # handle clean up
-
-    app = FastAPI(lifespan=lifespan)
-
-    @serve.deployment
-    @serve.ingress(app)
-    class Agent(BaseAgent):
-        @app.post("/{goal}")
-        async def handle(self, goal: str, plan: dict | None = None):
-            return super().handle(goal, plan)
-
-    return Agent.bind(**args)
+    return bootstrap_main(BaseAgent).bind(config=get_agent_config(**args))

@@ -1,10 +1,7 @@
-import ray
-from base_agent.config import get_agent_config
+from base_agent.const import EntrypointGroup
 from base_agent.utils import get_entrypoint
 
-ray.init(storage="/tmp/ray")
-
-app = get_entrypoint(get_agent_config().group_name).load()
+app = get_entrypoint(EntrypointGroup.AGENT_ENTRYPOINT).load()
 
 
 if __name__ == "__main__":
@@ -13,7 +10,7 @@ if __name__ == "__main__":
     from ray import serve
 
     # Run Ray Serve in local testing mode
-    handle = serve.run(app(get_agent_config().model_dump()),
+    handle = serve.run(app,
                       route_prefix='/',
                       _local_testing_mode=True)
 

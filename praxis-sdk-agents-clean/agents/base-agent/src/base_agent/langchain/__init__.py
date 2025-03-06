@@ -1,6 +1,8 @@
-from base_agent.langchain.config import get_langchain_config
-from base_agent.langchain.executor import LangChainExecutor
+from base_agent.const import EntrypointGroup
+from base_agent.utils import get_entrypoint
 
 
-def agent_executor(*args, **kwargs):
-    return LangChainExecutor(config=get_langchain_config())
+def executor_builder():
+    config = get_entrypoint(EntrypointGroup.AGENT_EXECUTOR_CONFIG_ENTRYPOINT).load()
+
+    return get_entrypoint(EntrypointGroup.AGENT_EXECUTOR_ENTRYPOINT).load()(config)
