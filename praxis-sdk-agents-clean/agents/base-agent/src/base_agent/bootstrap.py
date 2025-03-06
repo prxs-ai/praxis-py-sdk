@@ -20,9 +20,8 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[abc.AbstractAgent
     @serve.deployment
     @serve.ingress(app)
     class Agent(agent_cls):
-        pass
-
-    # Register the handle method as a POST endpoint
-    Agent.handle = app.post("/{goal}")(Agent.handle)
+        @app.post("/{goal}")
+        async def handle(self, goal: str, plan: dict | None = None):
+            return await super().handle(goal, plan)
 
     return Agent

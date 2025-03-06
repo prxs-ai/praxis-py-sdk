@@ -59,7 +59,7 @@ class AbstractAgent(ABC):
     """Abstract base class for agent implementations."""
 
     @abstractmethod
-    def handle(self, goal: str, plan: dict | None = None) -> Any:
+    async def handle(self, goal: str, plan: dict | None = None) -> Any:
         """Handle an incoming request.
 
         Args:
@@ -134,7 +134,7 @@ class AbstractAgent(ABC):
         pass
 
     @abstractmethod
-    def handoff(self, endpoint: str, goal: str, plan: dict) -> Any:
+    async def handoff(self, endpoint: str, goal: str, plan: dict) -> Any:
         """Hand off execution to another agent.
 
         Args:

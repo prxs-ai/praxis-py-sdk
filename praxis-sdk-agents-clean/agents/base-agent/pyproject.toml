@@ -29,7 +29,7 @@ basic = "base_agent.langchain.executor:agent_executor"
 basic = "base_agent.prompt.config:get_prompt_config"
 
 [project.entry-points."agent.prompt.entrypoint"]
-basic = "base_agent.prompt:prompt_builder"
+basic = "base_agent.prompt.builder:prompt_builder"
 
 [project.entry-points."agent.workflow.config"]
 basic = "base_agent.workflows.config:get_workflow_config"
