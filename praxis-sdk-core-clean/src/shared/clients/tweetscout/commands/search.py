@@ -1,4 +1,4 @@
-from services.shared.api_client import APIError
+from services.shared.clients import APIError
 
 from .base import AbstractCommand, Request, Response, TweetScoutSession
 

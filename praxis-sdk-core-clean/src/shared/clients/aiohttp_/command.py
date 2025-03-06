@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Awaitable
 
-from services.shared.api_client.types import Command
+from services.shared.clients.types import Command
 
 from .session import AiohttpSession
 

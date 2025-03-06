@@ -9,8 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from services.shared.api_client.aiohttp_ import AbstractCommand as _AbstractCommand
-from services.shared.api_client.tweetscout.session import TweetScoutSession
+from services.shared.clients.aiohttp_ import AbstractCommand as _AbstractCommand
+from services.shared.clients.tweetscout.session import TweetScoutSession
 
 
 class Request(BaseModel):

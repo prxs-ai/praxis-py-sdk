@@ -1,4 +1,4 @@
-from services.shared.api_client.aiohttp_ import AiohttpAPI
+from services.shared.clients.aiohttp_ import AiohttpAPI
 
 from .commands import Feedspot, FeedspotRequest, FeedspotResponse
 from .session import RSSSession

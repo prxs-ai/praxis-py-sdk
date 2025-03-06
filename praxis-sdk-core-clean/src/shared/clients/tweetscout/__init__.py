@@ -5,7 +5,7 @@ __all__ = (
 )
 
 
-from services.shared.api_client import APIError
+from services.shared.clients import APIError
 
 from .api import TweetScoutAPI
 from .session import TweetScoutSession

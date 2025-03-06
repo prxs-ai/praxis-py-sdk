@@ -1,6 +1,6 @@
 from typing import overload
 
-from services.shared.api_client.aiohttp_ import AiohttpAPI
+from services.shared.clients.aiohttp_ import AiohttpAPI
 
 from .commands import (
     GetFollowings,

@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
-from services.shared.api_client import APIError
-from services.shared.api_client.rss.session import RSSSession
+from services.shared.clients import APIError
+from services.shared.clients.rss.session import RSSSession
 
 from .base import AbstractCommand, Request, Response
 

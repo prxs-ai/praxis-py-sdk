@@ -1,7 +1,7 @@
 from types import TracebackType
 from typing import Self
 
-from services.shared.api_client.types import API, Command
+from services.shared.clients.types import API, Command
 
 from .session import AiohttpSession
 
