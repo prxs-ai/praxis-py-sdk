@@ -1,3 +1,7 @@
-__all__ = ("APIError",)
+__all__ = (
+    "APIError",
+    "API",
+)
 
 from .exceptions import APIError
+from .types import API
