@@ -71,7 +71,7 @@ class BaseAgent(abc.AbstractAgent):
             ),
             ToolModel(
                 name="return-answer-tool",
-                version="0.1.1",
+                version="0.1.2",
                 openai_function_spec={
                     "type": "function",
                     "function": {

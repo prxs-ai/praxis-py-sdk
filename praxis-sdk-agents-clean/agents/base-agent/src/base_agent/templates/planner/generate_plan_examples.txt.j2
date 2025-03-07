@@ -1,37 +1,13 @@
-name: example-pipeline
-description: Example pipeline demonstrating structure
-parameters:
-  - name: example-param
-    type: string
-    default: example-value
-steps:
-  - name: initial_step
-    tool: handoff_tool
-    inputs:
-      - name: agent
-        value: "example-agent"
-      - name: goal
-        value: {{ "{{{{inputs.parameters.example-param}}}}" }}
-    outputs:
-      - name: initial_output
-  - name: dependent_step
-    tool: handoff_tool
-    dependencies: [initial_step]
-    inputs:
-      - name: agent
-        value: "example-agent-2"
-      - name: goal
-        value: {{ "{{{{steps.initial_step.outputs.initial_output}}}}" }}
-    outputs:
-      - name: processed_output
-  - name: return_result
-    tool: return_answer_tool
-    dependencies: [dependent_step]
-    inputs:
-      - name: answer
-        value: {{ "{{{{steps.dependent_step.outputs.processed_output}}}}"}}
-    outputs:
-      - name: return_result_output
+EXAMPLE
+Goal: Return the answer to the question of life, universe and everything.
+Plan:
+```yaml
+name: answer-life-universe-everything
+description: Returns the answer to the question of life, universe and everything
+thought: This is a well-known question in science fiction "The Hitchhiker's Guide to the Galaxy" by Douglas Adams. The answer is 42. Let's return this answer.
+steps: []
 outputs:
-  - name: final-output
-    value: {{ "{{{{steps.return_result.outputs.return_result_output}}}}" }}
+  - name: answer
+    value: '{{ "{{\"result\": 42}}" }}'
+```
+END OF EXAMPLE

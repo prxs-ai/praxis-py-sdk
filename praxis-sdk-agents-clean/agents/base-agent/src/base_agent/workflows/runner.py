@@ -1,11 +1,11 @@
 import uuid
 from typing import Any
 
-from base_agent.const import EntrypointGroup
 import ray
 from ray import workflow
 from ray.runtime_env import RuntimeEnv
 
+from base_agent.const import EntrypointGroup
 from base_agent.models import Task
 from base_agent.utils import get_entry_points
 from base_agent.workflows.config import BasicWorkflowConfig
@@ -33,7 +33,7 @@ class DAGRunner:
             except KeyError as exc:
                 raise ValueError(f"Tool {task.tool.name} not found in entry points") from exc
 
-            return workflow.continuation(tool.bind(**kwargs))
+            return workflow.continuation(tool.bind(*args, **kwargs))
 
         return get_tool_entrypoint_wrapper
 
@@ -56,7 +56,7 @@ class DAGRunner:
                 deps = task.dependencies
 
                 # Gather inputs from dependencies
-                inputs = task.args if isinstance(task.args, list) else [task.args] if task.args is not None else []
+                inputs = {a['name']: a['value'] for a in task.args}
 
                 if deps:
                     dep_results = {}
@@ -66,11 +66,11 @@ class DAGRunner:
 
                     # If we have dependency results, use them as inputs
                     if dep_results:
-                        inputs = list(dep_results.values())
+                        inputs = inputs.update(dep_results.values())
 
                 # Execute step with dependencies
                 step_func = self.steps[task_id]
-                result = step_func.bind(*inputs)
+                result = step_func.bind(**inputs)
 
                 # Store result for dependencies
                 step_results[task_id] = result
