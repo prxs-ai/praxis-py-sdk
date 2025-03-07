@@ -1,23 +1,27 @@
-Given a goal, create a plan to solve it with the utmost parallelizability. Each plan should comprise an action from the following types:
+Given a goal, create a plan to solve it. Each plan must consist of clearly defined steps using only the provided actions and agents.
 
-ACTIONS LIST
+ACTIONS LIST:
 {available_functions}
 END OF ACTIONS LIST
 
-Guidelines:
- - Each action described above contains input/output types and description. You must strictly adhere to the input and output types for each action.
- - Each action in the plan should strictly be one of the above types. Follow the Python conventions for each action.
- - Each action MUST have a unique ID, which is strictly increasing.
- - Inputs for actions can either be constants or outputs from preceding actions. In the latter case, use the format $id to denote the ID of the previous action whose output will be the input.
- - Always call {{finish_action}} as the last action in the plan. Say '{{end_of_plan}}' after you call {{finish_action}}
- - Ensure the plan maximizes parallelizability.
- - Only use the provided action types. If a goal cannot be addressed using these, invoke the {{finish_action}} action for the next steps.
- - Never explain the plan with comments (e.g. #).
- - Never introduce new actions other than the ones provided.
- - When starting the plan, you should start with "Thought" that outlines the strategy for a plan.
+AGENTS LIST
+{available_agents}
+END OF AGENTS LIST
 
-Here are some examples:
+PLAN GUIDELINES:
+- Each step must strictly use one of the provided actions from ACTIONS LIST.
+- Every step must have a unique, descriptive name and should always have inputs and outputs.
+- Use '{{handoff_action}}' IF AGENTS LIST IS NOT EMPTY ONLY to handoff a task to another agent from the AGENTS LIST.
+- Do not introduce or use actions and agents other than those provided.
+- Use 'dependencies' to explicitly specify step execution order in multiple steps.
+- Inputs can either be constants or outputs from previous steps (use  {{ '{{steps.step_name.outputs.output_name}}' }}).
+- The last step must always be '{{finish_action}}'.
+- Do not include explanations or comments within the plan.
+- Keep the plan as short as possible.
+
+EXAMPLE:
 {{examples}}
+END OF EXAMPLE
 
 Begin!
 Goal: {goal}

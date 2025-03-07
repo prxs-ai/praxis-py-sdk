@@ -6,7 +6,7 @@ import requests
 
 from base_agent import abc
 from base_agent.bootstrap import bootstrap_main
-from base_agent.config import get_agent_config
+from base_agent.config import BasicAgentConfig, get_agent_config
 from base_agent.langchain import executor_builder
 from base_agent.models import AgentModel, Task, ToolModel
 from base_agent.prompt import prompt_builder
@@ -20,7 +20,8 @@ class BaseAgent(abc.AbstractAgent):
     prompt_builder: abc.AbstractPromptBuilder
     agent_executor: abc.AbstractExecutor
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, config: BasicAgentConfig, *args, **kwargs):
+        self.config = config
         self.workflow_runner = workflow_builder()
         self.agent_executor = executor_builder()
         self.prompt_builder = prompt_builder()
@@ -105,10 +106,8 @@ class BaseAgent(abc.AbstractAgent):
         self, goal: str, agents: Sequence[AgentModel], tools: Sequence[ToolModel], plan: dict | None = None
     ):
         """This method is used to generate a plan for the given goal."""
-        prompt = self.prompt_builder.generate_plan_prompt()
-
         return self.agent_executor.generate_plan(
-            prompt,
+            self.prompt_builder.generate_plan_prompt(system_prompt=self.config.system_prompt),
             available_functions=tools,
             available_agents=agents,
             goal=goal,

@@ -1,3 +1,37 @@
-Goal: Answer to the Ultimate Question of Life, the Universe, and Everything.
-Thought: This is a tricky question from the book "The Hitchhiker's Guide to the Galaxy". The answer is 42.
-1. {{finish_action}}(answer="42"){{end_of_plan}}
+name: example-pipeline
+description: Example pipeline demonstrating structure
+parameters:
+  - name: example-param
+    type: string
+    default: example-value
+steps:
+  - name: initial_step
+    tool: handoff_tool
+    inputs:
+      - name: agent
+        value: "example-agent"
+      - name: goal
+        value: {{ "{{{{inputs.parameters.example-param}}}}" }}
+    outputs:
+      - name: initial_output
+  - name: dependent_step
+    tool: handoff_tool
+    dependencies: [initial_step]
+    inputs:
+      - name: agent
+        value: "example-agent-2"
+      - name: goal
+        value: {{ "{{{{steps.initial_step.outputs.initial_output}}}}" }}
+    outputs:
+      - name: processed_output
+  - name: return_result
+    tool: return_answer_tool
+    dependencies: [dependent_step]
+    inputs:
+      - name: answer
+        value: {{ "{{{{steps.dependent_step.outputs.processed_output}}}}"}}
+    outputs:
+      - name: return_result_output
+outputs:
+  - name: final-output
+    value: {{ "{{{{steps.return_result.outputs.return_result_output}}}}" }}

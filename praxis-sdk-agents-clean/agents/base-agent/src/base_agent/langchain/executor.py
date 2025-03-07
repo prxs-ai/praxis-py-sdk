@@ -26,7 +26,7 @@ class LangChainExecutor:
         )
 
     def generate_plan(self, prompt: PromptTemplate, **kwargs):
-        agent = ChatOpenAI(callbacks=self._callbacks)
+        agent = ChatOpenAI(callbacks=self._callbacks, model=self.config.openai_api_model)
         output_parser = StrOutputParser()
         if "available_functions" in kwargs:
             agent.bind_tools(tools=[tool.openai_function_spec for tool in kwargs["available_functions"]])
