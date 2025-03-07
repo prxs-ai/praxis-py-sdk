@@ -17,8 +17,7 @@ class ToolModel(BaseModel):
         return self.openai_function_spec["function"]["name"]
 
     def render_openai_function_spec(self) -> str:
-        return f"""
-- {self.openai_function_spec["function"]["name"]}
+        return f"""- {self.openai_function_spec["function"]["name"]}
     - description: {self.openai_function_spec["function"]["description"]}
     - parameters: {self.openai_function_spec["function"]["parameters"]}
 """

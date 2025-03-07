@@ -1,12 +1,9 @@
 from jinja2 import Environment
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate
 
 from base_agent.prompt.config import BasicPromptConfig
-from base_agent.prompt.const import END_OF_PLAN, FINISH_ACTION
+from base_agent.prompt.const import FINISH_ACTION, HANDOFF_ACTION
 from base_agent.prompt.utils import get_environment
-
-GENERATE_PLAN_EXAMPLES_TEMPLATE_NAME = "planner/generate_plan_examples.txt.j2"
-GENERATE_PLAN_TEMPLATE_NAME = "planner/generate_plan.txt.j2"
 
 
 class PromptBuilder:
@@ -14,18 +11,24 @@ class PromptBuilder:
         self.config = config
         self.jinja2_env = jinja2_env
 
-    def generate_plan_prompt(self, *args, **kwargs):
-        template = self.jinja2_env.get_template(GENERATE_PLAN_TEMPLATE_NAME)
-        examples = self.jinja2_env.get_template(GENERATE_PLAN_EXAMPLES_TEMPLATE_NAME)
-
-        return PromptTemplate.from_template(
-            template.render(
-                finish_action=FINISH_ACTION,
-                end_of_plan=END_OF_PLAN,
-                examples=examples.render(finish_action=FINISH_ACTION, end_of_plan=END_OF_PLAN),
-            ),
+    def generate_plan_prompt(self, *args, system_prompt: str, **kwargs):
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(
+                    self.jinja2_env.get_template(self.config.system_prompt_template).render(system_prompt=system_prompt)
+                ),
+                HumanMessagePromptTemplate.from_template(
+                    self.jinja2_env.get_template(self.config.generate_plan_template).render(
+                        finish_action=FINISH_ACTION,
+                        handoff_action=HANDOFF_ACTION,
+                        examples=self.jinja2_env.get_template(self.config.generate_plan_examples_template).render(
+                            finish_action=FINISH_ACTION, handoff_action=HANDOFF_ACTION
+                        ),
+                    )
+                ),
+            ]
         )
 
 
 def prompt_builder(config: BasicPromptConfig) -> PromptBuilder:
-    return PromptBuilder(config, get_environment(config.template_path, config.template_dir))
+    return PromptBuilder(config, get_environment(config.template_path))
