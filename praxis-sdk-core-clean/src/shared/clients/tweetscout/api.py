@@ -47,15 +47,15 @@ class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
             return dto.HandlerListTweetsRes(**(await resp.json()))
 
     async def search_tweets(self, payload: dto.HandlerSearchTweetsReq) -> dto.HandlerSearchTweetsRes:
-        async with self._session.post(url="search-tweets", json=payload.__dict__) as resp:
+        async with self._session.post(url="search-tweets", json=payload.to_dict()) as resp:
             return dto.HandlerSearchTweetsRes(**(await resp.json()))
 
     async def tweet_info(self, payload: dto.HandlerTweetInfoReq) -> dto.HandlerTweetInfoResp:
-        async with self._session.post(url="tweet-info", json=payload.__dict__) as resp:
+        async with self._session.post(url="tweet-info", json=payload.to_dict()) as resp:
             return dto.HandlerTweetInfoResp(**(await resp.json()))
 
     async def user_tweets(self, payload: dto.HandlerUserTweetsReq) -> dto.HandlerUserTweetsRes:
-        async with self._session.post(url="user-tweets", json=payload.__dict__) as resp:
+        async with self._session.post(url="user-tweets", json=payload.to_dict()) as resp:
             return dto.HandlerUserTweetsRes(**(await resp.json()))
 
     async def handle_to_id(self, user_handle: str) -> dto.HandlerIDRes:
