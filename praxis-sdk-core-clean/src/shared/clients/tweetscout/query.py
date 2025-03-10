@@ -13,14 +13,17 @@ def camel_case_to_snake_case(s: str) -> str:
 
 
 type Username = str
-type Constraint = FromUser
-type Operand = Word | Hashtag | FromUser | And | Negate | MinRetweets
+type Operand = Word | Hashtag | FromUser | And | Negate | MinRetweets | MentionUser | Phrase
 
 
 class QueryNode(Struct): ...
 
 
 class Word(QueryNode):
+    value: str
+
+
+class Phrase(QueryNode):
     value: str
 
 
@@ -32,8 +35,12 @@ class FromUser(QueryNode):
     from_user: Username
 
 
-class Filter(QueryNode):
-    constraints: list[Constraint]
+class MentionUser(QueryNode):
+    mention: Username
+
+
+class Sequence(QueryNode):
+    operands: list[Operand]
 
 
 class Negate(QueryNode):
@@ -81,7 +88,7 @@ class Walker[R](ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def visit_filter(self, node: Filter) -> R:
+    def visit_sequence(self, node: Sequence) -> R:
         raise NotImplementedError
 
     @abstractmethod
@@ -104,6 +111,14 @@ class Walker[R](ABC):
     def visit_min_replies(self, node: MinReplies) -> R:
         raise NotImplementedError
 
+    @abstractmethod
+    def visit_mention_user(self, node: MentionUser) -> R:
+        raise NotImplementedError
+
+    @abstractmethod
+    def visit_phrase(self, node: Phrase) -> R:
+        raise NotImplementedError
+
 
 class QueryBuilder(Walker[str]):
     def visit_word(self, node: Word) -> str:
@@ -115,8 +130,8 @@ class QueryBuilder(Walker[str]):
     def visit_from_user(self, node: FromUser) -> str:
         return "from:" + node.from_user
 
-    def visit_filter(self, node: Filter) -> str:
-        return " ".join([self.walk(constr) for constr in node.constraints])
+    def visit_sequence(self, node: Sequence) -> str:
+        return " ".join([self.walk(op) for op in node.operands])
 
     def visit_negate(self, node: Negate) -> str:
         return "-(" + self.walk(node.operand) + ")"
@@ -135,6 +150,12 @@ class QueryBuilder(Walker[str]):
 
     def visit_min_replies(self, node: MinReplies) -> str:
         return "min_replies:" + str(node.value)
+
+    def visit_mention_user(self, node: MentionUser) -> str:
+        return "@" + node.mention
+
+    def visit_phrase(self, node: Phrase) -> str:
+        return f'"{node.value}"'
 
 
 def build_query(ast: QueryNode) -> str:
