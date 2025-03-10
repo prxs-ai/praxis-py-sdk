@@ -1,12 +1,12 @@
 [project]
-name = "get_likes_from_tweet"
+name = "get-likes-from-tweet"
 version = "0.0.1"
 description = "This is package for getting likes from tweet"
 authors = [
      {name = "hexavor",email = "bychynski.valiantsin@gmail.com"}
 ]
 requires-python = ">=3.11,<4.0"
-dependencies = []
+dependencies = ["aiohttp (>=3.11.13,<4.0.0)"]
 readme = "README.md"
 
 [tool.poetry]
