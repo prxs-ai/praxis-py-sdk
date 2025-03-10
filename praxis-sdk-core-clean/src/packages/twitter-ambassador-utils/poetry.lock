@@ -12,6 +12,11 @@ files = [
     {file = "aiohappyeyeballs-2.4.6.tar.gz", hash = "sha256:9b05052f9042985d32ecbe4b59a77ae19c006a78f1344d7fdad69d28ded3d0b0"},
 ]
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "aiohttp"
 version = "3.11.13"
@@ -116,6 +121,11 @@ yarl = ">=1.17.0,<2.0"
 [package.extras]
 speedups = ["Brotli ; platform_python_implementation == \"CPython\"", "aiodns (>=3.2.0) ; sys_platform == \"linux\" or sys_platform == \"darwin\"", "brotlicffi ; platform_python_implementation != \"CPython\""]
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "aiosignal"
 version = "1.3.2"
@@ -131,6 +141,11 @@ files = [
 [package.dependencies]
 frozenlist = ">=1.1.0"
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "async-timeout"
 version = "5.0.1"
@@ -143,6 +158,11 @@ files = [
     {file = "async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c"},
     {file = "async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3"},
 ]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "attrs"
@@ -164,6 +184,11 @@ docs = ["cogapp", "furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphi
 tests = ["cloudpickle ; platform_python_implementation == \"CPython\"", "hypothesis", "mypy (>=1.11.1) ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pytest-xdist[psutil]"]
 tests-mypy = ["mypy (>=1.11.1) ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pytest-mypy-plugins ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\""]
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "certifi"
 version = "2025.1.31"
@@ -175,6 +200,11 @@ files = [
     {file = "certifi-2025.1.31-py3-none-any.whl", hash = "sha256:ca78db4565a652026a4db2bcdf68f2fb589ea80d0be70e03929ed730746b84fe"},
     {file = "certifi-2025.1.31.tar.gz", hash = "sha256:3d5da6925056f6f18f119200434a4780a94263f10d1c21d032a6f6b2baa20651"},
 ]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "cffi"
@@ -256,6 +286,11 @@ files = [
 
 [package.dependencies]
 pycparser = "*"
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "charset-normalizer"
@@ -359,12 +394,17 @@ files = [
     {file = "charset_normalizer-3.4.1.tar.gz", hash = "sha256:44251f18cd68a75b56585dd00dae26183e102cd5e0f9f1466e6df5da2ed64ea3"},
 ]
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "cryptography"
 version = "44.0.2"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
 optional = false
-python-versions = "!=3.9.0,!=3.9.1,>=3.7"
+python-versions = ">=3.7, !=3.9.0, !=3.9.1"
 groups = ["main"]
 files = [
     {file = "cryptography-44.0.2-cp37-abi3-macosx_10_9_universal2.whl", hash = "sha256:efcfe97d1b3c79e486554efddeb8f6f53a4cdd4cf6086642784fa31fc384e1d7"},
@@ -416,6 +456,28 @@ sdist = ["build (>=1.0.0)"]
 ssh = ["bcrypt (>=3.1.5)"]
 test = ["certifi (>=2024)", "cryptography-vectors (==44.0.2)", "pretend (>=0.7)", "pytest (>=7.4.0)", "pytest-benchmark (>=4.0)", "pytest-cov (>=2.10.1)", "pytest-xdist (>=3.5.0)"]
 test-randomorder = ["pytest-randomly"]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
+[[package]]
+name = "example-package"
+version = "0.0.3"
+description = "This is an example package."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "example_package-0.0.3-py3-none-any.whl", hash = "sha256:bd5a0acf8a2a189ea424c06449c1776abb882e775b317bbb066d12da93a18c0e"},
+    {file = "example_package-0.0.3.tar.gz", hash = "sha256:628e62334dbad0d0f0b749f1454ed7f16c9e923e4aa963e0c3d78aa591eac8ac"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "frozenlist"
@@ -519,6 +581,11 @@ files = [
     {file = "frozenlist-1.5.0.tar.gz", hash = "sha256:81d5af29e61b9c8348e876d442253723928dce6433e0e76cd925cd83f1b4b817"},
 ]
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "idna"
 version = "3.10"
@@ -533,6 +600,11 @@ files = [
 
 [package.extras]
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "multidict"
@@ -639,6 +711,11 @@ files = [
 [package.dependencies]
 typing-extensions = {version = ">=4.1.0", markers = "python_version < \"3.11\""}
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "oauthlib"
 version = "3.2.2"
@@ -655,6 +732,11 @@ files = [
 rsa = ["cryptography (>=3.0.0)"]
 signals = ["blinker (>=1.4.0)"]
 signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "propcache"
@@ -764,6 +846,11 @@ files = [
     {file = "propcache-0.3.0.tar.gz", hash = "sha256:a8fd93de4e1d278046345f49e2238cdb298589325849b2645d4a94c53faeffc5"},
 ]
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "pycparser"
 version = "2.22"
@@ -776,6 +863,11 @@ files = [
     {file = "pycparser-2.22-py3-none-any.whl", hash = "sha256:c3702b6d3dd8c7abc1afa565d7e63d53a1d0bd86cdc24edd75470f4de499cfcc"},
     {file = "pycparser-2.22.tar.gz", hash = "sha256:491c8be9c040f5390f5bf44a5b07752bd07f56edf992381b05c701439eec10f6"},
 ]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "requests"
@@ -799,6 +891,11 @@ urllib3 = ">=1.21.1,<3"
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "requests-oauthlib"
 version = "2.0.0"
@@ -818,6 +915,11 @@ requests = ">=2.0.0"
 [package.extras]
 rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [[package]]
 name = "typing-extensions"
 version = "4.12.2"
@@ -830,6 +932,11 @@ files = [
     {file = "typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d"},
     {file = "typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"},
 ]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "urllib3"
@@ -848,6 +955,11 @@ brotli = ["brotli (>=1.0.9) ; platform_python_implementation == \"CPython\"", "b
 h2 = ["h2 (>=4,<5)"]
 socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
+
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
 
 [[package]]
 name = "yarl"
@@ -946,7 +1058,12 @@ idna = ">=2.0"
 multidict = ">=4.0"
 propcache = ">=0.2.0"
 
+[package.source]
+type = "legacy"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
+reference = "praxis"
+
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "76c0fedd3281c7a915a19926328c9bc2a829d6402eb8c67d7adf7dced765b2f7"
+content-hash = "0373fe00450ba41d273245660c1607bf94e9207f17ca89ec58703c606dfd33a3"
