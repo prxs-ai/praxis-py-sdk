@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import pydantic
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,4 +27,6 @@ class AiRegistryConfig(BaseSettings):
     )
 
 
-ai_registry_config = AiRegistryConfig()
+@lru_cache
+def get_ai_registry_config() -> AiRegistryConfig:
+    return AiRegistryConfig()

@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import pydantic
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -24,4 +26,6 @@ class LightRagConfig(BaseSettings):
     )
 
 
-light_rag_config = LightRagConfig()
+@lru_cache
+def get_light_rag_config() -> LightRagConfig:
+    return LightRagConfig()

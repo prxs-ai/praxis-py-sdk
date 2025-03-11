@@ -1,33 +1,22 @@
 from typing import Any
 
-import redis
 from loguru import logger
-
-from base_agent.memory.config import MemoryConfig
+from mem0 import Memory
 
 
 class MemoryClient:
-    def __init__(self, config: MemoryConfig):
-        self.redis_client = redis.Redis(
-            host=config.host,
-            port=config.port,
-            db=config.db,
-            decode_responses=True,
-        )
+    def __init__(self):
+        self.memory = Memory()
 
     def store(self, key: str, interaction: dict[str, Any]) -> None:
         try:
-            self.redis_client.lpush(key, str(interaction))
+            self.memory.add(interaction, run_id=key)
         except Exception as e:
             logger.error(f"Error storing interaction in Redis: {e}")
 
-    def read(self, key: str) -> list[dict[str, Any]]:
+    def read(self, key: str, limit: int = 3) -> list[dict[str, Any]]:
         try:
-            interactions = self.redis_client.lrange(key, 0, -1)
-            return [eval(interaction) for interaction in interactions]
+            return self.memory.search(query=key, run_id=key, limit=limit)
         except Exception as e:
             logger.error(f"Error retrieving interactions from Redis: {e}")
             return []
-
-    def close(self):
-        self.redis_client.close()
