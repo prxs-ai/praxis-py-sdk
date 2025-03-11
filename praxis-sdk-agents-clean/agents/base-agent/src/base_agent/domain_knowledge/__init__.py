@@ -1,6 +1,8 @@
-from base_agent.domain_knowledge.client import LightRagClient
-from base_agent.domain_knowledge.config import get_light_rag_config
+from base_agent.const import EntrypointGroup
+from base_agent.prompt.config import BasicPromptConfig
+from base_agent.utils import get_entrypoint
 
 
-def light_rag_client(*args, **kwargs):
-    return LightRagClient(config=get_light_rag_config())
+def light_rag_builder(*args, **kwargs):
+    config: BasicPromptConfig = get_entrypoint(EntrypointGroup.DOMAIN_KNOWLEDGE_CONFIG_ENTRYPOINT).load()
+    return get_entrypoint(EntrypointGroup.DOMAIN_KNOWLEDGE_ENTRYPOINT).load()(config())

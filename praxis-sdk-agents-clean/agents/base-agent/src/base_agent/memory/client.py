@@ -20,3 +20,7 @@ class MemoryClient:
         except Exception as e:
             logger.error(f"Error retrieving interactions from Redis: {e}")
             return []
+
+
+def memory_client() -> MemoryClient:
+    return MemoryClient()

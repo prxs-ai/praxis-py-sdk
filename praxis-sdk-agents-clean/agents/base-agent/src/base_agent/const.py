@@ -14,6 +14,14 @@ class EntrypointGroup(str, Enum):
     AGENT_WORKFLOW_CONFIG_ENTRYPOINT = "agent.workflow.config"
     AGENT_WORKFLOW_ENTRYPOINT = "agent.workflow.entrypoint"
 
+    AI_REGISTRY_CONFIG_ENTRYPOINT = "ai.registry.config"
+    AI_REGISTRY_ENTRYPOINT = "ai.registry.entrypoint"
+
+    DOMAIN_KNOWLEDGE_CONFIG_ENTRYPOINT = "domain.knowledge.config"
+    DOMAIN_KNOWLEDGE_ENTRYPOINT = "domain.knowledge.entrypoint"
+
+    MEMORY_ENTRYPOINT = "memory.entrypoint"
+
     def __str__(self):
         return self.value
 

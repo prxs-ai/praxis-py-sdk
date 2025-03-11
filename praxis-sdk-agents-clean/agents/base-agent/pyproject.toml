@@ -41,6 +41,21 @@ basic = "base_agent.workflows.runner:dag_runner"
 [project.entry-points."agent.entrypoint"]
 basic = "base_agent.ray_entrypoint:agent_builder"
 
+[project.entry-points."ai.registry.config"]
+basic = "base_agent.ai_registry.config:get_ai_registry_config"
+
+[project.entry-points."ai.registry.entrypoint"]
+basic = "base_agent.ai_registry.client:ai_registry_client"
+
+[project.entry-points."domain.knowledge.config"]
+basic = "base_agent.domain_knowledge.config:get_light_rag_config"
+
+[project.entry-points."domain.knowledge.entrypoint"]
+basic = "base_agent.domain_knowledge.client:light_rag_client"
+
+[project.entry-points."memory.entrypoint"]
+basic = "base_agent.memory.client:memory_client"
+
 [tool.poetry.group.dev.dependencies]
 ray = { extras = ["serve"], version = "^2.42.1" }
 pytest = "^8.3.4"
