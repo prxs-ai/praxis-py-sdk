@@ -13,7 +13,22 @@ def camel_case_to_snake_case(s: str) -> str:
     return CAMEL_CASE_TO_SNAKE_CASE.sub("_", s).lower()
 
 
-type Operand = Word | Hashtag | FromUser | And | Negate | MinRetweets | MentionUser | Phrase | MinFavorites | MinReplies
+type Operand = (
+    Word
+    | Hashtag
+    | FromUser
+    | And
+    | Negate
+    | MinRetweets
+    | MentionUser
+    | Phrase
+    | MinFavorites
+    | MinReplies
+    | SinceId
+    | UntilId
+    | SinceTime
+    | UntilTime
+)
 
 
 class QueryNode(Struct): ...
