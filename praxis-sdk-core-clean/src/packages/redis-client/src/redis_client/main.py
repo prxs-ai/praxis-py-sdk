@@ -9,11 +9,6 @@ from dataclasses import asdict
 import asyncio
 from random import randint
 from datetime import datetime
-
-from database.redis.redis_client import db, Post
-
-from infrastructure.configs.logger import get_logger
-
 from typing import Set
 import inspect
 from functools import wraps
