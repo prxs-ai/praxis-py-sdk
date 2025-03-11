@@ -34,3 +34,7 @@ class LightRagClient:
             print(f"Unexpected error: {e}")
 
         return {}
+
+
+def light_rag_client(config: LightRagConfig) -> LightRagClient:
+    return LightRagClient(config=config)

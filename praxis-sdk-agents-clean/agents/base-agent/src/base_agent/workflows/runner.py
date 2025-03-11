@@ -56,7 +56,7 @@ class DAGRunner:
                 deps = task.dependencies
 
                 # Gather inputs from dependencies
-                inputs = {a['name']: a['value'] for a in task.args}
+                inputs = {a["name"]: a["value"] for a in task.args}
 
                 if deps:
                     dep_results = {}

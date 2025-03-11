@@ -131,7 +131,7 @@ def _parse_llm_compiler_action_args(args: str) -> list[Any]:
         return ()
     try:
         args = ast.literal_eval(args)
-    except:
+    except:  # noqa: E722
         args = args
     if not isinstance(args, list) and not isinstance(args, tuple):
         args = (args,)

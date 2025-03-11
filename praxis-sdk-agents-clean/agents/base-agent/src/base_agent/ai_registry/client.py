@@ -32,3 +32,7 @@ class AiRegistryClient:
             print(f"Unexpected error: {e}")
 
         return {}
+
+
+def ai_registry_client(config: AiRegistryConfig) -> AiRegistryClient:
+    return AiRegistryClient(config=config)

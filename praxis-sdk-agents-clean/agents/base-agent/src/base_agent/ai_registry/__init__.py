@@ -1,6 +1,8 @@
-from base_agent.ai_registry.client import AiRegistryClient
-from base_agent.ai_registry.config import get_ai_registry_config
+from base_agent.const import EntrypointGroup
+from base_agent.prompt.config import BasicPromptConfig
+from base_agent.utils import get_entrypoint
 
 
-def ai_registry_client(*args, **kwargs):
-    return AiRegistryClient(config=get_ai_registry_config())
+def ai_registry_builder(*args, **kwargs):
+    config: BasicPromptConfig = get_entrypoint(EntrypointGroup.AI_REGISTRY_CONFIG_ENTRYPOINT).load()
+    return get_entrypoint(EntrypointGroup.AI_REGISTRY_ENTRYPOINT).load()(config())
