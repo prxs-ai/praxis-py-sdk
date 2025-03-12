@@ -1,10 +1,9 @@
 from functools import lru_cache
 
-from pydantic import field_validator, ValidationInfo, PostgresDsn, RedisDsn, Field
-from pydantic_settings import BaseSettings
-from dotenv import load_dotenv
 from cryptography.fernet import Fernet
-
+from dotenv import load_dotenv
+from pydantic import Field, RedisDsn, ValidationInfo, field_validator
+from pydantic_settings import BaseSettings
 
 load_dotenv()
 
@@ -104,6 +103,18 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = '***REMOVED***'
     TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
     TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
+
+    HEYGEN_API_KEY: str = "***REMOVED***"
+
+    LIVEKIT_URL: str = "wss://streamingavatar-o51wm8kk.livekit.cloud"
+    LIVEKIT_API_KEY: str = "***REMOVED***"
+    LIVEKIT_API_SECRET: str = "***REMOVED***"
+
+    TWITCH_CLIENT_ID: str = "d39qf2fhjamywvevtsctdxnrflma20"
+    TWITCH_CLIENT_SECRET: str = "51fkl9bclgwamyfot69wlcrnkz1ajq"
+
+    AVATAR_INTERNAL_REDIS_HOST: str = "localhost"
+    AVATAR_INTERNAL_REDIS_PORT: int = 6379
 
     # FAL AI
     fal_ai_api_key: str = ""
