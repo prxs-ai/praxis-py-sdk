@@ -714,3 +714,20 @@ async def ensure_delay_between_posts(username: str, delay: int = None):
             wait_time = delay - time_since_last_post
             print(f'Waiting: {username=} {wait_time=}')
             await asyncio.sleep(wait_time)
+
+
+def decode_redis(src):
+    if isinstance(src, list):
+        rv = []
+        for key in src:
+            rv.append(decode_redis(key))
+        return rv
+    elif isinstance(src, dict):
+        rv = {}
+        for key in src:
+            rv[key.decode()] = decode_redis(src[key])
+        return rv
+    elif isinstance(src, bytes):
+        return src.decode()
+    else:
+        raise Exception("type not handled: " + type(src))
