@@ -202,7 +202,7 @@ class QueryBuilder(Walker[str]):
         return "@" + node.mention.value
 
     def visit_phrase(self, node: Phrase) -> str:
-        return f'"{node.value}"'
+        return f'{node.value}'
 
     def visit_since_id(self, node: SinceId) -> str:
         return f"since_id:{node.tweet_id}"

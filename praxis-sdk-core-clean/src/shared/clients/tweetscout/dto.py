@@ -4,8 +4,14 @@ from msgspec import Struct
 
 
 class DTO(Struct):
-    def to_dict(self) -> dict[str, Any]:
-        return {f: getattr(self, f) for f in self.__struct_fields__}
+    def to_dict(self, exclude_none: bool = True) -> dict[str, Any]:
+        data: dict[str, Any] = {}
+        for field in self.__struct_fields__:
+            value = getattr(self, field)
+            if exclude_none and value is None:
+                continue
+            data[field] = value
+        return data
 
 
 class TypesAccount(DTO):
