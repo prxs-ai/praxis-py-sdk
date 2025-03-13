@@ -3,7 +3,6 @@ __all__ = (
     "TweetScoutSession",
     "build_query",
     "And",
-    "Filter",
     "FromUser",
     "Hashtag",
     "MinFavorites",
@@ -17,7 +16,6 @@ __all__ = (
 from .api import TweetScoutAPI
 from .query import (
     And,
-    Filter,
     FromUser,
     Hashtag,
     MinFavorites,

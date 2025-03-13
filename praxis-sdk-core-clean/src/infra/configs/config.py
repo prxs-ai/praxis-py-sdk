@@ -106,10 +106,10 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
     TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
 
-    REDIS_COLLECTOR_HOST: str
+    REDIS_COLLECTOR_HOST: str = "localhost"
     REDIS_COLLECTOR_PORT: int = 6379
 
-    KAFKA_BRONZE_LAYER_BOOTSTRAP_SERVERS: list[str]
+    KAFKA_BRONZE_LAYER_BOOTSTRAP_SERVERS: list[str] = []
 
     # FAL AI
     fal_ai_api_key: str = ""
@@ -121,14 +121,14 @@ class Settings(BaseSettings):
     jwt_access_token_expires_in: int = 1440
 
     # Creativity
-    creativity_api_id: str = Field(validation_alias="CREATIVITY_API_ID")
-    creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
+    creativity_api_id: str | None = None
+    creativity_api_key: str | None = None
     creativity_base_url: str = "https://api.creatify.ai/api"
 
-    confluent_api_key: str
-    confluent_api_secret: str
-    confluent_bootstrap_server: str
-    confluent_rest_endpoint: str
+    confluent_api_key: str | None = None
+    confluent_api_secret: str | None = None
+    confluent_bootstrap_server: str | None = None
+    confluent_rest_endpoint: str | None = None
 
 
 @lru_cache

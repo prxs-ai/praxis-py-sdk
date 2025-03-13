@@ -99,7 +99,7 @@ class Walker[R](ABC):
     __slots__ = ()
 
     def walk(self, node: QueryNode) -> R:
-        name = camel_case_to_snake_case("visit_" + type(node).__name__)
+        name = "visit_" + camel_case_to_snake_case(type(node).__name__)
         method = getattr(self, name, None)
         if method is None:
             raise RuntimeError(f"No implementation found for node: {node}")
@@ -215,7 +215,6 @@ class QueryBuilder(Walker[str]):
 
     def visit_until_time(self, node: UntilTime) -> str:
         return f"until_time:{node.timestamp}"
-
 
 def build_query(ast: QueryNode) -> str:
     return QueryBuilder().walk(ast)
