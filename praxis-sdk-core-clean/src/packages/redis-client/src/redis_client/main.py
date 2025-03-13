@@ -1,5 +1,4 @@
 import json
-import os
 import threading
 import time
 from random import random
@@ -13,6 +12,9 @@ from typing import Set
 import inspect
 from functools import wraps
 import redis
+from redis_client.config import get_settings
+
+settings = get_settings()
 
 
 @dataclass
@@ -51,14 +53,17 @@ class RedisDB:
         """
         Initialize the Redis connection.
         """
+        REDIS_HOST = settings.REDIS_HOST if settings.REDIS_HOST else "localhost"
+        REDIS_PORT = settings.REDIS_PORT if settings.REDIS_PORT else 6379
+        REDIS_DB = settings.REDIS_DB if settings.REDIS_DB else 0
         print(
-            f'Redis: {os.environ.get("REDIS_HOST", "localhost")}:{os.environ.get("REDIS_PORT", 6379)} '
-            f'db={os.environ.get("REDIS_DB", 0)}'
+            f'Redis: {REDIS_HOST}:{REDIS_PORT} '
+            f'db={REDIS_DB}'
         )
         self.r = redis.Redis(
-            host=os.environ.get('REDIS_HOST', 'localhost'),
-            port=int(os.environ.get('REDIS_PORT', 6379)),
-            db=int(os.environ.get('REDIS_DB', 0))  # 0 - main, 1 - test
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB  # 0 - main, 1 - test
         )
 
         if self.wait_for_redis(timeout=100):
