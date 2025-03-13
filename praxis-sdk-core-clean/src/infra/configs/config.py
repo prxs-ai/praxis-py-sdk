@@ -109,7 +109,7 @@ class Settings(BaseSettings):
     REDIS_COLLECTOR_HOST: str = "localhost"
     REDIS_COLLECTOR_PORT: int = 6379
 
-    KAFKA_BRONZE_LAYER_BOOTSTRAP_SERVERS: list[str] = []
+    KAFKA_BRONZE_LAYER_BOOTSTRAP_SERVERS: list[str] = ["localhost:9092"]
 
     # FAL AI
     fal_ai_api_key: str = ""
