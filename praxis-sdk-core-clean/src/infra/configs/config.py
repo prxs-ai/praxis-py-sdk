@@ -10,9 +10,12 @@ load_dotenv()
 
 
 class InfrastructureConfig(BaseSettings):
-    postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
-    postgres_db: str = "postgres"
+    postgres_user: str = "rag"
+    postgres_password: str = "rag"
+    postgres_db: str = "rag"
+    # postgres_user: str = "postgres"
+    # postgres_password: str = "postgres"
+    # postgres_db: str = "postgres"
     postgres_host: str = Field(default="localhost", validation_alias="POSTGRES_HOST")
     postgres_port: int = 5432
     postgres_logs: bool = False
