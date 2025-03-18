@@ -10,9 +10,7 @@ if __name__ == "__main__":
     from ray import serve
 
     # Run Ray Serve in local testing mode
-    handle = serve.run(app({}),
-                      route_prefix='/',
-                      _local_testing_mode=True)
+    handle = serve.run(app({}), route_prefix="/", _local_testing_mode=True)
 
     fastapi_app = FastAPI()
 

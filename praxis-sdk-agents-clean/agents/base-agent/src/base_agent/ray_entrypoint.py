@@ -70,18 +70,10 @@ class BaseAgent(abc.AbstractAgent):
         )
         self.memory_client.store(key=goal, interaction=interaction.model_dump())
 
-    def get_relevant_insights(self, goal: str) -> list[str]:
+    def get_relevant_insights(self, goal: str) -> list[InsightModel]:
         """Retrieve relevant insights from LightRAG memory for the given goal."""
-
-        response = self.lightrag_client.post(
-            endpoint=self.lightrag_client.endpoints.query,
-            json=QueryData(query=goal).model_dump(),
-        )
-
-        if not response:
-            return []
-
-        return [InsightModel(**insight) for insight in response]
+        response = self.lightrag_client.query(query=goal)
+        return [InsightModel(**response)]
 
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
         """This method is used to find the most useful agents for the given goal."""
