@@ -317,12 +317,9 @@ class RedisDB:
         link = f"https://twitter.com/i/web/status/{tweet_id}"
         self.r.rpush(key, link)
 
-# Initialize a default instance
-db = RedisDB()
 
-
-def get_redis_db() -> RedisDB:
-    return db
+def get_redis_db(*args, **kwargs) -> RedisDB:
+    return RedisDB(*args, **kwargs)
 
 
 class PromptManager:

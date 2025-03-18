@@ -7,7 +7,7 @@ from datetime import datetime
 from requests_oauthlib import OAuth2Session
 import aiohttp
 
-from redis_client.main import get_redis_db, decode_redis
+from redis_client.main import decode_redis, get_redis_db
 from twitter_ambassador_utils.config import cipher, get_settings
 
 settings = get_settings()
