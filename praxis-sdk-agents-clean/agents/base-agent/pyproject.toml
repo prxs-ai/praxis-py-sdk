@@ -54,6 +54,9 @@ basic = "base_agent.domain_knowledge.config:get_light_rag_config"
 [project.entry-points."domain.knowledge.entrypoint"]
 basic = "base_agent.domain_knowledge.client:light_rag_client"
 
+[project.entry-points."memory.config"]
+basic = "base_agent.memory.config:get_memory_config"
+
 [project.entry-points."memory.entrypoint"]
 basic = "base_agent.memory.client:memory_client"
 
