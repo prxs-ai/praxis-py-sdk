@@ -1,6 +1,6 @@
 [project]
 name = "redis-client"
-version = "0.1.4"
+version = "0.1.5"
 description = "Package that create Redis client"
 authors = [
     {name = "0xDevZip",email = "noreply@example.com"}
