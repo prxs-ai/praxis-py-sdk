@@ -415,7 +415,7 @@ def use_dynamic_prompt(function_name: str):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            prompt_manager = PromptManager(db)
+            prompt_manager = PromptManager(get_redis_db())
             template = prompt_manager.get_prompt(function_name)
 
             # Проверяем разрешенные переменные
@@ -689,7 +689,7 @@ Respond with one word - True or False.""",
 }
 
 
-prompt_manager = PromptManager(db)
+prompt_manager = PromptManager(get_redis_db())
 
 
 async def ensure_delay_between_posts(username: str, delay: int = None):
