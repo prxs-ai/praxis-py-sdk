@@ -1460,6 +1460,18 @@ langsmith-pyo3 = ["langsmith-pyo3 (>=0.1.0rc2,<0.2.0)"]
 pytest = ["pytest (>=7.0.0)", "rich (>=13.9.4,<14.0.0)"]
 
 [[package]]
+name = "lightrag-hku"
+version = "1.2.5"
+description = "LightRAG: Simple and Fast Retrieval-Augmented Generation"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "lightrag_hku-1.2.5-py3-none-any.whl", hash = "sha256:e5645d994d18f10370136faa452a2512bd664425d1b33c46aef5345b60715424"},
+    {file = "lightrag_hku-1.2.5.tar.gz", hash = "sha256:52da5f86c1d37f504275386f1dfa207fa2fb70babdcd35eb97de9d2fd26aadb1"},
+]
+
+[[package]]
 name = "markupsafe"
 version = "3.0.2"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -4047,4 +4059,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "367972c6c6d6ff3e56767b4b622f50f673cb416355b489e64c21b85479f5ac19"
+content-hash = "0923852d823a014b876499d0f191532cf7b8e49f4390ce27ee2ab76793b37108"
