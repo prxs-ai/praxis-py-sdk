@@ -21,8 +21,5 @@ def bootstrap_main(provider_cls: type[abc.AbstractProvider]) -> type[abc.Abstrac
     @serve.ingress(app)
     class Provider(provider_cls):
         pass
-        # @app.post("/{goal}")
-        # async def handle(self, goal: str, plan: dict | None = None):
-        #     return await super().handle(goal, plan)
 
     return Provider
