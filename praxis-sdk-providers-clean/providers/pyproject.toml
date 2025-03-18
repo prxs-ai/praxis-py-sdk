@@ -1,0 +1,27 @@
+[project]
+name = "base-provider"
+version = "0.1.0"
+description = "Base provider for Ray Serve"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+readme = "README.md"
+requires-python = ">=3.9,<4.0"
+dependencies = [
+    "fastapi (>=0.115.8,<1.0.0)",
+    "jinja2 (>=3.1.5,<4.0.0)",
+    "pydantic-settings (>=2.8.0,<3.0.0)",
+]
+
+[tool.poetry]
+packages = [{ include = "*", from = "src" }]
+
+[project.entry-points."provider.entrypoint"]
+basic = "base_provider.ray_entrypoint:provider_builder"
+
+[tool.poetry.group.dev.dependencies]
+ray = { extras = ["serve"], version = "^2.42.1" }
+pytest = "^8.3.4"
+pyarrow = "^19.0.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
