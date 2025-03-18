@@ -20,6 +20,7 @@ class EntrypointGroup(str, Enum):
     DOMAIN_KNOWLEDGE_CONFIG_ENTRYPOINT = "domain.knowledge.config"
     DOMAIN_KNOWLEDGE_ENTRYPOINT = "domain.knowledge.entrypoint"
 
+    MEMORY_CONFIG_ENTRYPOINT = "memory.entrypoint.config"
     MEMORY_ENTRYPOINT = "memory.entrypoint"
 
     def __str__(self):

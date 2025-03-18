@@ -3,10 +3,12 @@ from typing import Any
 from loguru import logger
 from mem0 import Memory
 
+from base_agent.memory.config import MemoryConfig
+
 
 class MemoryClient:
-    def __init__(self):
-        self.memory = Memory()
+    def __init__(self, config: MemoryConfig):
+        self.memory = Memory.from_config(config.mem0_config)
 
     def store(self, key: str, interaction: dict[str, Any]) -> None:
         try:
@@ -22,5 +24,5 @@ class MemoryClient:
             return []
 
 
-def memory_client() -> MemoryClient:
-    return MemoryClient()
+def memory_client(config: MemoryConfig) -> MemoryClient:
+    return MemoryClient(config=config)
