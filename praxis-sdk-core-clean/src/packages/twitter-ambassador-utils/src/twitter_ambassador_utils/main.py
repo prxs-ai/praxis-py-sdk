@@ -7,7 +7,7 @@ from datetime import datetime
 from requests_oauthlib import OAuth2Session
 import aiohttp
 
-from redis_client.main import db, RedisDB, decode_redis
+from redis_client.main import decode_redis, get_redis_db
 from twitter_ambassador_utils.config import cipher, get_settings
 
 settings = get_settings()
@@ -78,7 +78,7 @@ class TwitterAuthClient:
         redirect_uri=settings.TWITTER_REDIRECT_URI,
         scope="tweet.read users.read follows.write tweet.write like.write like.read follows.read offline.access",
     )
-    _DB: RedisDB = db
+    _DB = get_redis_db()
 
     @classmethod
     def create_auth_link(cls, user_id: str = None):  # Сделаем необязательным
