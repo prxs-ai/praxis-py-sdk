@@ -689,7 +689,7 @@ Respond with one word - True or False.""",
 }
 
 
-prompt_manager = PromptManager(get_redis_db())
+prompt_manager = PromptManager(get_redis_db)
 
 
 async def ensure_delay_between_posts(username: str, delay: int = None):
