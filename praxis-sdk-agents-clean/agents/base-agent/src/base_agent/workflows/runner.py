@@ -26,8 +26,8 @@ class DAGRunner:
         """Creates a remote function for a step"""
 
         @ray.workflow.options(checkpoint=True, catch_exceptions=True)
-        @ray.remote(runtime_env=RuntimeEnv(pip=[f"{task.tool.name}=={task.tool.version}"]), max_retries=5,
-                    retry_exceptions=True)
+        @ray.remote(runtime_env=RuntimeEnv(pip=[f"{task.tool.name}=={task.tool.version}"]),
+                    max_retries=BasicWorkflowConfig.RAY_MAX_RETRIES, retry_exceptions=True)
         def get_tool_entrypoint_wrapper(*args, **kwargs):
             entry_points = get_entry_points(EntrypointGroup.TOOL_ENTRYPOINT)
             try:
@@ -45,8 +45,7 @@ class DAGRunner:
         for _step_id, task in dag_spec.items():
             self.steps[task.task_id] = self.create_step(task)
 
-        @ray.workflow.options(checkpoint=True, catch_exceptions=True)
-        @ray.remote(max_retries=3, retry_exceptions=True)
+        @ray.remote
         def workflow_executor(request_id: str) -> Any:
             step_results = {}
 
