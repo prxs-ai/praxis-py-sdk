@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
-from pydantic import Field, RedisDsn, ValidationInfo, field_validator
+from pydantic import Field, RedisDsn, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings
 
 load_dotenv()
@@ -35,6 +35,9 @@ class InfrastructureConfig(BaseSettings):
 
     QDRANT_HOST: str = Field(default="qdrant", validation_alias="QDRANT_HOST")
     QDRANT_PORT: int = 6333
+
+    LANGFUSE_SECRET_KEY: SecretStr
+    LANGFUSE_PUBLIC_KEY: SecretStr
 
     @property
     def qdrant_url(self) -> str:
