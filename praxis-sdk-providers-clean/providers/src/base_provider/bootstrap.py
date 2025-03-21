@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-
 from base_provider import abc
+from fastapi import FastAPI
 
 
 def bootstrap_main(provider_cls: type[abc.AbstractProvider]) -> type[abc.AbstractProvider]:

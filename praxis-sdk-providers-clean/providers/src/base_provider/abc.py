@@ -1,8 +1,12 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from typing import Any
+
+from base_provider.models import SubscribeRequestModel, SubscribeResponseModel
 
 
 class AbstractProvider(ABC):
     """Abstract base class for data provider implementations."""
-    pass
+
+    @abstractmethod
+    def subscribe(self, model: SubscribeRequestModel) -> SubscribeResponseModel:
+        """Subscribe to data from the provider."""
+        raise NotImplementedError
