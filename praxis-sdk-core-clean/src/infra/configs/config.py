@@ -36,8 +36,8 @@ class InfrastructureConfig(BaseSettings):
     QDRANT_HOST: str = Field(default="qdrant", validation_alias="QDRANT_HOST")
     QDRANT_PORT: int = 6333
 
-    LANGFUSE_SECRET_KEY: SecretStr
-    LANGFUSE_PUBLIC_KEY: SecretStr
+    LANGFUSE_SECRET_KEY: SecretStr = ""
+    LANGFUSE_PUBLIC_KEY: SecretStr = ""
 
     @property
     def qdrant_url(self) -> str:
