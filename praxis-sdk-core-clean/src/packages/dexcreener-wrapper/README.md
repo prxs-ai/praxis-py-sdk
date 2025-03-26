@@ -136,7 +136,11 @@ Response Example:
         "pairCreatedAt": 1742991620000
     }
 ]
-
 ```
+
+- `/tokens/v1/{chainId}/{tokenAddresses}` - Get one or multiple pairs by token address (rate-limit 300 requests per minute)
+
+Response Example: Response like `/latest/dex/pairs/{chainId}/{pairId}`
+
 ## Official Documentation:
 For more information on the DexScreener API, visit the official documentation [here](https://docs.dexscreener.com/).

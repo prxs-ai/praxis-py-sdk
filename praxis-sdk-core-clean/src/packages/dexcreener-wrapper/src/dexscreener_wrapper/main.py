@@ -54,15 +54,31 @@ class DexScreenerAPI:
             return await response.json()
 
     async def get_latest_token_profiles(self, ) -> Dict[str, Any]:
+        """
+        Get the latest token profiles (rate-limit 60 requests per minute)
+        """
         return await self._request(f"/token-profiles/latest/v1")
 
     async def get_pairs_data_by_pool_address(self, chain: str, pair_address: str):
+        """
+        Get one or multiple pairs by chain and pair address (rate-limit 300 requests per minute)
+
+        param chain: The chain to get the pairs from(solana,ether)
+        param pair_address: The address of the pair(6xzcGi7rMd12UPD5PJSMnkTgquBZFYhhMz9D5iHgzB1w)
+        """
         return await self._request(f"/latest/dex/pairs/{chain}/{pair_address}")
 
     async def get_token_data_by_address(self, chain: str, token_address: str):
+        """
+        Get one or multiple pairs by token address (rate-limit 300 requests per minute)
+        param chain: The chain to get the pairs from(solana,ether)
+        param token_address: The address of the token(6xzcGi7rMd12UPD5PJSMnkTgquBZFYhhMz9D5iHgzB1w)
+        """
         return await self._request(f"/tokens/v1/{chain}/{token_address}")
 
     async def close(self):
-        """Close the aiohttp session."""
+        """
+        Close the aiohttp session.
+        """
         await self.session.close()
 
