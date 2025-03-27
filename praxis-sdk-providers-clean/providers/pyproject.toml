@@ -14,8 +14,35 @@ dependencies = [
 [tool.poetry]
 packages = [{ include = "*", from = "src" }]
 
+[project.entry-points."provider.config.entrypoint"]
+basic = "base_provider.config:get_provider_config"
+
 [project.entry-points."provider.entrypoint"]
 basic = "base_provider.ray_entrypoint:provider_builder"
+
+[project.entry-points."provider.data_contract.config.entrypoint"]
+basic = "base_provider.contract.config.get_data_contract_config"
+
+[project.entry-points."provider.data_contract.entrypoint"]
+basic = "base_provider.contract.base:get_data_contract"
+
+[project.entry-points."provider.data_source.config.entrypoint"]
+basic = "base_provider.source.config.get_data_source_config"
+
+[project.entry-points."provider.data_source.entrypoint"]
+basic = "base_provider.source.base:get_data_source"
+
+[project.entry-points."provider.data_processor.config.entrypoint"]
+basic = "base_provider.processor.config.get_data_processor_config"
+
+[project.entry-points."provider.data_processor.entrypoint"]
+basic = "base_provider.processor.base:get_data_processor"
+
+[project.entry-points."provider.data_sink.config.entrypoint"]
+basic = "base_provider.sink.config.get_data_sink_config"
+
+[project.entry-points."provider.data_sink.entrypoint"]
+basic = "base_provider.sink.base:get_data_sink"
 
 [tool.poetry.group.dev.dependencies]
 ray = { extras = ["serve"], version = "^2.42.1" }
