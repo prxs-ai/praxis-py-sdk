@@ -1,12 +1,12 @@
 from base_provider import abc
 from base_provider.bootstrap import bootstrap_main
-from base_provider.config import BasicProviderConfig, get_provider_config
+from base_provider.config import BaseProviderConfig, get_provider_config
 
 
 class BaseProvider(abc.AbstractProvider):
     """Base default implementation for all data providers."""
 
-    def __init__(self, config: BasicProviderConfig, *args, **kwargs):
+    def __init__(self, config: BaseProviderConfig, *args, **kwargs):
         self.config = config
 
 
