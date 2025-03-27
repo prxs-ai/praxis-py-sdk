@@ -1,6 +1,8 @@
 # DexScreener API Wrapper
 
-This package is an asynchronous wrapper for the DexScreener API. It simplifies interaction with the API, automatically manages rate limits, and provides a convenient interface for retrieving data.
+This package is an asynchronous wrapper for the DexScreener API. 
+It simplifies interaction with the API, automatically manages rate limits, 
+and provides a convenient interface for retrieving data.
 
 ## Technologies Used
 - **aiohttp** – for asynchronous HTTP requests
