@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 from typing import Any
@@ -24,10 +25,10 @@ class BaseProvider(AbstractDataProvider):
         self._contract = contract_builder()
         self._stream = stream_builder()
 
-        sinks = list(self.config.sinks)
+        sinks = self.config.sinks.split(",")
         if self._contract.supports_sync:
-            if "http" not in sinks:
-                sinks.append("http")
+            if "basic" not in sinks:
+                sinks.append("basic")
         if self._contract.supports_async:
             if "kafka" not in self.config.sinks:
                 sinks.append("kafka")
@@ -86,6 +87,8 @@ class BaseProvider(AbstractDataProvider):
 
         topic_hash = self._generate_run_hash(filters)
         topic_name = self._get_topic_name(abc.AsyncDataType.BATCH, topic_hash)
+
+        await self._stream.run(topic_hash, filters=filters, topic=topic_name)
 
         return topic_name
 
