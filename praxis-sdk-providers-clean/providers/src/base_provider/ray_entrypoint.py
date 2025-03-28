@@ -1,13 +1,82 @@
-from base_provider import abc
+import hashlib
+import json
+from typing import Any
+
 from base_provider.bootstrap import bootstrap_main
 from base_provider.config import BaseProviderConfig, get_provider_config
+from base_provider.contract import contract_builder
+from base_provider.exceptions import AsyncNotSupportedException, SyncNotSupportedException
+from base_provider.processor import processor_builder
+from base_provider.sink import sinks_builder
+from base_provider.source import source_builder
+from base_provider.stream import stream_builder
+from fastapi.security import HTTPAuthorizationCredentials
+
+from .abc import AbstractDataContract, AbstractDataProvider
 
 
-class BaseProvider(abc.AbstractProvider):
-    """Base default implementation for all data providers."""
+class BaseProvider(AbstractDataProvider):
+    """Base implementation of a provider supporting both sync and async modes."""
 
-    def __init__(self, config: BaseProviderConfig, *args, **kwargs):
+    def __init__(self, config: BaseProviderConfig):
         self.config = config
+        self._contract = contract_builder()
+        self._stream = stream_builder()
+
+        sinks = list(self.config.sinks)
+        if self._contract.supports_sync:
+            if "http" not in sinks:
+                sinks.append("http")
+        if self._contract.supports_async:
+            if "kafka" not in self.config.sinks:
+                sinks.append("kafka")
+
+        self._stream.setup(source=source_builder(), processors=[processor_builder()], sinks=sinks_builder(sinks))
+
+    @property
+    def domain(self) -> str:
+        return self.config.domain
+
+    @property
+    def version(self) -> str:
+        return self.config.version
+
+    @property
+    def contract(self) -> AbstractDataContract:
+        return self._contract
+
+    async def authenticate(self, credentials: HTTPAuthorizationCredentials | None = None) -> bool:
+        # No-op for now, implement actual authentication logic here
+        return True
+
+    def _generate_run_hash(self, filters: dict[str, Any]) -> str:
+        """Generate a unique hash for the topic based on filters."""
+        filter_str = json.dumps(filters, sort_keys=True)
+        return hashlib.sha256(filter_str.encode()).hexdigest()[:7]
+
+    def _get_topic_name(self, data_type: str, topic_hash: str) -> str:
+        """Generate the full topic name."""
+        return f"{self.domain}.{self.version}.{data_type}.{topic_hash}"
+
+    async def query(self, filters: dict[str, Any]) -> Any:
+        """Synchronously query data based on filters."""
+        if not self._contract.supports_sync:
+            raise SyncNotSupportedException("Synchronous queries not supported")
+        await self.authenticate()
+        run_hash = self._generate_run_hash(filters)
+        return await self._stream.run_once(run_hash, filters=filters)
+
+    async def subscribe(self, filters: dict[str, Any]) -> str:
+        """Subscribe to data stream and return Kafka topic."""
+        if not self._contract.supports_async:
+            raise AsyncNotSupportedException("Asynchronous streaming not supported")
+
+        await self.authenticate()
+
+        topic_hash = self._generate_run_hash(filters)
+        topic_name = self._get_topic_name("data", topic_hash)
+
+        return topic_name
 
 
 def provider_builder(args: dict):

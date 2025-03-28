@@ -12,6 +12,9 @@ class BaseProviderConfig(BaseSettings):
     kafka_message_format: str = "msgpack"
 
 
+    sinks: str = "basic,kafka"
+
+
 @lru_cache
 def get_provider_config() -> BaseProviderConfig:
     return BaseProviderConfig()

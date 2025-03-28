@@ -76,6 +76,44 @@ class AbstractDataSink(Generic[T], ABC):
         """Push data to the sink."""
         pass
 
+class AbstractDataStream(Generic[T, U], ABC):
+    """Abstract base class for data streams."""
+    
+    @abstractmethod
+    async def start(self) -> None:
+        """Start all data streams."""
+        pass
+
+    @abstractmethod
+    async def setup(self, source: AbstractDataSource[T], processors: list[AbstractDataProcessor[Any, Any]], sinks: list[AbstractDataSink[U]]) -> None:
+        """Setup the data stream."""
+        pass
+
+    @abstractmethod
+    async def run_once(self, *args, **kwargs) -> Any:
+        """Run the data pipeline."""
+        pass
+
+
+    @abstractmethod
+    async def run(self, *args, **kwargs) -> None:
+        """Run the data pipeline in a loop."""
+        pass
+
+    @abstractmethod
+    async def process_item(self, item: Any) -> Any:
+        """Process a single item."""
+        pass
+
+    @abstractmethod
+    async def process_batch(self, batch: list[Any]) -> list[Any]:
+        """Process a batch of items."""
+        pass
+
+    @abstractmethod
+    async def stop(self) -> None:
+        """Stop all data streams."""
+        pass
 
 class AbstractDataProvider(ABC):
     """Abstract base class for data provider implementations."""
