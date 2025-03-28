@@ -13,7 +13,7 @@ class BaseDataSource(AbstractDataSource[T], Generic[T]):
         self.config = config
 
     async def fetch(self, *args, **kwargs) -> list[T]:
-        return [{"data": "example"}]
+        return []
 
 
 def get_data_source(config: BaseDataSourceConfig) -> BaseDataSource:
