@@ -1,10 +1,11 @@
 import asyncio
 from typing import Any, TypeVar
 
-from base_provider.abc import AbstractDataProcessor, AbstractDataSink, AbstractDataSource, AbstractDataStream, DataMode
+from base_provider.abc import AbstractDataProcessor, AbstractDataSink, AbstractDataSource, AbstractDataStream, AbstractDataTrigger, DataMode
 from base_provider.stream.config import BaseDataStreamConfig
 
 T = TypeVar("T")
+E = TypeVar("E")
 U = TypeVar("U")
 
 
@@ -16,10 +17,12 @@ class BaseDataStream(AbstractDataStream[T, U]):
 
     def setup(
         self,
+        triggers: list[AbstractDataTrigger[E]],
         source: AbstractDataSource[T],
         processors: list[AbstractDataProcessor[Any, Any]],
         sinks: list[AbstractDataSink[U]],
     ) -> None:
+        self.triggers = triggers
         self.source = source
         self.processors = processors
         self.sinks = sinks

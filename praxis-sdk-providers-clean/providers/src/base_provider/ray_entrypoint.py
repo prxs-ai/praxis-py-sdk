@@ -1,8 +1,8 @@
-import asyncio
 import hashlib
 import json
 from typing import Any
 
+from base_provider import abc
 from base_provider.bootstrap import bootstrap_main
 from base_provider.config import BaseProviderConfig, get_provider_config
 from base_provider.contract import contract_builder
@@ -11,10 +11,10 @@ from base_provider.processor import processor_builder
 from base_provider.sink import sinks_builder
 from base_provider.source import source_builder
 from base_provider.stream import stream_builder
+from base_provider.trigger import trigger_builder
 from fastapi.security import HTTPAuthorizationCredentials
 
 from .abc import AbstractDataContract, AbstractDataProvider
-from base_provider import abc
 
 
 class BaseProvider(AbstractDataProvider):
@@ -33,7 +33,12 @@ class BaseProvider(AbstractDataProvider):
             if "kafka" not in self.config.sinks:
                 sinks.append("kafka")
 
-        self._stream.setup(source=source_builder(), processors=[processor_builder()], sinks=sinks_builder(sinks))
+        self._stream.setup(
+            triggers=[trigger_builder()],
+            source=source_builder(),
+            processors=[processor_builder()],
+            sinks=sinks_builder(sinks),
+        )
 
         self._contract.build_spec(
             domain=self.config.domain,

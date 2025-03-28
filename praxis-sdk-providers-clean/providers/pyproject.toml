@@ -26,6 +26,12 @@ basic = "base_provider.contract.config:get_data_contract_config"
 [project.entry-points."provider.data_contract.entrypoint"]
 basic = "base_provider.contract.base:get_data_contract"
 
+[project.entry-points."provider.data_trigger.config.entrypoint"]
+basic = "base_provider.trigger.config:get_data_trigger_config"
+
+[project.entry-points."provider.data_trigger.entrypoint"]
+basic = "base_provider.trigger.base:get_data_trigger"
+
 [project.entry-points."provider.data_source.config.entrypoint"]
 basic = "base_provider.source.config:get_data_source_config"
 
