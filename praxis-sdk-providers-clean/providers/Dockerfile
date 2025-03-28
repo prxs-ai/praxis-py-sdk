@@ -34,4 +34,5 @@ ENV PIP_EXTRA_INDEX_URL="https://praxis-688567299207.d.codeartifact.eu-west-1.am
 
 WORKDIR /serve_app
 
+COPY src/base_provider /serve_app/base_provider
 COPY entrypoint.py /serve_app/entrypoint.py

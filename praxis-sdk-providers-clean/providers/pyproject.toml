@@ -46,6 +46,12 @@ kafka = "base_provider.sink.config.get_kafka_data_sink_config"
 basic = "base_provider.sink.base:get_data_sink"
 kafka = "base_provider.sink.kafka:get_kafka_data_sink"
 
+[project.entry-points."provider.data_stream.config.entrypoint"]
+basic = "base_provider.stream.config.get_data_stream_config"
+
+[project.entry-points."provider.data_stream.entrypoint"]
+basic = "base_provider.stream.base:get_data_stream"
+
 [tool.poetry.group.dev.dependencies]
 ray = { extras = ["serve"], version = "^2.42.1" }
 pytest = "^8.3.4"
