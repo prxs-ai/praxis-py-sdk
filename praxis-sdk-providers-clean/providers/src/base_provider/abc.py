@@ -21,6 +21,7 @@ class AsyncDataType(str, Enum):
 
 
 T = TypeVar("T")
+E = TypeVar("E")
 U = TypeVar("U")
 
 
@@ -48,6 +49,15 @@ class AbstractDataContract(ABC):
     @abstractmethod
     def supports_async(self) -> bool:
         """Whether provider supports asynchronous streaming."""
+        pass
+
+
+class AbstractDataTrigger(Generic[E], ABC):
+    """Abstract base class for data trigger."""
+
+    @abstractmethod
+    async def trigger(self, *args, **kwargs) -> E:
+        """Trigger data."""
         pass
 
 
@@ -92,7 +102,7 @@ class AbstractDataStream(Generic[T, U], ABC):
         pass
 
     @abstractmethod
-    async def setup(self, source: AbstractDataSource[T], processors: list[AbstractDataProcessor[Any, Any]], sinks: list[AbstractDataSink[U]]) -> None:
+    async def setup(self, triggers: list[AbstractDataTrigger[E]], source: AbstractDataSource[T], processors: list[AbstractDataProcessor[Any, Any]], sinks: list[AbstractDataSink[U]]) -> None:
         """Setup the data stream."""
         pass
 

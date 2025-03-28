@@ -8,6 +8,9 @@ class EntrypointGroup(str, Enum):
     DATA_CONTRACT_CONFIG_ENTRYPOINT = "provider.data_contract.config.entrypoint"
     DATA_CONTRACT_ENTRYPOINT = "provider.data_contract.entrypoint"
 
+    DATA_TRIGGER_CONFIG_ENTRYPOINT = "provider.data_trigger.config.entrypoint"
+    DATA_TRIGGER_ENTRYPOINT = "provider.data_trigger.entrypoint"
+
     DATA_SOURCE_CONFIG_ENTRYPOINT = "provider.data_source.config.entrypoint"
     DATA_SOURCE_ENTRYPOINT = "provider.data_source.entrypoint"
 
