@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings
 
 
 class BaseProviderConfig(BaseSettings):
+    title: str
+    description: str
     domain: str
     version: str
 

@@ -12,7 +12,7 @@ class BaseDataSource(AbstractDataSource[T], Generic[T]):
     def __init__(self, config: BaseDataSourceConfig):
         self.config = config
 
-    async def fetch(self, query: Any) -> list[T]:
+    async def fetch(self, *args, **kwargs) -> list[T]:
         return []
 
 
