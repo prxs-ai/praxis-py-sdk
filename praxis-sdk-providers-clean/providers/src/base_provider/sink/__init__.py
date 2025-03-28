@@ -8,6 +8,6 @@ def sinks_builder(sinks: list[str]) -> list[AbstractDataSink]:
     for entrypoint in get_entrypoints(EntrypointGroup.DATA_SINK_CONFIG_ENTRYPOINT):
         if entrypoint.name in sinks:
             sink_config = entrypoint.load()()
-            _sinks.append(get_entrypoint(EntrypointGroup.DATA_SINK_ENTRYPOINT, entrypoint.name).load(sink_config))
+            _sinks.append(get_entrypoint(EntrypointGroup.DATA_SINK_ENTRYPOINT, entrypoint.name).load()(sink_config))
 
     return _sinks

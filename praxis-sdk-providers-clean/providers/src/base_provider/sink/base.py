@@ -16,7 +16,7 @@ class BaseDataSink(AbstractDataSink[T], Generic[T]):
     def mode(self) -> DataMode:
         return DataMode.SYNC
 
-    async def write(self, data: T) -> T:
+    async def write(self, data: T, *args, **kwargs) -> T:
         # just return the data for now
         return data
 

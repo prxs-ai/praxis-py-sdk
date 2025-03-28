@@ -15,11 +15,22 @@ class KafkaDataSink(AbstractDataSink[T], Generic[T]):
         self.config = config
         self.broker = broker
 
+        self.is_connected = False
+
     @property
     def mode(self) -> DataMode:
         return DataMode.ASYNC
 
-    async def write(self, data: T, topic: str) -> T:
+    async def connect(self):
+        """Establish connection to Kafka."""
+        await self.broker.start()
+        self.is_connected = True
+
+
+    async def write(self, data: T, *args, topic: str, **kwargs) -> T:
+        if not self.is_connected:
+            await self.connect()
+
         await self.broker.publish(data, topic=topic)
 
         return data
@@ -27,7 +38,7 @@ class KafkaDataSink(AbstractDataSink[T], Generic[T]):
 
 @inject
 def get_kafka_broker(config: KafkaDataSinkConfig = Depends(get_kafka_data_sink_config)) -> KafkaBroker:
-    return KafkaBroker(bootstrap_servers=config.kafka_bootstrap_uri)
+    return KafkaBroker(config.kafka_bootstrap_uri)
 
 
 @inject

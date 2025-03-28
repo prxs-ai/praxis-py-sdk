@@ -16,5 +16,13 @@ if __name__ == "__main__":
 
     fastapi_app = FastAPI()
 
+    @fastapi_app.post("/v1/query")
+    async def query_handler(filters: dict):
+        return await handle.query.remote(filters)
+
+    @fastapi_app.post("/v1/subscribe")
+    async def subscribe_handler(filters: dict) -> str:
+        return await handle.subscribe.remote(filters)
+
     # Run uvicorn server
     uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)

@@ -1,4 +1,5 @@
-from typing import Any, Generic, TypeVar
+import asyncio
+from typing import Any, TypeVar
 
 from base_provider.abc import AbstractDataProcessor, AbstractDataSink, AbstractDataSource, AbstractDataStream, DataMode
 from base_provider.stream.config import BaseDataStreamConfig
@@ -13,7 +14,12 @@ class BaseDataStream(AbstractDataStream[T, U]):
     def __init__(self, config: BaseDataStreamConfig):
         self.config = config
 
-    def setup(self, source: AbstractDataSource[T], processors: list[AbstractDataProcessor[Any, Any]], sinks: list[AbstractDataSink[U]]) -> None:
+    def setup(
+        self,
+        source: AbstractDataSource[T],
+        processors: list[AbstractDataProcessor[Any, Any]],
+        sinks: list[AbstractDataSink[U]],
+    ) -> None:
         self.source = source
         self.processors = processors
         self.sinks = sinks
@@ -65,13 +71,17 @@ class BaseDataStream(AbstractDataStream[T, U]):
         # do not lanch the sink, just return the data
         return data_list
 
-    async def run(self, *args, **kwargs) -> None:
+    async def run(self, *args, filters: dict[str, Any], **kwargs) -> None:
         """Run the data pipeline."""
-        pass
+        data_list = await self.source.fetch(*args, **kwargs)
+        data_list = await self.process_batch(data_list, filters=filters)
+
+        await asyncio.gather(*[sink.write(data_list, *args, **kwargs) for sink in self.sinks])
 
     async def stop(self) -> None:
         """Stop all data streams."""
         self._is_running = False
+
 
 def get_data_stream(config: BaseDataStreamConfig) -> BaseDataStream:
     return BaseDataStream(config)
