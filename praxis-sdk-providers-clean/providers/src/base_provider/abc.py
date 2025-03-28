@@ -7,10 +7,17 @@ class DataMode(str, Enum):
     SYNC = "sync"
     ASYNC = "async"
 
+    @classmethod
+    def all(cls):
+        return {cls.SYNC, cls.ASYNC}
+
 
 class AsyncDataType(str, Enum):
     STREAM = "stream"
     BATCH = "batch"
+
+    def __str__(self):
+        return self.value
 
 
 T = TypeVar("T")
@@ -92,6 +99,31 @@ class AbstractDataStream(Generic[T, U], ABC):
     @abstractmethod
     async def run_once(self, *args, **kwargs) -> Any:
         """Run the data pipeline."""
+        pass
+
+
+    @property
+    @abstractmethod
+    def models(self) -> dict[str, Any]:
+        """Return the models supported by the stream."""
+        pass
+
+    @property
+    @abstractmethod
+    def service_levels(self) -> dict[str, Any]:
+        """Return the service levels supported by the stream."""
+        pass
+
+    @property
+    @abstractmethod
+    def servers(self) -> dict[str, Any]:
+        """Return the servers supported by the stream."""
+        pass
+
+    @property
+    @abstractmethod
+    def supported_modes(self) -> set[DataMode]:
+        """Return the supported modes."""
         pass
 
 

@@ -13,6 +13,7 @@ from base_provider.stream import stream_builder
 from fastapi.security import HTTPAuthorizationCredentials
 
 from .abc import AbstractDataContract, AbstractDataProvider
+from base_provider import abc
 
 
 class BaseProvider(AbstractDataProvider):
@@ -32,6 +33,17 @@ class BaseProvider(AbstractDataProvider):
                 sinks.append("kafka")
 
         self._stream.setup(source=source_builder(), processors=[processor_builder()], sinks=sinks_builder(sinks))
+
+        self._contract.build_spec(
+            domain=self.config.domain,
+            version=self.config.version,
+            title=self.config.title,
+            description=self.config.description,
+            models=self._stream.models,
+            servers=self._stream.servers,
+            service_levels=self._stream.service_levels,
+            supported_modes=self._stream.supported_modes,
+        )
 
     @property
     def domain(self) -> str:
@@ -63,8 +75,7 @@ class BaseProvider(AbstractDataProvider):
         if not self._contract.supports_sync:
             raise SyncNotSupportedException("Synchronous queries not supported")
         await self.authenticate()
-        run_hash = self._generate_run_hash(filters)
-        return await self._stream.run_once(run_hash, filters=filters)
+        return await self._stream.run_once(self._generate_run_hash(filters), filters=filters)
 
     async def subscribe(self, filters: dict[str, Any]) -> str:
         """Subscribe to data stream and return Kafka topic."""
@@ -74,7 +85,7 @@ class BaseProvider(AbstractDataProvider):
         await self.authenticate()
 
         topic_hash = self._generate_run_hash(filters)
-        topic_name = self._get_topic_name("data", topic_hash)
+        topic_name = self._get_topic_name(abc.AsyncDataType.BATCH, topic_hash)
 
         return topic_name
 

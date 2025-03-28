@@ -11,6 +11,7 @@ class BaseDataContract(AbstractDataContract):
     def __init__(self, config: BaseDataContractConfig):
         self.config = config
         self._spec = None
+        self.supported_modes = DataMode.all()
 
     def build_spec(
         self,
@@ -18,25 +19,25 @@ class BaseDataContract(AbstractDataContract):
         version: str,
         title: str,
         description: str,
-        models: dict[str, DataModel],
-        servers: dict[str, ServerSpec],
-        service_levels: ServiceLevel,
+        models: dict[str, Any],
+        servers: dict[str, Any],
+        service_levels: dict[str, Any],
         supported_modes: set[DataMode] = None,
     ):
         if supported_modes is None:
-            supported_modes = {DataMode.SYNC, DataMode.ASYNC}
+            supported_modes = DataMode.all()
         self.supported_modes = supported_modes
 
         self._spec = ContractSpecification(
             data_contract_specification=self.config.data_contract_version,
             id=self.config.data_contract_uid_template.format(domain=domain, version=version),
             info=self._build_info(title, version, description),
-            servers=servers,
+            servers={server_name: ServerSpec(**server) for server_name, server in servers.items()},
             roles=self._build_roles(),
             terms=self._build_terms(),
             policies=self._build_policies(),
-            models=models,
-            service_levels=service_levels,
+            models={model_name: DataModel(**model) for model_name, model in models.items()},
+            service_levels=ServiceLevel(**service_levels),
             tags=[],
             supported_modes=supported_modes,
         )
