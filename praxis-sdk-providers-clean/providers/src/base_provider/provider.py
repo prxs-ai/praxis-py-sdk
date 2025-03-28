@@ -2,6 +2,7 @@ import hashlib
 import json
 from typing import Any
 
+from base_provider.config import BaseProviderConfig
 from base_provider.contract import contract_builder
 from base_provider.exceptions import AsyncNotSupportedException, SyncNotSupportedException
 from base_provider.processor import processor_builder
@@ -17,26 +18,25 @@ class BaseProvider(AbstractDataProvider):
 
     def __init__(
         self,
-        domain: str,
-        version: str,
+        config: BaseProviderConfig
     ):
-        self._domain = domain
-        self._version = version
-        self._contract = contract_builder()
+        self.config = config
         self._source = source_builder()
         self._processor = processor_builder()
         self._sink = sink_builder()
+
+        self._contract = contract_builder()
 
         if self._contract.supports_async:
             pass
 
     @property
     def domain(self) -> str:
-        return self._domain
+        return self.config.domain
 
     @property
     def version(self) -> str:
-        return self._version
+        return self.config.version
 
     @property
     def contract(self) -> AbstractDataContract:

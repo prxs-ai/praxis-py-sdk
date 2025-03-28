@@ -62,11 +62,17 @@ class AbstractDataProcessor(Generic[T, U], ABC):
         pass
 
 
-class AbstractDataSink(ABC):
+class AbstractDataSink(Generic[T], ABC):
     """Abstract base class for data sinks."""
 
+    @property
     @abstractmethod
-    async def write(self, data: T) -> None:
+    def mode(self) -> DataMode:
+        """Return the sink's mode."""
+        pass
+
+    @abstractmethod
+    async def write(self, data: T, *args, **kwargs) -> T:
         """Push data to the sink."""
         pass
 

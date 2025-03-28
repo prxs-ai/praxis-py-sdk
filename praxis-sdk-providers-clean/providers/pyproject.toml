@@ -8,7 +8,7 @@ requires-python = ">=3.9,<4.0"
 dependencies = [
     "fastapi (>=0.115.8,<1.0.0)",
     "pydantic-settings (>=2.8.0,<3.0.0)",
-    "faststream (>=0.5.37,<0.6.0)",
+    "faststream[kafka] (>=0.5.37,<0.6.0)",
 ]
 
 [tool.poetry]
@@ -40,9 +40,11 @@ basic = "base_provider.processor.base:get_data_processor"
 
 [project.entry-points."provider.data_sink.config.entrypoint"]
 basic = "base_provider.sink.config.get_data_sink_config"
+kafka = "base_provider.sink.config.get_kafka_data_sink_config"
 
 [project.entry-points."provider.data_sink.entrypoint"]
 basic = "base_provider.sink.base:get_data_sink"
+kafka = "base_provider.sink.kafka:get_kafka_data_sink"
 
 [tool.poetry.group.dev.dependencies]
 ray = { extras = ["serve"], version = "^2.42.1" }

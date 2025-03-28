@@ -4,6 +4,6 @@ from base_provider.utils import get_entrypoint
 
 
 def sink_builder() -> AbstractDataSink:
-    config = get_entrypoint(EntrypointGroup.DATA_SOURCE_CONFIG_ENTRYPOINT).load()
+    config = get_entrypoint(EntrypointGroup.DATA_SINK_CONFIG_ENTRYPOINT).load()
 
-    return get_entrypoint(EntrypointGroup.DATA_SOURCE_ENTRYPOINT).load()(config())
+    return get_entrypoint(EntrypointGroup.DATA_SINK_ENTRYPOINT).load()(config())
