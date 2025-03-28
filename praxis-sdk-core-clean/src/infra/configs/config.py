@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     LIKES_INTERVAL: int = 6 * 60 * 60
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
     TWITTER_CLIENT_ID: str = 'eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ'
-    TWITTER_CLIENT_SECRET: str = 'TeK9tRPPirYbpGhiyb_yaOMYJA7ijvCQaU6O5vu5VioA8knBAA'
+    TWITTER_CLIENT_SECRET: str = '8noXqU32HCtbW-0VIB2bw42Q_ZRdAliBYTq3BAV0nQvwhOTCux'
     TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
 
     TWITTER_REDIRECT_URI: str = 'https://dev.prx.ai/twitter/oauth/callback/'
