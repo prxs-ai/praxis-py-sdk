@@ -36,8 +36,8 @@ class InfrastructureConfig(BaseSettings):
     QDRANT_HOST: str = Field(default="qdrant", validation_alias="QDRANT_HOST")
     QDRANT_PORT: int = 6333
 
-    LANGFUSE_SECRET_KEY: SecretStr
-    LANGFUSE_PUBLIC_KEY: SecretStr
+    LANGFUSE_SECRET_KEY: SecretStr = ""
+    LANGFUSE_PUBLIC_KEY: SecretStr = ""
 
     @property
     def qdrant_url(self) -> str:
@@ -94,12 +94,12 @@ class Settings(BaseSettings):
     ANSWER_MY_COMMENT_INTERVAL: int = 60 * 4
     LIKES_INTERVAL: int = 6 * 60 * 60
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
-    TWITTER_CLIENT_ID: str = "eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ"
-    TWITTER_CLIENT_SECRET: str = "TeK9tRPPirYbpGhiyb_yaOMYJA7ijvCQaU6O5vu5VioA8knBAA"
-    TWITTER_BASIC_BEARER_TOKEN: str = "AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj"
+    TWITTER_CLIENT_ID: str = 'eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ'
+    TWITTER_CLIENT_SECRET: str = 'TeK9tRPPirYbpGhiyb_yaOMYJA7ijvCQaU6O5vu5VioA8knBAA'
+    TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
 
-    TWITTER_REDIRECT_URI: str = "http://185.53.46.123:8000/twitter/oauth/callback/"
-    OPENAI_API_KEY: str = "***REMOVED***"
+    TWITTER_REDIRECT_URI: str = 'http://185.53.46.123:8000/twitter/oauth/callback/'
+    OPENAI_API_KEY: str = '***REMOVED***'
     OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
     LOGS_DIR: str = "../logs"
     TWEETSCOUT_API_KEY: str = "***REMOVED***"

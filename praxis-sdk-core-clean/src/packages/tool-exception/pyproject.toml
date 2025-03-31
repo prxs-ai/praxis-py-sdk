@@ -1,14 +1,12 @@
 [project]
-name = "redis-client"
-version = "0.1.6"
-description = "Package that create Redis client"
+name = "tool-exception"
+version = "0.0.1"
+description = "Package that consists tool exceptions of Praxis project"
 authors = [
     {name = "0xDevZip",email = "noreply@example.com"}
 ]
 requires-python = ">=3.10,<4"
-dependencies = [
-    "redis>=4.5.0",
-]
+dependencies = []
 readme = "README.md"
 
 [tool.poetry]
