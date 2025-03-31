@@ -12,7 +12,7 @@ class DataMode(str, Enum):
         return {cls.SYNC, cls.ASYNC}
 
 
-class AsyncDataType(str, Enum):
+class DataModelType(str, Enum):
     STREAM = "stream"
     BATCH = "batch"
 

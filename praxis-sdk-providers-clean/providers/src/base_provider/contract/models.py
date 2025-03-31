@@ -1,12 +1,11 @@
 from typing import Any
 
-from base_provider.abc import DataMode
+from base_provider.abc import DataMode, DataModelType
 from pydantic import BaseModel, Field
 
 
 class ServerSpec(BaseModel):
     pass
-
 
 class KafkaServerSpec(ServerSpec):
     # TODO: make datacontract.com compatible
@@ -37,10 +36,10 @@ class DataField(BaseModel):
 
 class DataModel(BaseModel):
     description: str
-    type: str  # "stream" or "dataset"
+    type: DataModelType
     fields: dict[str, DataField]
     examples: list[str] = Field(default_factory=list)
-    supported_modes: set[DataMode] = {DataMode.SYNC, DataMode.ASYNC}
+    supported_modes: set[DataMode] = DataMode.all()
 
 
 class ServiceLevel(BaseModel):
