@@ -98,11 +98,6 @@ class AbstractDataStream(Generic[T, U], ABC):
     """Abstract base class for data streams."""
 
     @abstractmethod
-    async def start(self) -> None:
-        """Start all data streams."""
-        pass
-
-    @abstractmethod
     async def setup(
         self,
         triggers: dict[str, AbstractDataTrigger[E]],
@@ -111,11 +106,6 @@ class AbstractDataStream(Generic[T, U], ABC):
         sinks: dict[str, AbstractDataSink[U]],
     ) -> None:
         """Setup the data stream."""
-        pass
-
-    @abstractmethod
-    async def run_once(self, *args, **kwargs) -> Any:
-        """Run the data pipeline."""
         pass
 
     @property
@@ -143,25 +133,49 @@ class AbstractDataStream(Generic[T, U], ABC):
         pass
 
     @abstractmethod
-    async def run(self, *args, **kwargs) -> None:
-        """Run the data pipeline in a loop."""
-        pass
-
-    @abstractmethod
     async def process_item(self, item: Any) -> Any:
         """Process a single item."""
         pass
 
     @abstractmethod
-    async def process_batch(self, batch: list[Any]) -> list[Any]:
+    async def fetch_batch(self, *args, **kwargs) -> list[Any]:
         """Process a batch of items."""
         pass
 
     @abstractmethod
-    async def stop(self) -> None:
-        """Stop all data streams."""
+    async def process_batch(self, batch: dict[str, list[Any]]) -> dict[str, Any]:
+        """Process a batch of items."""
         pass
 
+    @abstractmethod
+    async def write_batch(self, batch: dict[str, list[Any]], *args, **kwargs) -> None:
+        """Write a batch of items."""
+        pass
+
+class AbstractDataRunner(Generic[T], ABC):
+    """Abstract base class for data runner implementations."""
+
+    @classmethod
+    @abstractmethod
+    def start(cls) -> None:
+        """Start all data workflows."""
+        pass
+
+    @abstractmethod
+    async def run_once(self, run_id: str, stream: AbstractDataStream[T, Any], *args, **kwargs) -> Any:
+        """Run the data pipeline and return a result."""
+        pass
+
+    @abstractmethod
+    async def run(self, run_id: str, stream: AbstractDataStream[T, Any], *args, **kwargs) -> None:
+        """Run the data pipeline in a background."""
+        pass
+
+    @classmethod
+    @abstractmethod
+    def stop(cls) -> None:
+        """Stop all data workflows."""
+        pass
 
 class AbstractDataProvider(ABC):
     """Abstract base class for data provider implementations."""
@@ -176,6 +190,12 @@ class AbstractDataProvider(ABC):
     @abstractmethod
     def version(self) -> str:
         """Return the provider's version."""
+        pass
+
+    @property
+    @abstractmethod
+    def runner(self) -> AbstractDataRunner:
+        """Return the provider's data runner."""
         pass
 
     @property

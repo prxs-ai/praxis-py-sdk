@@ -36,8 +36,6 @@ class BaseDataStream(AbstractDataStream[T, U]):
         self.processors = processors
         self.sinks = sinks
 
-        self._is_running = False
-
     @property
     def models(self) -> dict[str, Any]:
         """Return the models supported by the stream."""
@@ -57,10 +55,6 @@ class BaseDataStream(AbstractDataStream[T, U]):
     def supported_modes(self) -> set[DataMode]:
         """Return the supported modes."""
         return DataMode.all()
-
-    async def start(self) -> None:
-        """Start all data streams."""
-        self._is_running = True
 
     async def process_item(self, item: Any, filters: dict[str, Any]):
         """Process a single item."""
@@ -85,13 +79,6 @@ class BaseDataStream(AbstractDataStream[T, U]):
             items[source_name] = await source.fetch(*args, **kwargs)
         return items
 
-    async def run_once(self, *args, filters: dict[str, Any], **kwargs) -> U:
-        """Run the data pipeline."""
-        data = await self.fetch_batch(*args, **kwargs)
-        data = await self.process_batch(data, filters=filters)
-        # do not launch the sink, just return the data
-        return data
-
     async def write_item(self, item: Any, *args, **kwargs):
         """Write a single item."""
         results = {}
@@ -107,20 +94,6 @@ class BaseDataStream(AbstractDataStream[T, U]):
                 *[self.write_item(item, *args, **kwargs) for item in minibatch]
             )
         return results
-
-    async def run(self, *args, filters: dict[str, Any], topic: str, **kwargs) -> None:
-        """Run the data pipeline."""
-        data = await self.fetch_batch(*args, **kwargs)
-        data = await self.process_batch(data, filters=filters)
-
-        # TODO: fix this
-        kwargs[str(DefaultSinkEntrypointType.KAFKA)] = {"topic": topic}
-
-        await self.write_batch(data, *args, **kwargs)
-
-    async def stop(self) -> None:
-        """Stop all data streams."""
-        self._is_running = False
 
 
 @inject

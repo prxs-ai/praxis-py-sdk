@@ -15,6 +15,7 @@ class EntrypointGroup(str, Enum):
     DATA_SINK_ENTRYPOINT = "provider.sink.entrypoint"
 
     DATA_STREAM_ENTRYPOINT = "provider.stream.entrypoint"
+    DATA_RUNNER_ENTRYPOINT = "provider.runner.entrypoint"
 
     def __str__(self):
         return self.value
