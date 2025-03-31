@@ -20,15 +20,14 @@ def bootstrap_main(provider_cls: type[abc.AbstractDataProvider]) -> type[abc.Abs
     @serve.deployment
     @serve.ingress(app)
     class Provider(provider_cls):
-        
         @app.get("/v1/contract")
         async def get_contract_handler(self) -> dict[str, Any]:
             return self.contract.spec
-        
+
         @app.post("/v1/query")
         async def query_handler(self, filters: dict[str, Any]) -> Any:
             return await self.query(filters)
-        
+
         @app.post("/v1/subscribe")
         async def subscribe_handler(self, filters: dict[str, Any]) -> str:
             return await self.subscribe(filters)

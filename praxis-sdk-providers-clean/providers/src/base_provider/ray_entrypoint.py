@@ -7,11 +7,11 @@ from base_provider.bootstrap import bootstrap_main
 from base_provider.config import BaseProviderConfig, get_provider_config
 from base_provider.contract import contract_builder
 from base_provider.exceptions import AsyncNotSupportedException, SyncNotSupportedException
-from base_provider.processor import processor_builder
-from base_provider.sink import sinks_builder
-from base_provider.source import source_builder
+from base_provider.processors import processors_builder
+from base_provider.sinks import sinks_builder
+from base_provider.sources import sources_builder
 from base_provider.stream import stream_builder
-from base_provider.trigger import trigger_builder
+from base_provider.triggers import triggers_builder
 from fastapi.security import HTTPAuthorizationCredentials
 
 from .abc import AbstractDataContract, AbstractDataProvider
@@ -25,19 +25,11 @@ class BaseProvider(AbstractDataProvider):
         self._contract = contract_builder()
         self._stream = stream_builder()
 
-        sinks = self.config.sinks.split(",")
-        if self._contract.supports_sync:
-            if "basic" not in sinks:
-                sinks.append("basic")
-        if self._contract.supports_async:
-            if "kafka" not in self.config.sinks:
-                sinks.append("kafka")
-
         self._stream.setup(
-            triggers=[trigger_builder()],
-            source=source_builder(),
-            processors=[processor_builder()],
-            sinks=sinks_builder(sinks),
+            triggers=triggers_builder(),
+            sources=sources_builder(),
+            processors=processors_builder(),
+            sinks=sinks_builder(),
         )
 
         self._contract.build_spec(

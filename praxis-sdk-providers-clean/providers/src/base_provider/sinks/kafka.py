@@ -1,7 +1,7 @@
 from typing import Generic, TypeVar
 
 from base_provider.abc import AbstractDataSink, DataMode
-from base_provider.sink.config import KafkaDataSinkConfig, get_kafka_data_sink_config
+from base_provider.sinks.config import KafkaDataSinkConfig, get_kafka_data_sink_config
 from fast_depends import Depends, inject
 from faststream.kafka import KafkaBroker
 
@@ -26,7 +26,6 @@ class KafkaDataSink(AbstractDataSink[T], Generic[T]):
         await self.broker.start()
         self.is_connected = True
 
-
     async def write(self, data: T, *args, topic: str, **kwargs) -> T:
         if not self.is_connected:
             await self.connect()
@@ -42,5 +41,8 @@ def get_kafka_broker(config: KafkaDataSinkConfig = Depends(get_kafka_data_sink_c
 
 
 @inject
-def get_kafka_data_sink(config: KafkaDataSinkConfig, broker: KafkaBroker = Depends(get_kafka_broker)) -> KafkaDataSink:
+def get_kafka_data_sink(
+    config: KafkaDataSinkConfig = Depends(get_kafka_data_sink_config),
+    broker: KafkaBroker = Depends(get_kafka_broker),
+) -> KafkaDataSink:
     return KafkaDataSink(config, broker)

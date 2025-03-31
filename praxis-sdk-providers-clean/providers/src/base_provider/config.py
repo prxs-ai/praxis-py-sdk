@@ -14,7 +14,7 @@ class BaseProviderConfig(BaseSettings):
     kafka_message_format: str = "msgpack"
 
 
-    sinks: str = "basic,kafka"
+    sinks: str = ""
 
 
 @lru_cache

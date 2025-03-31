@@ -1,8 +1,9 @@
 from typing import Any
 
 from base_provider.abc import AbstractDataContract, DataMode
-from base_provider.contract.config import BaseDataContractConfig
+from base_provider.contract.config import BaseDataContractConfig, get_data_contract_config
 from base_provider.contract.models import ContractSpecification, DataModel, Policy, Role, ServerSpec, ServiceLevel
+from fast_depends import Depends, inject
 
 
 class BaseDataContract(AbstractDataContract):
@@ -80,5 +81,6 @@ class BaseDataContract(AbstractDataContract):
         return DataMode.ASYNC in self.supported_modes
 
 
-def get_data_contract(config: BaseDataContractConfig) -> BaseDataContract:
+@inject
+def get_data_contract(config: BaseDataContractConfig = Depends(get_data_contract_config)) -> BaseDataContract:
     return BaseDataContract(config)

@@ -1,7 +1,8 @@
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from base_provider.abc import AbstractDataSource
-from base_provider.source.config import BaseDataSourceConfig
+from base_provider.sources.config import BaseDataSourceConfig, get_data_source_config
+from fast_depends import Depends, inject
 
 T = TypeVar("T")
 
@@ -16,5 +17,6 @@ class BaseDataSource(AbstractDataSource[T], Generic[T]):
         return []
 
 
-def get_data_source(config: BaseDataSourceConfig) -> BaseDataSource:
+@inject
+def get_data_source(config: BaseDataSourceConfig = Depends(get_data_source_config)) -> BaseDataSource:
     return BaseDataSource(config)

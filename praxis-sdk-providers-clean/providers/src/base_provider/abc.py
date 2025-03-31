@@ -93,16 +93,23 @@ class AbstractDataSink(Generic[T], ABC):
         """Push data to the sink."""
         pass
 
+
 class AbstractDataStream(Generic[T, U], ABC):
     """Abstract base class for data streams."""
-    
+
     @abstractmethod
     async def start(self) -> None:
         """Start all data streams."""
         pass
 
     @abstractmethod
-    async def setup(self, triggers: list[AbstractDataTrigger[E]], source: AbstractDataSource[T], processors: list[AbstractDataProcessor[Any, Any]], sinks: list[AbstractDataSink[U]]) -> None:
+    async def setup(
+        self,
+        triggers: dict[str, AbstractDataTrigger[E]],
+        sources: dict[str, AbstractDataSource[T]],
+        processors: dict[str, AbstractDataProcessor[Any, Any]],
+        sinks: dict[str, AbstractDataSink[U]],
+    ) -> None:
         """Setup the data stream."""
         pass
 
@@ -110,7 +117,6 @@ class AbstractDataStream(Generic[T, U], ABC):
     async def run_once(self, *args, **kwargs) -> Any:
         """Run the data pipeline."""
         pass
-
 
     @property
     @abstractmethod
@@ -136,7 +142,6 @@ class AbstractDataStream(Generic[T, U], ABC):
         """Return the supported modes."""
         pass
 
-
     @abstractmethod
     async def run(self, *args, **kwargs) -> None:
         """Run the data pipeline in a loop."""
@@ -156,6 +161,7 @@ class AbstractDataStream(Generic[T, U], ABC):
     async def stop(self) -> None:
         """Stop all data streams."""
         pass
+
 
 class AbstractDataProvider(ABC):
     """Abstract base class for data provider implementations."""
