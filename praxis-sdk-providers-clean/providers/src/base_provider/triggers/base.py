@@ -1,7 +1,8 @@
 from typing import Generic, TypeVar
 
 from base_provider.abc import AbstractDataTrigger
-from base_provider.triggers.config import BaseDataTriggerConfig
+from base_provider.triggers.config import BaseDataTriggerConfig, get_data_trigger_config
+from fast_depends import Depends, inject
 
 T = TypeVar("T")
 
@@ -16,5 +17,6 @@ class BaseDataTrigger(AbstractDataTrigger[T], Generic[T]):
         raise NotImplementedError
 
 
-def get_data_trigger(config: BaseDataTriggerConfig) -> BaseDataTrigger:
+@inject
+def get_data_trigger(config: BaseDataTriggerConfig = Depends(get_data_trigger_config)) -> BaseDataTrigger:
     return BaseDataTrigger(config)

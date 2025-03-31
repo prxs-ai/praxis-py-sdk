@@ -74,7 +74,7 @@ class AbstractDataProcessor(Generic[T, U], ABC):
     """Abstract base class for data processors."""
 
     @abstractmethod
-    async def process(self, data: T, filters: dict[str, Any]) -> U:
+    async def process(self, data: T, **filters) -> U:
         """Process data."""
         pass
 
