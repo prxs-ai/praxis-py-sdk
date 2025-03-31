@@ -16,6 +16,10 @@ if __name__ == "__main__":
 
     fastapi_app = FastAPI()
 
+    @fastapi_app.post("/v1/contract")
+    async def contract_handler(filters: dict):
+        return await handle.contract.remote()
+
     @fastapi_app.post("/v1/query")
     async def query_handler(filters: dict):
         return await handle.query.remote(filters)

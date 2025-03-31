@@ -22,17 +22,17 @@ basic = "base_provider.ray_entrypoint:provider_builder"
 basic = "base_provider.contract.base:get_data_contract"
 
 [project.entry-points."provider.trigger.entrypoint"]
-basic = "base_provider.trigger.base:get_data_trigger"
+basic = "base_provider.triggers.base:get_data_trigger"
 
 [project.entry-points."provider.source.entrypoint"]
-basic = "base_provider.source.base:get_data_source"
+basic = "base_provider.sources.base:get_data_source"
 
 [project.entry-points."provider.processor.entrypoint"]
-basic = "base_provider.processor.base:get_data_processor"
+basic = "base_provider.processors.base:get_data_processor"
 
 [project.entry-points."provider.sink.entrypoint"]
-basic = "base_provider.sink.base:get_data_sink"
-kafka = "base_provider.sink.kafka:get_kafka_data_sink"
+basic = "base_provider.sinks.base:get_data_sink"
+kafka = "base_provider.sinks.kafka:get_kafka_data_sink"
 
 [project.entry-points."provider.stream.entrypoint"]
 basic = "base_provider.stream.base:get_data_stream"

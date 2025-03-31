@@ -1,8 +1,17 @@
 import asyncio
 from typing import Any, TypeVar
 
-from base_provider.abc import AbstractDataProcessor, AbstractDataSink, AbstractDataSource, AbstractDataStream, AbstractDataTrigger, DataMode
-from base_provider.stream.config import BaseDataStreamConfig
+from base_provider.abc import (
+    AbstractDataProcessor,
+    AbstractDataSink,
+    AbstractDataSource,
+    AbstractDataStream,
+    AbstractDataTrigger,
+    DataMode,
+)
+from base_provider.sinks.const import DefaultSinkEntrypointType
+from base_provider.stream.config import BaseDataStreamConfig, get_data_stream_config
+from fast_depends import Depends, inject
 
 T = TypeVar("T")
 E = TypeVar("E")
@@ -17,13 +26,13 @@ class BaseDataStream(AbstractDataStream[T, U]):
 
     def setup(
         self,
-        triggers: list[AbstractDataTrigger[E]],
-        source: AbstractDataSource[T],
-        processors: list[AbstractDataProcessor[Any, Any]],
-        sinks: list[AbstractDataSink[U]],
+        triggers: dict[str, AbstractDataTrigger[E]],
+        sources: dict[str, AbstractDataSource[T]],
+        processors: dict[str, AbstractDataProcessor[Any, Any]],
+        sinks: dict[str, AbstractDataSink[U]],
     ) -> None:
         self.triggers = triggers
-        self.source = source
+        self.sources = sources
         self.processors = processors
         self.sinks = sinks
 
@@ -56,35 +65,64 @@ class BaseDataStream(AbstractDataStream[T, U]):
     async def process_item(self, item: Any, filters: dict[str, Any]):
         """Process a single item."""
         result = item
-        for processor in self.processors:
-            result = await processor.process(result, filters)
+        for processor_name, processor in self.processors.items():
+            result = await processor.process(result, **filters.pop(processor_name, {}))
         return result
 
-    async def process_batch(self, batch: list[Any], filters: dict[str, Any]) -> list[Any]:
+    async def process_batch(self, batch: dict[str, list[Any]], filters: dict[str, Any]) -> list[Any]:
         """Process a batch of items."""
-        results = []
-        for item in batch:
-            results.append(await self.process_item(item, filters))
+        results = {}
+        for source, minibatch in batch.items():
+            results[source] = await asyncio.gather(
+                *[self.process_item(item, filters) for item in minibatch]
+            )
         return results
+
+    async def fetch_batch(self, *args, **kwargs) -> dict[str, list[T]]:
+        """Fetch data from the source."""
+        items = {}
+        for source_name, source in self.sources.items():
+            items[source_name] = await source.fetch(*args, **kwargs)
+        return items
 
     async def run_once(self, *args, filters: dict[str, Any], **kwargs) -> U:
         """Run the data pipeline."""
-        data_list = await self.source.fetch(*args, **kwargs)
-        data_list = await self.process_batch(data_list, filters=filters)
-        # do not lanch the sink, just return the data
-        return data_list
+        data = await self.fetch_batch(*args, **kwargs)
+        data = await self.process_batch(data, filters=filters)
+        # do not launch the sink, just return the data
+        return data
 
-    async def run(self, *args, filters: dict[str, Any], **kwargs) -> None:
+    async def write_item(self, item: Any, *args, **kwargs):
+        """Write a single item."""
+        results = {}
+        for sink_name, sink in self.sinks.items():
+            results[sink_name] = await sink.write(item, **kwargs.pop(sink_name, {}))
+        return results
+
+    async def write_batch(self, batch: dict[str, list[U]], *args, **kwargs) -> None:
+        """Write data to sinks."""
+        results = {}
+        for source, minibatch in batch.items():
+            results[source] = await asyncio.gather(
+                *[self.write_item(item, *args, **kwargs) for item in minibatch]
+            )
+        return results
+
+    async def run(self, *args, filters: dict[str, Any], topic: str, **kwargs) -> None:
         """Run the data pipeline."""
-        data_list = await self.source.fetch(*args, **kwargs)
-        data_list = await self.process_batch(data_list, filters=filters)
+        data = await self.fetch_batch(*args, **kwargs)
+        data = await self.process_batch(data, filters=filters)
 
-        await asyncio.gather(*[sink.write(data_list, *args, **kwargs) for sink in self.sinks])
+        # TODO: fix this
+        kwargs[str(DefaultSinkEntrypointType.KAFKA)] = {"topic": topic}
+
+        await self.write_batch(data, *args, **kwargs)
 
     async def stop(self) -> None:
         """Stop all data streams."""
         self._is_running = False
 
 
-def get_data_stream(config: BaseDataStreamConfig) -> BaseDataStream:
+@inject
+def get_data_stream(config: BaseDataStreamConfig = Depends(get_data_stream_config)) -> BaseDataStream:
     return BaseDataStream(config)
