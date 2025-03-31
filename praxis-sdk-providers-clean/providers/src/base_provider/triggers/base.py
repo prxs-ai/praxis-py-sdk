@@ -1,7 +1,7 @@
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from base_provider.abc import AbstractDataTrigger
-from base_provider.trigger.config import BaseDataTriggerConfig
+from base_provider.triggers.config import BaseDataTriggerConfig
 
 T = TypeVar("T")
 

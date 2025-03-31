@@ -1,7 +1,8 @@
 from typing import Any, Generic, TypeVar
 
 from base_provider.abc import AbstractDataProcessor
-from base_provider.processor.config import BaseDataProcessorConfig
+from base_provider.processors.config import BaseDataProcessorConfig, get_data_processor_config
+from fast_depends import Depends, inject
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -18,5 +19,6 @@ class BaseDataProcessor(AbstractDataProcessor[T, U], Generic[T, U]):
         return data  # type: ignore
 
 
-def get_data_processor(config: BaseDataProcessorConfig) -> BaseDataProcessor:
+@inject
+def get_data_processor(config: BaseDataProcessorConfig = Depends(get_data_processor_config)) -> BaseDataProcessor:
     return BaseDataProcessor(config)

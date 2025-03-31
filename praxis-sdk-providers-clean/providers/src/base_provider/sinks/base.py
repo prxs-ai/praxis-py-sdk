@@ -1,7 +1,8 @@
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from base_provider.abc import AbstractDataSink, DataMode
-from base_provider.sink.config import BaseDataSinkConfig
+from base_provider.sinks.config import BaseDataSinkConfig, get_data_sink_config
+from fast_depends import Depends, inject
 
 T = TypeVar("T")
 
@@ -21,5 +22,6 @@ class BaseDataSink(AbstractDataSink[T], Generic[T]):
         return data
 
 
-def get_data_sink(config: BaseDataSinkConfig) -> BaseDataSink:
+@inject
+def get_data_sink(config: BaseDataSinkConfig = Depends(get_data_sink_config)) -> BaseDataSink:
     return BaseDataSink(config)
