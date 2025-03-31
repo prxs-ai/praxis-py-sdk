@@ -14,7 +14,7 @@ class BaseDataProcessor(AbstractDataProcessor[T, U], Generic[T, U]):
     def __init__(self, config: BaseDataProcessorConfig):
         self.config = config
 
-    async def process(self, data: T, filters: dict[str, Any]) -> U:
+    async def process(self, data: T, **filters) -> U:
 
         return data  # type: ignore
 
