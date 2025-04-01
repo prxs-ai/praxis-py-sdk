@@ -56,3 +56,11 @@ async def send_openai_request(
             raise e
 
     return None
+
+
+async def get_embedding(text: str) -> list[float]:
+    response = await client.embeddings.create(
+        model=settings.OPENAI_EMBEDDING_MODEL,
+        input=text
+    )
+    return response.data[0].embedding
