@@ -2,7 +2,9 @@
 name = "qdrant-client"
 version = "0.0.1"
 description = ""
-authors = ["ruthuwjwb <ruthuwjwb@gmail.com>"]
+authors = [
+    {name = "ruthuwjwb",email = "ruthuwjwb@gmail.com"}
+]
 readme = "README.md"
 dependencies = [
     "qdrant-client (>=1.13.0,<2.0.0)",
