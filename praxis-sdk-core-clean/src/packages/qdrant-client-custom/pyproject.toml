@@ -1,5 +1,5 @@
 [project]
-name = "qdrant-client"
+name = "qdrant-client-custom"
 version = "0.0.1"
 description = ""
 authors = [

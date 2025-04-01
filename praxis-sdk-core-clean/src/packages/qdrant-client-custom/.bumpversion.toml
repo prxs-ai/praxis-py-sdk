@@ -1,9 +1,9 @@
 [tool.bumpversion]
 current_version = "0.0.1"
-message = "Bump version of package/qdrant-client: {current_version} → {new_version}"
+message = "Bump version of package/qdrant-client-custom: {current_version} → {new_version}"
 commit = false
 tag = false
-tag_name = "packages/qdrant-client-v{new_version}"
+tag_name = "packages/qdrant-client-custom-v{new_version}"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\.(?P<dev>dev\\d+)\\+(?P<branch>.*))?"
 serialize = ["{major}.{minor}.{patch}.{dev}+{branch}", "{major}.{minor}.{patch}"]
 
