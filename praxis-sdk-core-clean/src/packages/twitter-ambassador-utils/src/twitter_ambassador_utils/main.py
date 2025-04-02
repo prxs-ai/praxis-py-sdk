@@ -81,7 +81,7 @@ class TwitterAuthClient:
     _DB = get_redis_db()
 
     @classmethod
-    def create_auth_link(cls, user_id: str = None):  # Сделаем необязательным
+    def create_auth_link(cls, user_id: str):
         code_verifier = cls._generate_code_verifier()
         code_challenge = cls._generate_code_challenge(code_verifier)
 
@@ -93,6 +93,7 @@ class TwitterAuthClient:
         cls._store_session_data(
             session_id=state,
             data={
+                "user_id": str(user_id),
                 "code_challenge": code_challenge,
                 "code_verifier": code_verifier,
             },
@@ -103,51 +104,32 @@ class TwitterAuthClient:
     @classmethod
     async def callback(cls, state: str, code: str):
         """Twitter send here after user allow to connect to his account"""
-        try:
-            if not (tokens_data := await cls.get_tokens(state, code)):
-                print("Failed to get tokens")
-                return False
-
-            if not (user_data := await cls.get_me(tokens_data['access_token'])):
-                print("Failed to get user data")
-                return False
-
-            tokens_data['user_id'] = user_data['username']
-
-            cls.save_twitter_data(**tokens_data, **user_data)
-            return True
-
-        except Exception as e:
-            print(f"Error in callback: {e}")
-            return False
+        tokens_data = await cls.get_tokens(state, code)
+        user_data = await cls.get_me(tokens_data['access_token'])
+        cls.save_twitter_data(**tokens_data, **user_data)
+        return True
 
     @classmethod
     async def get_tokens(cls, state: str, code: str):
         """get tokens from state and code that twitter had sent to callback"""
         if not (data := cls.get_session_data(state)):
-            print("No session data found")
-            return None
-
-        try:
-            loop = asyncio.get_running_loop()
-            tokens_data = await loop.run_in_executor(
-                None,
-                lambda: cls._CLIENT.fetch_token(
-                    token_url='https://api.twitter.com/2/oauth2/token',
-                    code=code,
-                    client_secret=settings.TWITTER_CLIENT_SECRET,
-                    code_verifier=data["code_verifier"],
-                ),
-            )
-
-            return {
-                "access_token": tokens_data["access_token"],
-                "refresh_token": tokens_data["refresh_token"],
-                "expires_at": tokens_data["expires_at"],
-            }
-        except Exception as e:
-            print(f"Error getting tokens: {e}")
-            return None
+            return
+        loop = asyncio.get_running_loop()
+        tokens_data = await loop.run_in_executor(
+            None,
+            lambda: cls._CLIENT.fetch_token(
+                token_url='https://api.twitter.com/2/oauth2/token',
+                code=code,
+                client_secret=settings.TWITTER_CLIENT_SECRET,
+                code_verifier=data["code_verifier"],
+            ),
+        )
+        return {
+            "user_id": data["user_id"],
+            "access_token": tokens_data["access_token"],
+            "refresh_token": tokens_data["refresh_token"],
+            "expires_at": tokens_data["expires_at"],
+        }
 
     @classmethod
     async def get_me(cls, access_token: str) -> dict | None:
@@ -193,15 +175,15 @@ class TwitterAuthClient:
 
     @classmethod
     def save_twitter_data(
-            cls,
-            user_id: str,
-            access_token: str,
-            refresh_token: str,
-            expires_at: int,
-            name: str,
-            username: str,
-            twitter_id: str,
-            **_,
+        cls,
+        user_id: str,
+        access_token: str,
+        refresh_token: str,
+        expires_at: int,
+        name: str,
+        username: str,
+        twitter_id: str,
+        **_,
     ):
         cls._DB.r.hmset(
             f'twitter_data:{user_id}',
@@ -217,36 +199,25 @@ class TwitterAuthClient:
 
     @classmethod
     async def _refresh_tokens(cls, refresh: str):
-        try:
-            auth_string = base64.b64encode(
-                f"{settings.TWITTER_CLIENT_ID}:{settings.TWITTER_CLIENT_SECRET}".encode()
-            ).decode()
-
-            headers = {
-                "Authorization": f"Basic {auth_string}",
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-
-            loop = asyncio.get_running_loop()
-            tokens_data = await loop.run_in_executor(
-                None,
-                lambda: cls._CLIENT.refresh_token(
-                    token_url='https://api.twitter.com/2/oauth2/token',
-                    refresh_token=refresh,
-                    client_id=settings.TWITTER_CLIENT_ID,
-                    client_secret=settings.TWITTER_CLIENT_SECRET,
-                    headers=headers
-                ),
-            )
-
-            return {
-                "access_token": tokens_data["access_token"],
-                "refresh_token": tokens_data["refresh_token"],
-                "expires_at": tokens_data["expires_at"],
-            }
-        except Exception as e:
-            print(f"Error refreshing tokens: {str(e)}")
-            raise
+        loop = asyncio.get_running_loop()
+        tokens_data = await loop.run_in_executor(
+            None,
+            lambda: cls._CLIENT.refresh_token(
+                token_url='https://api.twitter.com/2/oauth2/token',
+                refresh_token=refresh,
+                client_id=settings.TWITTER_CLIENT_ID,
+                client_secret=settings.TWITTER_CLIENT_SECRET,
+                headers={
+                    "Authorization": f"Basic {settings.TWITTER_BASIC_BEARER_TOKEN}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+            ),
+        )
+        return {
+            "access_token": tokens_data["access_token"],
+            "refresh_token": tokens_data["refresh_token"],
+            "expires_at": tokens_data["expires_at"],
+        }
 
     @classmethod
     async def update_tokens(cls, refresh_token: str, user_id: str):
@@ -304,8 +275,7 @@ class TwitterAuthClient:
         twitter_data = await cls.get_twitter_data(username)
         if not twitter_data:
             print(f"No twitter data found for {username}")
-            raise NotImplementedError
-
+            raise ValueError(f"Twitter data not found for user {username}")
         try:
             return cipher.decrypt(twitter_data["access_token"]).decode()
         except (KeyError, TypeError) as e:
