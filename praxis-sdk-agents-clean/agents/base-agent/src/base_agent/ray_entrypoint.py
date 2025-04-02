@@ -1,8 +1,13 @@
+import typing
 from collections.abc import Sequence
+from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import urljoin
 
 import requests
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from ray import serve
 
 from base_agent import abc
 from base_agent.ai_registry import ai_registry_builder
@@ -16,6 +21,16 @@ from base_agent.prompt import prompt_builder
 from base_agent.workflows import workflow_builder
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@serve.deployment
+@serve.ingress(app)
 class BaseAgent(abc.AbstractAgent):
     """Base default implementation for all agents."""
 
@@ -38,24 +53,44 @@ class BaseAgent(abc.AbstractAgent):
         # ---------- Redis Memory ----------#
         self.memory_client = memory_builder()
 
-    async def handle(self, goal: str, plan: dict | None = None):
-        """This is one of the most important endpoint of MAS.
-        It handles all requests made by handoff from other agents or by user."""
+    async def handle(self, goal: str, plan: dict | None = None) -> typing.Any:
+        """This is one of the most important endpoints of MAS.
+        It handles all requests made by handoff from other agents or by user.
+
+        If a predefined plan is provided, it skips plan generation and executes the plan directly.
+        Otherwise, it follows the standard logic to generate a plan and execute it.
+        """
+
+        if plan is not None:
+            result = self.run_workflow(plan)
+            self.store_interaction(goal, plan, result)
+            return result
 
         insights = self.get_relevant_insights(goal)
-
         past_interactions = self.get_past_interactions(goal)
-
         agents = self.get_most_relevant_agents(goal)
         tools = self.get_most_relevant_tools(goal)
 
-        plan = self.generate_plan(goal, agents, tools, insights, past_interactions, plan)
+        plan = self.generate_plan(
+            goal=goal,
+            agents=agents,
+            tools=tools,
+            insights=insights,
+            past_interactions=past_interactions,
+            plan=None,
+        )
 
         result = self.run_workflow(plan)
-
         self.store_interaction(goal, plan, result)
-
         return result
+
+    @app.post("/{goal}", status_code=200)
+    async def handle_with_plan(self, request: Request, goal: str) -> JSONResponse:
+        body = await request.json()
+        plan = body.get("plan")
+        context = body.get("context")
+        result = await self.handle(goal=goal, plan=plan, context=context)
+        return JSONResponse(content=result)
 
     def get_past_interactions(self, goal: str) -> list[dict]:
         return self.memory_client.read(key=goal)
