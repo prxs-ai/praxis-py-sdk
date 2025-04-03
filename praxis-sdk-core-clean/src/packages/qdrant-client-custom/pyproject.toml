@@ -1,6 +1,6 @@
 [project]
 name = "qdrant-client-custom"
-version = "0.0.1"
+version = "0.0.2"
 description = ""
 authors = [
     {name = "ruthuwjwb",email = "ruthuwjwb@gmail.com"}
