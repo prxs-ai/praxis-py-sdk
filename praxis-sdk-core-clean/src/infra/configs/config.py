@@ -138,6 +138,8 @@ class Settings(BaseSettings):
     confluent_bootstrap_server: str
     confluent_rest_endpoint: str
 
+    REDIS_PERSONA_KEY: str = "available_personas"
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore
