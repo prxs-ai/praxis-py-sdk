@@ -1,13 +1,8 @@
-import typing
 from collections.abc import Sequence
-from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import urljoin
 
 import requests
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from ray import serve
 
 from base_agent import abc
 from base_agent.ai_registry import ai_registry_builder
@@ -21,16 +16,12 @@ from base_agent.prompt import prompt_builder
 from base_agent.workflows import workflow_builder
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
+class BaseAgentInputModel(abc.AbstractAgentInputModel): ...
 
 
-app = FastAPI(lifespan=lifespan)
+class BaseAgentOutputModel(abc.AbstractAgentOutputModel): ...
 
 
-@serve.deployment
-@serve.ingress(app)
 class BaseAgent(abc.AbstractAgent):
     """Base default implementation for all agents."""
 
@@ -53,7 +44,12 @@ class BaseAgent(abc.AbstractAgent):
         # ---------- Redis Memory ----------#
         self.memory_client = memory_builder()
 
-    async def handle(self, goal: str, plan: dict | None = None) -> typing.Any:
+    async def handle(
+        self,
+        goal: str,
+        plan: dict | None = None,
+        context: BaseAgentInputModel | None = None,
+    ) -> BaseAgentOutputModel:
         """This is one of the most important endpoints of MAS.
         It handles all requests made by handoff from other agents or by user.
 
@@ -62,8 +58,8 @@ class BaseAgent(abc.AbstractAgent):
         """
 
         if plan is not None:
-            result = self.run_workflow(plan)
-            self.store_interaction(goal, plan, result)
+            result = self.run_workflow(plan, context)
+            self.store_interaction(goal, plan, result, context)
             return result
 
         insights = self.get_relevant_insights(goal)
@@ -80,27 +76,26 @@ class BaseAgent(abc.AbstractAgent):
             plan=None,
         )
 
-        result = self.run_workflow(plan)
-        self.store_interaction(goal, plan, result)
+        result = self.run_workflow(plan, context)
+        self.store_interaction(goal, plan, result, context)
         return result
-
-    @app.post("/{goal}", status_code=200)
-    async def handle_with_plan(self, request: Request, goal: str) -> JSONResponse:
-        body = await request.json()
-        plan = body.get("plan")
-        context = body.get("context")
-        result = await self.handle(goal=goal, plan=plan, context=context)
-        return JSONResponse(content=result)
 
     def get_past_interactions(self, goal: str) -> list[dict]:
         return self.memory_client.read(key=goal)
 
-    def store_interaction(self, goal: str, plan: dict, result: Any) -> None:
+    def store_interaction(
+        self,
+        goal: str,
+        plan: dict,
+        result: BaseAgentOutputModel,
+        context: BaseAgentInputModel | None = None,
+    ) -> None:
         interaction = MemoryModel(
             **{
                 "goal": goal,
                 "plan": plan,
-                "result": result,
+                "result": result.model_dump(),
+                "context": context.model_dump(),
             }
         )
         self.memory_client.store(key=goal, interaction=interaction.model_dump())
@@ -217,8 +212,12 @@ class BaseAgent(abc.AbstractAgent):
             plan=plan,
         )
 
-    def run_workflow(self, plan: dict[int, Task]):
-        return self.workflow_runner.run(plan)
+    def run_workflow(
+        self,
+        plan: dict[int, Task],
+        context: BaseAgentInputModel | None = None,
+    ) -> BaseAgentOutputModel:
+        return self.workflow_runner.run(plan, context)
 
     def reconfigure(self, config: dict[str, Any]):
         pass
