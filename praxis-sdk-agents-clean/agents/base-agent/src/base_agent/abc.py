@@ -2,7 +2,21 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import Any
 
+import pydantic
+
 from base_agent.models import AgentModel, Task, ToolModel
+
+
+class AbstractAgentInputModel(pydantic.BaseModel):
+    """Abstract interface for agent intput model"""
+
+    ...
+
+
+class AbstractAgentOutputModel(pydantic.BaseModel):
+    """Abstract interface for agennt output model"""
+
+    ...
 
 
 class AbstractExecutor(ABC):
@@ -43,7 +57,11 @@ class AbstractWorkflowRunner(ABC):
     """Abstract interface for workflow execution engines."""
 
     @abstractmethod
-    def run(self, plan: dict[int, Task]) -> Any:
+    def run(
+        self,
+        plan: dict[int, Task],
+        context: AbstractAgentInputModel | None = None,
+    ) -> AbstractAgentOutputModel:
         """Execute a workflow plan.
 
         Args:
@@ -59,12 +77,18 @@ class AbstractAgent(ABC):
     """Abstract base class for agent implementations."""
 
     @abstractmethod
-    async def handle(self, goal: str, plan: dict | None = None) -> Any:
+    async def handle(
+        self,
+        goal: str,
+        plan: dict[int, Task] | None = None,
+        context: AbstractAgentInputModel | None = None,
+    ) -> AbstractAgentOutputModel:
         """Handle an incoming request.
 
         Args:
             goal: The goal to achieve
             plan: An optional existing plan to use or modify
+            context: An optional input schema for the agent
 
         Returns:
             The result of achieving the goal
