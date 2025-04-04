@@ -3,8 +3,8 @@ import logging
 from typing import Collection, Optional
 
 from qdrant_client import QdrantClient, AsyncQdrantClient
-from qdrant_client.http.models import VectorParams, Distance
-from qdrant_client.config import get_settings
+from qdrant_client.models import VectorParams, Distance, PointStruct
+from qdrant_client_custom.config import get_settings
 
 settings = get_settings()
 
