@@ -26,9 +26,9 @@ class InfrastructureConfig(BaseSettings):
 
     # S3 storage
     s3_bucket_prefix: str = "praxis"
-    s3_region: str = Field(validation_alias="S3_REGION")
-    s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY")
-    s3_secret_key: str = Field(validation_alias="S3_SECRET")
+    s3_region: str = Field(validation_alias="S3_REGION", default="us-east-1")
+    s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY", default="access_key")
+    s3_secret_key: str = Field(validation_alias="S3_SECRET", default="secret")
 
     kafka_host: str = "localhost"
     kafka_port: int = 9092
