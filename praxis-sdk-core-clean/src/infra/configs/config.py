@@ -26,9 +26,9 @@ class InfrastructureConfig(BaseSettings):
 
     # S3 storage
     s3_bucket_prefix: str = "praxis"
-    s3_region: str = Field(validation_alias="S3_REGION", default="us-east-1")
-    s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY", default="access_key")
-    s3_secret_key: str = Field(validation_alias="S3_SECRET", default="secret")
+    s3_region: str = Field(validation_alias="S3_REGION")
+    s3_access_key: str = Field(validation_alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(validation_alias="S3_SECRET")
 
     kafka_host: str = "localhost"
     kafka_port: int = 9092
@@ -129,14 +129,14 @@ class Settings(BaseSettings):
     jwt_access_token_expires_in: int = 1440
 
     # Creativity
-    creativity_api_id: str = Field(validation_alias="CREATIVITY_API_ID", default="1")
-    creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY", default="1")
+    creativity_api_id: str = Field(validation_alias="CREATIVITY_API_ID")
+    creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
     creativity_base_url: str = "https://api.creatify.ai/api"
 
-    confluent_api_key: str = '1'
-    confluent_api_secret: str = '1'
-    confluent_bootstrap_server: str = '1'
-    confluent_rest_endpoint: str = '1'
+    # confluent_api_key: str = '1'
+    # confluent_api_secret: str = '1'
+    # confluent_bootstrap_server: str = '1'
+    # confluent_rest_endpoint: str = '1'
 
 @lru_cache
 def get_settings() -> Settings:
