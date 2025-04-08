@@ -3,9 +3,9 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    OPENAI_API_KEY: str
-    OPEN_AI_MODEL: str
-    OPENAI_EMBEDDING_MODEL: str
+    QDRANT_HOST: str
+    QDRANT_PORT: int
+    VECTOR_DIMENSION: int
 
 
 @lru_cache

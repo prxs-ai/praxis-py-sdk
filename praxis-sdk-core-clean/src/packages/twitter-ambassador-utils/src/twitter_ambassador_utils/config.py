@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     TWITTER_REDIRECT_URI: str
     TWITTER_CLIENT_SECRET: str
     FERNET_KEY: bytes
+    TWITTER_BASIC_BEARER_TOKEN: str
 
 
 @lru_cache
