@@ -1,0 +1,104 @@
+{{- if .Values.enabled }}
+apiVersion: ray.io/v1alpha1
+kind: RayService
+metadata:
+  name: {{ include "agent.fullname" . }}-ray-service
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+spec:
+  serveConfigV2: |
+    {{ include "agent.serveConfigV2" . | nindent 4 }}
+  rayClusterConfig:
+    rayVersion: {{ .Values.rayVersion }}
+    headGroupSpec:
+      serviceType: {{ .Values.head.serviceType }}
+      replicas: {{ .Values.head.replicaCount }}
+      {{- with .Values.head.rayStartParams }}
+      rayStartParams:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      template:
+        spec:
+          containers:
+          - name: {{ include "agent.fullname" . }}-ray-head
+            image: {{ .Values.image }}
+            imagePullPolicy: {{ .Values.head.imagePullPolicy }}
+            {{- with .Values.head.ports }}
+            ports:
+{{ toYaml . | indent 14 }}
+            {{- end }}
+            {{- with .Values.head.env }}
+            env:
+{{ toYaml . | indent 14 }}
+            {{- end }}
+            {{- with .Values.environment }}
+            env:
+{{ toYaml . | indent 14 }}
+            {{- end }}
+            {{- if .Values.envFrom }}
+            envFrom:
+{{ toYaml .Values.envFrom | indent 14 }}
+            {{- end }}
+            resources:
+{{ toYaml .Values.head.resources | indent 14 }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+    workerGroupSpecs:
+    - groupName: {{ include "agent.fullname" . }}-ray-worker-group
+      replicas: {{ .Values.worker.replicaCount }}
+      minReplicas: {{ .Values.worker.minReplicas }}
+      maxReplicas: {{ .Values.worker.maxReplicas }}
+      {{- with .Values.worker.rayStartParams }}
+      rayStartParams:
+{{ toYaml . | indent 10 }}
+      {{- end }}
+      template:
+        spec:
+          containers:
+          - name: {{ include "agent.fullname" . }}-ray-worker
+            image: {{ .Values.image }}
+            imagePullPolicy: {{ .Values.worker.imagePullPolicy }}
+            {{- with .Values.worker.env }}
+            env:
+{{ toYaml . | indent 14 }}
+            {{- end }}
+            {{- with .Values.environment }}
+            env:
+{{ toYaml . | indent 14 }}
+            {{- end }}
+            {{- if .Values.envFrom }}
+            envFrom:
+{{ toYaml .Values.envFrom | indent 14 }}
+            {{- end }}
+            resources:
+{{ toYaml .Values.worker.resources | indent 14 }}
+            {{- if or .Values.pypiConfigSecretName .Values.worker.volumeMounts }}
+            volumeMounts:
+            {{- if .Values.pypiConfigSecretName }}
+            - name: pypi-config
+              mountPath: /home/ray/.pip
+              readOnly: true
+            {{- end }}
+            {{- with .Values.worker.volumeMounts }}
+{{ toYaml . | indent 12 }}
+            {{- end }}
+            {{- end }}
+          {{- if or .Values.pypiConfigSecretName .Values.worker.volumes }}
+          volumes:
+          {{- if .Values.pypiConfigSecretName }}
+          - name: pypi-config
+            secret:
+              secretName: {{ .Values.pypiConfigSecretName }}
+              defaultMode: 0644
+          {{- end }}
+          {{- with .Values.worker.volumes }}
+{{ toYaml . | indent 10 }}
+          {{- end }}
+          {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+{{- end }}
