@@ -2,12 +2,12 @@
 apiVersion: ray.io/v1alpha1
 kind: RayService
 metadata:
-  name: {{ include "agent.fullname" . }}-ray-service
+  name: {{ include "base-agent.fullname" . }}-ray-service
   labels:
-    {{- include "agent.labels" . | nindent 4 }}
+    {{- include "base-agent.labels" . | nindent 4 }}
 spec:
   serveConfigV2: |
-    {{ include "agent.serveConfigV2" . | nindent 4 }}
+    {{ include "base-agent.serveConfigV2" . | nindent 4 }}
   rayClusterConfig:
     rayVersion: {{ .Values.rayVersion }}
     headGroupSpec:
@@ -20,7 +20,7 @@ spec:
       template:
         spec:
           containers:
-          - name: {{ include "agent.fullname" . }}-ray-head
+          - name: {{ include "base-agent.fullname" . }}-ray-head
             image: {{ .Values.image }}
             imagePullPolicy: {{ .Values.head.imagePullPolicy }}
             {{- with .Values.head.ports }}
@@ -46,7 +46,7 @@ spec:
 {{ toYaml . | indent 12 }}
           {{- end }}
     workerGroupSpecs:
-    - groupName: {{ include "agent.fullname" . }}-ray-worker-group
+    - groupName: {{ include "base-agent.fullname" . }}-ray-worker-group
       replicas: {{ .Values.worker.replicaCount }}
       minReplicas: {{ .Values.worker.minReplicas }}
       maxReplicas: {{ .Values.worker.maxReplicas }}
@@ -57,7 +57,7 @@ spec:
       template:
         spec:
           containers:
-          - name: {{ include "agent.fullname" . }}-ray-worker
+          - name: {{ include "base-agent.fullname" . }}-ray-worker
             image: {{ .Values.image }}
             imagePullPolicy: {{ .Values.worker.imagePullPolicy }}
             {{- with .Values.worker.env }}

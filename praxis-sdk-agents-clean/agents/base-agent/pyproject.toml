@@ -17,7 +17,6 @@ dependencies = [
     "lightrag-hku==1.2.5",
 ]
 
-
 [tool.poetry]
 packages = [{ include = "*", from = "src" }]
 

@@ -3,9 +3,9 @@ kind: PodMonitor
 metadata:
   labels:
     release: {{ .Values.prometheusRelease }}
-  name: {{ include "agent.fullname" . }}-ray-worker-monitor
+  name: {{ include "base-agent.fullname" . }}-ray-worker-monitor
 spec:
-  jobLabel: {{ include "agent.fullname" . }}-ray-worker
+  jobLabel: {{ include "base-agent.fullname" . }}-ray-worker
   namespaceSelector:
     matchNames:
     - {{ .Release.Namespace }}
