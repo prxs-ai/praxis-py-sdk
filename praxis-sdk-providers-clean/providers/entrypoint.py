@@ -7,7 +7,7 @@ app = get_entrypoint(EntrypointGroup.APP_ENTRYPOINT).load()
 
 if __name__ == "__main__":
     import uvicorn
-    from fastapi import FastAPI
+    from fastapi import FastAPI, APIRouter
     from ray import serve
 
     # Run Ray Serve in local testing mode
@@ -16,18 +16,21 @@ if __name__ == "__main__":
                       _local_testing_mode=True)
 
     fastapi_app = FastAPI()
+    v1_router = APIRouter(prefix="/v1")
 
-    @fastapi_app.get("/v1/contract")
+    @v1_router.get("/contract")
     async def contract_handler():
         return handle.contract.spec.remote()
 
-    @fastapi_app.post("/v1/query")
+    @v1_router.post("/query")
     async def query_handler(filters: dict):
         return await handle.query.remote(filters)
 
-    @fastapi_app.post("/v1/subscribe")
+    @v1_router.post("/subscribe")
     async def subscribe_handler(filters: dict) -> str:
         return await handle.subscribe.remote(filters)
+
+    fastapi_app.include_router(v1_router)
 
     # Run uvicorn server
     uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
