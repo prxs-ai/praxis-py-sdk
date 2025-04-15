@@ -1,5 +1,5 @@
 [tool.bumpversion]
-current_version = "0.0.3"
+current_version = "0.1.0"
 message = "Bump version of send-openai-request: {current_version} -> {new_version}"
 tag_name = "packages/send-openai-request-v{new_version}"
 commit = false
