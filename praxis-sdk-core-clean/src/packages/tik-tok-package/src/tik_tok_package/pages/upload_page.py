@@ -1,13 +1,14 @@
 import os
-from telnetlib import EC
 
 from selenium import webdriver
-from selenium.webdriver import ActionChains
+from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 import time
 
-from selenium.webdriver.support.wait import WebDriverWait
+
+
+from log import log
 
 
 class UploadPage:
@@ -15,16 +16,16 @@ class UploadPage:
         self.driver = driver
 
     def open_page(self):
-        """Метод для открытия страницы загрузки видео"""
+        """Method to open the upload page"""
         try:
-            print("Ожидание загрузки страницы загрузки видео...")
+            log.info("Waiting for the upload page to load...")
             self.driver.get("https://www.tiktok.com/tiktokstudio/upload?from=webapp")
             time.sleep(3)
         except Exception as e:
-            print(f"Ошибка при открытии страницы логина: {e}")
+            log.error(f"Error while open upload page: {e}")
 
     def upload_video(self, video_path: str):
-        """Метод для загрузки видео"""
+        """Method for uploading a video"""
         try:
             absolute_path = os.path.abspath(video_path)
             file_input = self.driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
@@ -36,10 +37,10 @@ class UploadPage:
             time.sleep(3)
 
         except Exception as e:
-            print(f"Ошибка при загрузке видео: {e}")
+            log.error(f"Error while upload video: {e}")
 
     def add_description(self, description: str):
-        """Метод для добавления описания видео"""
+        """Method for adding a description to the video"""
         try:
             caption_input = self.driver.find_element(By.CSS_SELECTOR, 'div[contenteditable="true"]')
             caption_input.click()
@@ -50,25 +51,33 @@ class UploadPage:
 
             caption_input.send_keys(description)
         except Exception as e:
-            print(f"Ошибка при добавлении описания: {e}")
+            log.error(f"Error while adding description for video: {e}")
 
     def toggle_autor_rules(self):
-        """Метод для принятия правил для авторов"""
+        """Method for accepting copyright rules"""
         try:
-            print("Запустить проверку авторских прав...")
+            log.info("Check for accepting copyright rules...")
             autor_rule_button = self.driver.find_element(By.XPATH, '//div[1]/div[6]/div/div/div/div[2]/div')
             autor_rule_button.click()
-            time.sleep(60)
-            print("Проверка авторских прав завершена.")
+            for _ in range(60):
+                try:
+                    self.driver.find_element(By.CSS_SELECTOR, 'div.jsx-478649263.tool-tip.success')
+                    log.info("Check autor rules exist...")
+                    break
+                except NoSuchElementException:
+                    log.info("Check autor rules...")
+                    time.sleep(1)
+            else:
+                log.info("⚠️ Autor rules not found, check manually.")
         except Exception as e:
-            print(f"Ошибка при принятии правил авторских прав: {e}")
+            log.error(f"Error while cheking {e}")
 
     def click_post_button(self):
-        """Метод для клика по кнопке 'Опубликовать'"""
+        """Method for clicking the post button"""
         try:
-            print("Запустить публикацию видео...")
+            log.info("Upload video...")
             post_button = self.driver.find_element(By.XPATH, '/html/body/div[1]/div/div/div[2]/div[2]/div/div/div/div[4]/div/button[1]')
             post_button.click()
-            print("Видео опубликовано.")
+            log.info("Completed video upload, check manually. If the video is not uploaded, check the error message in the console. If the video is uploaded, you can close the browser.")
         except Exception as e:
-            print(f"Ошибка при публикации видео: {e}")
+            log.error(f"Error while upload video: {e}")
