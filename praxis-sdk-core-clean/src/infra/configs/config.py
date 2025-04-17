@@ -140,11 +140,10 @@ class Settings(BaseSettings):
     creativity_api_key: str | None = None
     creativity_base_url: str = "https://api.creatify.ai/api"
 
-    confluent_api_key: str | None = None
-    confluent_api_secret: str | None = None
-    confluent_bootstrap_server: str | None = None
-    confluent_rest_endpoint: str | None = None
-
+    # confluent_api_key: str = '1'
+    # confluent_api_secret: str = '1'
+    # confluent_bootstrap_server: str = '1'
+    # confluent_rest_endpoint: str = '1'
 
 @lru_cache
 def get_settings() -> Settings:
