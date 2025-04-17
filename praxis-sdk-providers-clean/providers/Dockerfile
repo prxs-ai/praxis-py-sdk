@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=rayproject/ray:2.42.1-py310-cpu
+ARG BASE_IMAGE=rayproject/ray:2.42.1-py312-cpu
 
 FROM ${BASE_IMAGE} as builder
 
