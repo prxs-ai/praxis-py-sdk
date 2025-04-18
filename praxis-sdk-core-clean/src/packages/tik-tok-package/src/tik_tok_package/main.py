@@ -1,14 +1,18 @@
 import os
 import time
 import pickle
+from typing import Optional
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from tiktok_captcha_solver import SeleniumSolver
 
+from log import log
 from pages.login_page import LoginPage
 from pages.scroll_page import ScrollPage
 from pages.upload_page import UploadPage
+from pages.user_profile_page import UserProfilePage
+from pages.user_video_page import UserVideoPage
 
 
 class TikTokBot:
@@ -33,6 +37,8 @@ class TikTokBot:
         self.login_page = LoginPage(self.driver)
         self.scroll_page = ScrollPage(self.driver)
         self.upload_page = UploadPage(self.driver)
+        self.user_video_page = UserVideoPage(self.driver)
+        self.user_profile_page = UserProfilePage(self.driver)
 
         # Попробовать загрузить куки
         self.driver.get("https://www.tiktok.com/")
@@ -68,10 +74,9 @@ class TikTokBot:
             self.scroll_page.wait_for_open_scroll_page()
             self._save_cookies()
             time.sleep(1)
-        else:
-            self.upload_page.open_page()
 
     def upload_video(self, description: str, video_path: str):
+        self.upload_page.open_page()
         self.scroll_page.accept_policy()
         self.upload_page.open_page()
         self.upload_page.upload_video(video_path)
@@ -79,6 +84,44 @@ class TikTokBot:
         self.upload_page.toggle_autor_rules()
         self.upload_page.click_post_button()
         time.sleep(10)
+
+    def like_video(self, video_url: Optional[str] = None, video_id: Optional[str] = None,
+                   username: Optional[str] = None):
+        if video_url is None:
+            if username is None or video_id is None:
+                log.info(f"[!] If 'video_url' is not provided, both 'username' and 'video_id' must be provided. ")
+                raise ValueError("If 'video_url' is not provided, both 'username' and 'video_id' must be provided.")
+            if username[0] != "@":
+                log.info(f"[!] Username should start with '@'. Adding '@' to {username}")
+                username = "@" + username
+            video_url = f"https://www.tiktok.com/{username}/video/{video_id}"
+        self.user_video_page.open_page(video_url)
+        self.user_video_page.like_video()
+        self.sadcaptcha.solve_captcha_if_present()
+
+    def follow_user(self, user_url: Optional[str] = None, username: Optional[str] = None, follow_user: bool = True):
+        if user_url is None:
+            if username is None:
+                log.info(f"[!] If 'user_url' is not provided, 'username' must be provided. ")
+                raise ValueError("If 'user_url' is not provided, 'username' must be provided.")
+            if username[0] != "@":
+                log.info(f"[!] Username should start with '@'. Adding '@' to {username}")
+                username = "@" + username
+            user_url = f"https://www.tiktok.com/{username}"
+
+        self.user_profile_page.open_page(user_url)
+        self.sadcaptcha.solve_captcha_if_present()
+        self.user_profile_page.follow_user(follow=follow_user)
+
+    def unfollow_user(self, user_url: Optional[str] = None, username: Optional[str] = None):
+        self.follow_user(user_url=user_url, username=username, follow_user=False)
+
+    def comment_on_video(self, video_url: str, comment: str):
+        self.user_video_page.open_page(video_url)
+        self.user_video_page.open_comment_page()
+        self.sadcaptcha.solve_captcha_if_present()
+        self.user_video_page.left_comment(comment)
+        self.user_video_page.publish_comment()
 
     def quit(self):
         self.driver.quit()
