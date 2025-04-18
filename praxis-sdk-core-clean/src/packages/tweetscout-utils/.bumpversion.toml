@@ -1,5 +1,5 @@
 [tool.bumpversion]
-current_version = "0.0.1"
+current_version = "0.0.2"
 message = "Bump version of tweetscout-utils: {current_version} -> {new_version}"
 tag_name = "packages/tweetscout-utils-v{new_version}"
 commit = false
