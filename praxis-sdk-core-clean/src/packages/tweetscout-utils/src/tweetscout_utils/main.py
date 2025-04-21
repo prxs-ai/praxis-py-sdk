@@ -146,7 +146,7 @@ async def _make_request(url: str, data: dict):
 
 
 async def fetch_user_tweets(username: str) -> list[Tweet]:
-    url = "https://api.tweetscout.io/api/user-tweets"
+    url = "https://api.tweetscout.io/v2/user-tweets"
     data = {"link": f"https://x.com/{username}"}
     result = await _make_request(url, data)
     tweets_data = result.get('tweets', [])
@@ -164,7 +164,7 @@ async def search_tweets(query: str) -> list[Tweet]:
 
 
 async def get_tweet_by_link(link: str) -> Tweet:
-    url = 'https://api.tweetscout.io/api/tweet-info'
+    url = 'https://api.tweetscout.io/v2/tweet-info'
     data = {'tweet_link': link}
     result = await _make_request(url, data)
     return parse_tweet(result)
