@@ -137,11 +137,10 @@ class Settings(BaseSettings):
     # confluent_api_secret: str = '1'
     # confluent_bootstrap_server: str = '1'
     # confluent_rest_endpoint: str = '1'
-    # AI Registry settings
+    
     AI_REGISTRY_HOST: str = Field(default="praxis-dev-ai-registry.praxis.svc.cluster.local")
     AI_REGISTRY_PORT: int = Field(default=8080)
     
-    # Deploy Service settings
     DEPLOY_SERVICE_HOST: str = Field(default="deploy-service.praxis.svc.cluster.local") 
     DEPLOY_SERVICE_PORT: int = Field(default=8000)
     
