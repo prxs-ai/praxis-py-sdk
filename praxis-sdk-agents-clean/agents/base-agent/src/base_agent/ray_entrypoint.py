@@ -39,10 +39,10 @@ class BaseAgent(abc.AbstractAgent):
         self.ai_registry_client = ai_registry_builder()
 
         # ---------- LightRAG Memory -------#
-        self.lightrag_client = light_rag_builder()
+        # self.lightrag_client = light_rag_builder()
 
         # ---------- Redis Memory ----------#
-        self.memory_client = memory_builder()
+        # self.memory_client = memory_builder()
 
     async def handle(
         self,
@@ -59,7 +59,7 @@ class BaseAgent(abc.AbstractAgent):
 
         if plan is not None:
             result = self.run_workflow(plan, context)
-            self.store_interaction(goal, plan, result, context)
+            # self.store_interaction(goal, plan, result, context)
             return result
 
         insights = self.get_relevant_insights(goal)
@@ -77,11 +77,12 @@ class BaseAgent(abc.AbstractAgent):
         )
 
         result = self.run_workflow(plan, context)
-        self.store_interaction(goal, plan, result, context)
+        # self.store_interaction(goal, plan, result, context)
         return result
 
     def get_past_interactions(self, goal: str) -> list[dict]:
-        return self.memory_client.read(key=goal)
+        # return self.memory_client.read(key=goal)
+        return [{}]
 
     def store_interaction(
         self,
@@ -98,24 +99,26 @@ class BaseAgent(abc.AbstractAgent):
                 "context": context.model_dump(),
             }
         )
-        self.memory_client.store(key=goal, interaction=interaction.model_dump())
+        # self.memory_client.store(key=goal, interaction=interaction.model_dump())
 
     def get_relevant_insights(self, goal: str) -> list[InsightModel]:
         """Retrieve relevant insights from LightRAG memory for the given goal."""
-        response = self.lightrag_client.query(query=goal)
-        return [InsightModel(**response)]
+        # response = self.lightrag_client.query(query=goal)
+        # return [InsightModel(**response)]
+        return []
 
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
         """This method is used to find the most useful agents for the given goal."""
-        response = self.ai_registry_client.post(
-            endpoint=self.ai_registry_client.endpoints.find_agents,
-            json=QueryData(goal=goal).model_dump(),
-        )
+        # response = self.ai_registry_client.post(
+        #     endpoint=self.ai_registry_client.endpoints.find_agents,
+        #     json=QueryData(goal=goal).model_dump(),
+        # )
 
-        if not response:
-            return []
+        # if not response:
+        #     return []
 
-        return [AgentModel(**agent) for agent in response]
+        # return [AgentModel(**agent) for agent in response]
+        return []
 
     def get_most_relevant_tools(self, goal: str) -> list[ToolModel]:
         """
@@ -182,15 +185,17 @@ class BaseAgent(abc.AbstractAgent):
             ),
         ]
         """
-        response = self.ai_registry_client.post(
-            endpoint=self.ai_registry_client.endpoints.find_tools,
-            json=GoalModel(goal=goal).model_dump(),
-        )
+        # response = self.ai_registry_client.post(
+        #     endpoint=self.ai_registry_client.endpoints.find_tools,
+        #     json=GoalModel(goal=goal).model_dump(),
+        # )
 
-        if not response:
-            return []
+        # if not response:
+        #     return []
 
-        return [ToolModel(**tool) for tool in response]
+        # return [ToolModel(**tool) for tool in response]
+
+        return []
 
     def generate_plan(
         self,
