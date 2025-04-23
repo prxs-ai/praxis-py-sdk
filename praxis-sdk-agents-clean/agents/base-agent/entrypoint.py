@@ -18,5 +18,9 @@ if __name__ == "__main__":
     async def handle_request(goal: str, plan: dict | None = None):
         return await handle.handle.remote(goal, plan)
 
+    @fastapi_app.get("/workflows")
+    async def get_workflows(status: str | None = None):
+        return await handle.list_workflows.remote(status)
+
     # Run uvicorn server
     uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)

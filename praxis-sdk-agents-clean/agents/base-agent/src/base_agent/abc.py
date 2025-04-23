@@ -72,6 +72,25 @@ class AbstractWorkflowRunner(ABC):
         """
         pass
 
+    @classmethod
+    @abstractmethod
+    def start(cls, *args, **kwargs) -> None:
+        """Start the workflow runner engine."""
+        pass
+
+    @classmethod
+    @abstractmethod
+    def stop(cls, *args, **kwargs) -> None:
+        """Stop the workflow runner engine."""
+        pass
+
+    @classmethod
+    @abstractmethod
+    def list_workflows(cls, *args, **kwargs) -> None:
+         """List all workflows in the workflow runner engine."""
+         pass
+
+
 
 class AbstractAgent(ABC):
     """Abstract base class for agent implementations."""
