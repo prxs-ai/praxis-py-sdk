@@ -5,6 +5,7 @@ import ray
 from ray import workflow
 from ray.runtime_env import RuntimeEnv
 
+from base_agent import abc
 from base_agent.const import EntrypointGroup
 from base_agent.models import Task
 from base_agent.utils import get_entry_points
@@ -17,10 +18,25 @@ def generate_request_id() -> str:
     return uuid.uuid4().hex
 
 
-class DAGRunner:
+class DAGRunner(abc.AbstractWorkflowRunner):
     def __init__(self, config: BasicWorkflowConfig):
         self.config = config
         self.steps = {}
+
+    @classmethod
+    def start(cls: "DAGRunner", include_failed = False) -> None:
+        workflow.init()
+        workflow.resume_all(include_failed)
+
+    @classmethod
+    def stop(cls: "DAGRunner") -> None:
+        #  TODO: Stop all workflows
+        pass
+
+    @classmethod
+    def list_workflows(cls: "DAGRunner", status: str | None = None) -> None:
+        return workflow.list_all(status)
+
 
     def create_step(self, task: Task):
         """Creates a remote function for a step"""
@@ -28,7 +44,7 @@ class DAGRunner:
         @ray.workflow.options(checkpoint=True)
         @ray.remote(
             runtime_env=RuntimeEnv(pip=[f"{task.tool.name}=={task.tool.version}"]),
-            max_retries=BasicWorkflowConfig.RAY_MAX_RETRIES,
+            max_retries=self.config.WORKFLOW_STEP_MAX_RETRIES,
             retry_exceptions=True,
         )
         def get_tool_entrypoint_wrapper(*args, **kwargs):
@@ -42,7 +58,7 @@ class DAGRunner:
 
         return get_tool_entrypoint_wrapper
 
-    def run(self, dag_spec: dict[int, Task]) -> Any:
+    def run(self, dag_spec: dict[int, Task], context: Any = None) -> Any:
         """Runs the DAG using Ray Workflows"""
         # Create remote functions for each step
         for _step_id, task in dag_spec.items():

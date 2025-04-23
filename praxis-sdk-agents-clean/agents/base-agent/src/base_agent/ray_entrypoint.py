@@ -8,12 +8,10 @@ from base_agent import abc
 from base_agent.ai_registry import ai_registry_builder
 from base_agent.bootstrap import bootstrap_main
 from base_agent.config import BasicAgentConfig, get_agent_config
-from base_agent.domain_knowledge import light_rag_builder
 from base_agent.langchain import executor_builder
-from base_agent.memory import memory_builder
-from base_agent.models import AgentModel, GoalModel, InsightModel, MemoryModel, QueryData, Task, ToolModel
+from base_agent.models import AgentModel, InsightModel, MemoryModel, Task, ToolModel
 from base_agent.prompt import prompt_builder
-from base_agent.workflows import workflow_builder
+from ray.serve.deployment import Application
 
 
 class BaseAgentInputModel(abc.AbstractAgentInputModel): ...
@@ -31,7 +29,6 @@ class BaseAgent(abc.AbstractAgent):
 
     def __init__(self, config: BasicAgentConfig, *args, **kwargs):
         self.config = config
-        self.workflow_runner = workflow_builder()
         self.agent_executor = executor_builder()
         self.prompt_builder = prompt_builder()
 
@@ -57,7 +54,7 @@ class BaseAgent(abc.AbstractAgent):
         Otherwise, it follows the standard logic to generate a plan and execute it.
         """
 
-        if plan is not None:
+        if plan is not None and plan:
             result = self.run_workflow(plan, context)
             # self.store_interaction(goal, plan, result, context)
             return result
@@ -195,7 +192,64 @@ class BaseAgent(abc.AbstractAgent):
 
         # return [ToolModel(**tool) for tool in response]
 
-        return []
+        return [
+            ToolModel(
+                name="handoff-tool",
+                version="0.1.0",
+                openai_function_spec={
+                    "type": "function",
+                    "function": {
+                        "name": "handoff_tool",
+                        "description": "A tool that returns the string passed in as an output.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "agent": {"type": "string", "description": "The name of the agent to use.", "enum": []},
+                                "goal": {"type": "string", "description": "The goal to achieve."},
+                            },
+                            "required": ["agent", "goal"],
+                        },
+                        "output": {
+                            "type": "object",
+                            "properties": {
+                                "result": {"type": "string", "description": "The result returned by the agent."}
+                            },
+                        },
+                    },
+                },
+            ),
+            ToolModel(
+                name="return-answer-tool",
+                version="0.1.2",
+                openai_function_spec={
+                    "type": "function",
+                    "function": {
+                        "name": "return_answer_tool",
+                        "description": "Returns the input as output.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "answer": {
+                                    "type": "string",
+                                    "description": "The answer in JSON string.",
+                                    "default": '{"result": 42}',
+                                }
+                            },
+                            "required": ["answer"],
+                        },
+                        "output": {
+                            "type": "object",
+                            "properties": {
+                                "result": {
+                                    "type": "string",
+                                    "description": "Returns the input as output in JSON string.",
+                                }
+                            },
+                        },
+                    },
+                },
+            ),
+        ]
 
     def generate_plan(
         self,
@@ -233,5 +287,5 @@ class BaseAgent(abc.AbstractAgent):
         return requests.post(urljoin(endpoint, goal), json=plan).json()
 
 
-def agent_builder(args: dict):
+def agent_builder(args: dict) -> Application:
     return bootstrap_main(BaseAgent).bind(config=get_agent_config(**args))
