@@ -15,19 +15,19 @@ def handle_captcha(method):
 
         try:
             if hasattr(self, "sadcaptcha"):
-                log.info(f"[{class_name}.{method_name}] Обнаружен атрибут sadcaptcha в self.")
+                # log.info(f"[{class_name}.{method_name}] Обнаружен атрибут sadcaptcha в self.")
                 if callable(getattr(self.sadcaptcha, "solve_captcha_if_present", None)):
-                    log.info(f"[{class_name}.{method_name}] Вызов solve_captcha_if_present через self.sadcaptcha.")
+                    # log.info(f"[{class_name}.{method_name}] Вызов solve_captcha_if_present через self.sadcaptcha.")
                     self.sadcaptcha.solve_captcha_if_present()
                 else:
                     log.warning(f"[{class_name}.{method_name}] Атрибут sadcaptcha найден, но метод solve_captcha_if_present не вызываемый.")
             elif hasattr(self, "driver"):
-                log.info(f"[{class_name}.{method_name}] Попытка найти sadcaptcha через driver._parent_instance.")
+                # log.info(f"[{class_name}.{method_name}] Попытка найти sadcaptcha через driver._parent_instance.")
                 parent = getattr(self.driver, "_parent_instance", None)
                 if parent:
-                    log.info(f"[{class_name}.{method_name}] Найден _parent_instance: {type(parent).__name__}")
+                    # log.info(f"[{class_name}.{method_name}] Найден _parent_instance: {type(parent).__name__}")
                     if hasattr(parent, "sadcaptcha") and callable(getattr(parent.sadcaptcha, "solve_captcha_if_present", None)):
-                        log.info(f"[{class_name}.{method_name}] Вызов solve_captcha_if_present через driver._parent_instance.sadcaptcha.")
+                        # log.info(f"[{class_name}.{method_name}] Вызов solve_captcha_if_present через driver._parent_instance.sadcaptcha.")
                         parent.sadcaptcha.solve_captcha_if_present()
                     else:
                         log.warning(f"[{class_name}.{method_name}] Метод solve_captcha_if_present не найден в parent.sadcaptcha.")
