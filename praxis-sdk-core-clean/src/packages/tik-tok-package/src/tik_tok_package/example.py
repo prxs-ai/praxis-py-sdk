@@ -17,7 +17,7 @@ def run_bot(username: str, password: str, api_key: str):
 
 if __name__ == "__main__":
     # Example usage
-    username = "valebtinbest@gmail.com"
-    password = "|yR2mZtbc;hjS/T"
-    api_key = "***REMOVED***"
+    username = ""
+    password = ""
+    api_key = ""
     run_bot(username, password, api_key )
