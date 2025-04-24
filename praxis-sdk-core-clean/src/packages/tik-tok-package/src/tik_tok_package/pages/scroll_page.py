@@ -2,12 +2,16 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time
 
+from tiktok_captcha_solver import SeleniumSolver
+
+from commands.captcha_solver import handle_captcha
 from log import log
 
 
 class ScrollPage:
-    def __init__(self, driver: webdriver.Chrome):
+    def __init__(self, driver: webdriver.Chrome, sadcaptcha: SeleniumSolver):
         self.driver = driver
+        self.sadcaptcha = sadcaptcha
 
     def accept_policy(self):
         """Method for accepting the privacy policy"""
@@ -19,6 +23,7 @@ class ScrollPage:
         except Exception as e:
             log.error(f"Error while accepting policy")
 
+    @handle_captcha
     def wait_for_open_scroll_page(self):
         """Method for waiting for the scroll page to open"""
 

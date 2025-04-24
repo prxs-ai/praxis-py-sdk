@@ -6,13 +6,16 @@ from selenium.webdriver.common.by import By
 import time
 
 from selenium.webdriver.support.wait import WebDriverWait
+from tiktok_captcha_solver import SeleniumSolver
 
+from commands.captcha_solver import handle_captcha
 from log import log
 
 
 class UserVideoPage:
-    def __init__(self, driver: webdriver.Chrome):
+    def __init__(self, driver: webdriver.Chrome, sadcaptcha: SeleniumSolver):
         self.driver = driver
+        self.sadcaptcha = sadcaptcha
 
     def open_page(self, url):
         """Method for opening the user video page"""
@@ -50,6 +53,7 @@ class UserVideoPage:
         except Exception as e:
             log.error(f"Error while opening comment page: {e}")
 
+    @handle_captcha
     def left_comment(self, comment: str):
         """Method for leaving a comment on a video
         """
@@ -97,3 +101,8 @@ class UserVideoPage:
         for char in text:
             element.send_keys(char)
             time.sleep(delay)
+
+    @handle_captcha
+    def verify_captcha(self):
+        """Method for verifying captcha"""
+        ...

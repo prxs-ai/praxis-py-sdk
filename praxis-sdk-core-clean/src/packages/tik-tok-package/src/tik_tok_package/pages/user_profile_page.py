@@ -1,14 +1,18 @@
 from selenium import webdriver
-from selenium.common import NoSuchElementException
+
 from selenium.webdriver.common.by import By
 import time
 
+from tiktok_captcha_solver import SeleniumSolver
+
+from commands.captcha_solver import handle_captcha
 from log import log
 
 
 class UserProfilePage:
-    def __init__(self, driver: webdriver.Chrome):
+    def __init__(self, driver: webdriver.Chrome, sadcaptcha: SeleniumSolver):
         self.driver = driver
+        self.sadcaptcha = sadcaptcha
 
     def open_page(self, url):
         """Method for opening the user profile page"""
@@ -16,6 +20,7 @@ class UserProfilePage:
         log.info(f"Opening user profile page: {url}")
         time.sleep(3)
 
+    @handle_captcha
     def follow_user(self, follow : bool=True):
         """Method for following a user"""
         try:

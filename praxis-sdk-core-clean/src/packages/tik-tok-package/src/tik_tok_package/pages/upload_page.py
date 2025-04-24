@@ -6,14 +6,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 import time
 
-
+from tiktok_captcha_solver import SeleniumSolver
 
 from log import log
 
 
 class UploadPage:
-    def __init__(self, driver: webdriver.Chrome):
+    def __init__(self, driver: webdriver.Chrome, sadcaptcha: SeleniumSolver):
         self.driver = driver
+        self.sadcaptcha = sadcaptcha
 
     def open_page(self):
         """Method to open the upload page"""

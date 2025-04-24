@@ -26,7 +26,7 @@ class TikTokBot:
         if headless:
             options.add_argument("--headless=new")
         self.driver = webdriver.Chrome(options=options)
-
+        self.start_time = time.time()
         self.sadcaptcha = SeleniumSolver(
             self.driver,
             api_key,
@@ -34,11 +34,11 @@ class TikTokBot:
             mouse_step_delay_ms=10
         )
 
-        self.login_page = LoginPage(self.driver)
-        self.scroll_page = ScrollPage(self.driver)
-        self.upload_page = UploadPage(self.driver)
-        self.user_video_page = UserVideoPage(self.driver)
-        self.user_profile_page = UserProfilePage(self.driver)
+        self.login_page = LoginPage(self.driver, self.sadcaptcha)
+        self.scroll_page = ScrollPage(self.driver, self.sadcaptcha)
+        self.upload_page = UploadPage(self.driver, self.sadcaptcha)
+        self.user_video_page = UserVideoPage(self.driver, self.sadcaptcha)
+        self.user_profile_page = UserProfilePage(self.driver, self.sadcaptcha)
 
         # Попробовать загрузить куки
         self.driver.get("https://www.tiktok.com/")
@@ -76,7 +76,6 @@ class TikTokBot:
             self.login_page.open_page()
             self.login_page.accept_cookies()
             self.login_page.login(username, password)
-            self.sadcaptcha.solve_captcha_if_present()
             self.scroll_page.wait_for_open_scroll_page()
             self._save_cookies()
             time.sleep(1)
@@ -111,7 +110,7 @@ class TikTokBot:
             video_url = f"https://www.tiktok.com/{username}/video/{video_id}"
         self.user_video_page.open_page(video_url)
         self.user_video_page.like_video()
-        self.sadcaptcha.solve_captcha_if_present()
+        self.user_video_page.verify_captcha()
 
     def follow_user(self, user_url: Optional[str] = None, username: Optional[str] = None, follow_user: bool = True):
         """
@@ -129,7 +128,6 @@ class TikTokBot:
             user_url = f"https://www.tiktok.com/{username}"
 
         self.user_profile_page.open_page(user_url)
-        self.sadcaptcha.solve_captcha_if_present()
         self.user_profile_page.follow_user(follow=follow_user)
 
     def unfollow_user(self, user_url: Optional[str] = None, username: Optional[str] = None):
@@ -144,9 +142,11 @@ class TikTokBot:
 
         WARNING: This method works only when session live more than 5 minutes.
         """
+        if self.start_time + 300 > time.time():
+            log.info(f"[!] Session is too young. Please wait more than 5 minutes.")
+            raise ValueError("Session is too young. Please wait more than 5 minutes.")
         self.user_video_page.open_page(video_url)
         self.user_video_page.open_comment_page()
-        self.sadcaptcha.solve_captcha_if_present()
         self.user_video_page.left_comment(comment)
         self.user_video_page.publish_comment()
 
