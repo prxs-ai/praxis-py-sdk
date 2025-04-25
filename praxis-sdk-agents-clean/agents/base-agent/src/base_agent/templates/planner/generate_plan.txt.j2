@@ -4,15 +4,10 @@ ACTIONS LIST:
 {available_functions}
 END OF ACTIONS LIST
 
-AGENTS LIST
-{available_agents}
-END OF AGENTS LIST
-
 PLAN GUIDELINES:
 - Each plan must consist of 0 or more clearly defined steps using only the provided actions and agents.
 - Each step must strictly use one of the provided actions from ACTIONS LIST.
 - Before using an action or constructing a plan, you must think how to use it right and provide a thought in the `thought` section.
-- Write the final output in an `outputs` section with a single output `answer`.
 - Every step must have a unique, descriptive name and should always have thought, inputs and outputs.
 - Use '{{handoff_action}}' IF AGENTS LIST IS NOT EMPTY ONLY to handoff a task to another agent from the AGENTS LIST.
 - Do not introduce or use actions and agents other than those provided.
