@@ -34,8 +34,12 @@ class DAGRunner(abc.AbstractWorkflowRunner):
         pass
 
     @classmethod
-    def list_workflows(cls: "DAGRunner", status: str | None = None) -> None:
-        return workflow.list_all(status)
+    def list_workflows(cls: "DAGRunner", status: str | None = None):
+        wfs = []
+        for wf_id, _ in workflow.list_all(status):
+            wfs.append(workflow.get_metadata(wf_id))
+        return wfs
+
 
 
     def create_step(self, task: Task):
