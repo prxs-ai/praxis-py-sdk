@@ -7,7 +7,7 @@ import yaml
 from langchain.agents.agent import AgentOutputParser
 from langchain.schema import OutputParserException
 
-from base_agent.models import Task, ToolModel
+from base_agent.models import InputItem, OutputItem, Task, ToolModel, Workflow, WorkflowStep
 from base_agent.prompt.const import FINISH_ACTION
 
 THOUGHT_PATTERN = r"Thought: ([^\n]*)"
@@ -16,6 +16,8 @@ ACTION_PATTERN = r"\n*(\d+)\. (\w+)\((.*)\)(\s*#\w+\n)?"
 ID_PATTERN = r"\$\{?(\d+)\}?"
 # Pattern to extract YAML content between ```yaml and ``` markers
 YAML_PATTERN = r"```yaml\s+(.*?)\s+```"
+# Pattern for template expressions like {{steps.step-name.outputs.output-name}}
+TEMPLATE_EXPR_PATTERN = r"\{\{(.*?)\}\}"
 
 
 def default_dependency_rule(idx, args: str):
@@ -31,93 +33,84 @@ class AgentOutputPlanParser(AgentOutputParser, extra="allow"):
         super().__init__(**kwargs)
         self.tools = tools
 
-    def parse(self, text: str) -> dict[int, Task]:
+    def parse(self, text: str) -> Workflow:
         # First try to extract YAML content
         yaml_match = re.search(YAML_PATTERN, text, re.DOTALL)
-        if yaml_match:
-            return self._parse_yaml_format(yaml_match.group(1))
+        if not yaml_match:
+            raise OutputParserException(f"Failed to parse YAML content from text: {text}")
 
-        # If no YAML format found, fall back to the original parsing logic
-        return self._parse_numbered_format(text)
+        return self._parse_yaml_format(yaml_match.group(1))
 
-    def _parse_yaml_format(self, yaml_content: str) -> dict[int, Task]:
+    def _parse_yaml_format(self, yaml_content: str) -> Workflow:
         try:
-            # Pre-process the YAML content to escape curly braces in template expressions
-            # Convert {{...}} to a string that won't be interpreted as a mapping
-            processed_content = re.sub(r"\{\{(.*?)\}\}", r'"{{$1}}"', yaml_content)
+            # Handle template expressions by temporarily replacing them
+            template_expressions = {}
 
-            plan_data = yaml.safe_load(processed_content)
-            graph_dict = {}
+            def replace_template(match):
+                placeholder = f"__TEMPLATE_{len(template_expressions)}__"
+                template_expressions[placeholder] = match.group(0)
+                return placeholder
 
-            # Process each step in the plan
-            for idx, step in enumerate(plan_data.get("steps", [])):
-                tool_name = step.get("tool")
+            processed_content = re.sub(r"\{\{(.*?)\}\}", replace_template, yaml_content)
 
-                # Extract inputs as arguments
-                inputs = step.get("inputs", [])
-                args_dict = {
-                    input_item.get("name"): input_item.get("value")
-                    for input_item in inputs
-                    if "name" in input_item and "value" in input_item
-                }
+            # Parse YAML content
+            workflow_data = yaml.safe_load(processed_content)
 
-                # Convert to a format the existing function can handle
-                args_str = str(args_dict) if args_dict else ""
+            # Convert back the template expressions
+            def restore_templates(obj):
+                if isinstance(obj, str):
+                    for placeholder, template in template_expressions.items():
+                        if placeholder in obj:
+                            obj = obj.replace(placeholder, template)
+                    return obj
+                elif isinstance(obj, list):
+                    return [restore_templates(item) for item in obj]
+                elif isinstance(obj, dict):
+                    return {k: restore_templates(v) for k, v in obj.items()}
+                return obj
 
-                task = instantiate_task(
-                    tools=self.tools,
-                    idx=idx,
-                    tool_name=tool_name,
-                    args=args_str,
-                    thought=step.get("thought", plan_data.get("description", "")),
-                )
+            workflow_data = restore_templates(workflow_data)
 
-                graph_dict[idx] = task
-
-            idx = len(graph_dict)
-
-            # The last step is implicitly a finish action
-            finish_task = instantiate_task(
-                tools=self.tools,
-                idx=idx + 1,
-                tool_name=FINISH_ACTION,
-                args=str(plan_data.get("outputs", [])),
-                thought=f"Completed all steps in the plan for: {plan_data.get('name', 'unknown')}",
+            # Convert to Workflow model
+            workflow = Workflow(
+                name=workflow_data.get("name", "unnamed_workflow"),
+                description=workflow_data.get("description", ""),
+                thought=workflow_data.get("thought", ""),
+                steps=[
+                    WorkflowStep(
+                        name=step.get("name", f"step_{i}"),
+                        tool=step.get("tool", ""),
+                        thought=step.get("thought", ""),
+                        inputs=[
+                            InputItem(name=input_item.get("name", ""), value=input_item.get("value", ""))
+                            for input_item in step.get("inputs", [])
+                        ],
+                        outputs=[
+                            OutputItem(name=output_item.get("name", ""), value=output_item.get("value", None))
+                            for output_item in step.get("outputs", [])
+                        ],
+                        task = instantiate_task(
+                            tools=self.tools,
+                            idx=i,
+                            tool_name=step.get("tool", ""),
+                            args=step.get("inputs", []),
+                            thought=step.get("thought", ""),
+                        )
+                    )
+                    for i, step in enumerate(workflow_data.get("steps", []))
+                ],
+                outputs=[
+                    OutputItem(name=output_item.get("name", ""), value=output_item.get("value", None))
+                    for output_item in workflow_data.get("outputs", [])
+                ],
             )
-            graph_dict[idx + 1] = finish_task
 
-            return graph_dict
+            return workflow
 
         except yaml.YAMLError as e:
             raise OutputParserException(f"Failed to parse YAML content: {e}") from e
-
-    def _parse_numbered_format(self, text: str) -> dict[int, Task]:
-        # Original parsing logic for numbered steps
-        pattern = rf"(?:{THOUGHT_PATTERN}\n)?{ACTION_PATTERN}"
-        matches = re.findall(pattern, text)
-
-        graph_dict = {}
-
-        for match in matches:
-            # idx = 1, function = "search", args = "Ronaldo number of kids"
-            # thought will be the preceding thought, if any, otherwise an empty string
-            thought, idx, tool_name, args, _ = match
-            idx = int(idx)
-
-            task = instantiate_task(
-                tools=self.tools,
-                idx=idx,
-                tool_name=tool_name,
-                args=args,
-                thought=thought,
-            )
-
-            graph_dict[idx] = task
-            if task.is_finish:
-                break
-
-        return graph_dict
-
+        except Exception as e:
+            raise OutputParserException(f"Failed to parse workflow: {e}") from e
 
 ### Helper functions
 
@@ -169,20 +162,14 @@ def instantiate_task(
     tools: Sequence[ToolModel],
     idx: int,
     tool_name: str,
-    args: str,
+    args: list[Any],
     thought: str,
 ) -> Task:
-    dependencies = _get_dependencies_from_graph(idx, tool_name, args)
-    args = _parse_llm_compiler_action_args(args)
-
-    tool = _find_tool(tool_name, tools)
-
     return Task(
         idx=idx,
         name=tool_name,
-        tool=tool,
+        tool=_find_tool(tool_name, tools),
         args=args,
-        dependencies=dependencies,
         thought=thought,
         is_finish=tool_name == FINISH_ACTION,
     )

@@ -1,8 +1,8 @@
 from collections.abc import Collection
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, List, Dict, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from base_agent.utils import default_stringify_rule_for_arguments
 
@@ -21,6 +21,37 @@ class ToolModel(BaseModel):
     - description: {self.openai_function_spec["function"]["description"]}
     - parameters: {self.openai_function_spec["function"]["parameters"]}
 """
+
+
+class InputItem(BaseModel):
+    name: str
+    value: Any
+
+
+class OutputItem(BaseModel):
+    name: str
+
+
+class WorkflowStep(BaseModel):
+    name: str
+    tool: str
+    thought: Optional[str] = None
+    inputs: List[InputItem] = Field(default_factory=list)
+    outputs: List[OutputItem] = Field(default_factory=list)
+
+    task: 'Task' = Field(..., exclude=True)
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
+
+
+class Workflow(BaseModel):
+    name: str
+    description: str
+    thought: Optional[str] = None
+    steps: List[WorkflowStep]
+    outputs: List[OutputItem] = Field(default_factory=list)
 
 
 class MemoryModel(BaseModel):
@@ -67,7 +98,6 @@ class Task:
     name: str
     tool: ToolModel
     args: Collection[Any]
-    dependencies: Collection[int]
     thought: str | None = None
     observation: str | None = None
     is_finish: bool = False
@@ -89,18 +119,3 @@ class Task:
         if self.observation is not None:
             thought_action_observation += f"Observation: {self.observation}\n"
         return thought_action_observation
-
-    @staticmethod
-    def _replace_arg_mask_with_real_value(args, dependencies: list[int], tasks: dict[str, "Task"]):
-        if isinstance(args, (list, tuple)):
-            return type(args)(Task._replace_arg_mask_with_real_value(item, dependencies, tasks) for item in args)
-        elif isinstance(args, str):
-            for dependency in sorted(dependencies, reverse=True):
-                # consider both ${1} and $1 (in case planner makes a mistake)
-                for arg_mask in ["${" + str(dependency) + "}", "$" + str(dependency)]:
-                    if arg_mask in args:
-                        if tasks[dependency].observation is not None:
-                            args = args.replace(arg_mask, str(tasks[dependency].observation))
-            return args
-        else:
-            return args
