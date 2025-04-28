@@ -137,7 +137,21 @@ class Settings(BaseSettings):
     # confluent_api_secret: str = '1'
     # confluent_bootstrap_server: str = '1'
     # confluent_rest_endpoint: str = '1'
-
+    
+    AI_REGISTRY_HOST: str = Field(default="praxis-dev-ai-registry.praxis.svc.cluster.local")
+    AI_REGISTRY_PORT: int = Field(default=8080)
+    
+    DEPLOY_SERVICE_HOST: str = Field(default="deploy-service.praxis.svc.cluster.local") 
+    DEPLOY_SERVICE_PORT: int = Field(default=8000)
+    
+    @property
+    def ai_registry_url(self) -> str:
+        return f"http://{self.AI_REGISTRY_HOST}:{self.AI_REGISTRY_PORT}"
+        
+    @property
+    def deploy_service_url(self) -> str:
+        return f"http://{self.DEPLOY_SERVICE_HOST}"
+    
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore
