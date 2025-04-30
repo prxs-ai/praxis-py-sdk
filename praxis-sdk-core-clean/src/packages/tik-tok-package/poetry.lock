@@ -1024,4 +1024,4 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "901f7442db7f72a495d15c5e40664a934d7725d6213130f2ca5e3023e01c8380"
+content-hash = "b660d0908d3818da815cd94d383bd0051aa338e45bae7de63c449a2b4ce8ce0f"

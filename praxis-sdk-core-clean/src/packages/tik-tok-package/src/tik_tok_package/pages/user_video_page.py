@@ -92,7 +92,7 @@ class UserVideoPage:
             # Нажимаем
             self.driver.execute_script("arguments[0].click();", post_button)
             log.info("Comment published")
-            time.sleep(123)
+            time.sleep(1)
         except Exception as e:
             log.error(f"Error while publishing comment: {e}")
 

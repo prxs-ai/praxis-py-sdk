@@ -2,9 +2,7 @@ import os
 import time
 import pickle
 from typing import Optional
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import undetected_chromedriver as uc
 from tiktok_captcha_solver import SeleniumSolver
 
 from log import log
@@ -20,12 +18,7 @@ class TikTokBot:
         self.session_name = session_name
         self.cookies_path = f"sessions/{session_name}_cookies.pkl"
 
-        # Инициализация драйвера
-        options = Options()
-        options.add_argument("--start-maximized")
-        if headless:
-            options.add_argument("--headless=new")
-        self.driver = webdriver.Chrome(options=options)
+        self.driver = uc.Chrome(headless=False, use_subprocess=False)
         self.start_time = time.time()
         self.sadcaptcha = SeleniumSolver(
             self.driver,
@@ -142,9 +135,9 @@ class TikTokBot:
 
         WARNING: This method works only when session live more than 5 minutes.
         """
-        if self.start_time + 300 > time.time():
-            log.info(f"[!] Session is too young. Please wait more than 5 minutes.")
-            raise ValueError("Session is too young. Please wait more than 5 minutes.")
+        # if self.start_time + 300 > time.time():
+        #     log.info(f"[!] Session is too young. Please wait more than 5 minutes.")
+        #     raise ValueError("Session is too young. Please wait more than 5 minutes.")
         self.user_video_page.open_page(video_url)
         self.user_video_page.open_comment_page()
         self.user_video_page.left_comment(comment)
