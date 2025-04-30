@@ -98,7 +98,7 @@ class Settings(BaseSettings):
     TWITTER_CLIENT_SECRET: str = '8noXqU32HCtbW-0VIB2bw42Q_ZRdAliBYTq3BAV0nQvwhOTCux'
     TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
 
-    TWITTER_REDIRECT_URI: str = 'https://dev.prx.ai/twitter/oauth/callback/'
+    TWITTER_REDIRECT_URI: str = '***REMOVED***'
     OPENAI_API_KEY: str = '***REMOVED***'
     OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
     LOGS_DIR: str = "../logs"
