@@ -129,6 +129,10 @@ def parse_tweet_from_twitter_api(tweet_data: dict, users: dict, referenced_tweet
         users: Dictionary mapping user IDs to user data
         referenced_tweets: Dictionary mapping tweet IDs to referenced tweet data
     """
+    public_metrics = tweet_data.get('public_metrics', {})
+    like_count = public_metrics.get('like_count', 0)
+    print(f"Tweet ID: {tweet_data.get('id')}, текст: {tweet_data.get('text')[:30]}...")
+    print(f"Метрики твита: {public_metrics}, лайков: {like_count}")
     if referenced_tweets is None:
         referenced_tweets = {}
 
@@ -190,7 +194,7 @@ def parse_tweet_from_twitter_api(tweet_data: dict, users: dict, referenced_tweet
         retweeted_status=retweeted_status,
         quoted_status=quoted_status,
         retweet_count=tweet_data.get('public_metrics', {}).get('retweet_count', 0),
-        favorite_count=tweet_data.get('public_metrics', {}).get('like_count', 0),
+        favorite_count=like_count,
         is_quote_status=is_quote_status,
         conversation_id_str=tweet_data.get('conversation_id', ''),
         in_reply_to_status_id_str=tweet_data.get('in_reply_to_status_id', None),
