@@ -150,7 +150,7 @@ class Settings(BaseSettings):
         
     @property
     def deploy_service_url(self) -> str:
-        return f"http://{self.DEPLOY_SERVICE_HOST}"
+        return f"http://{self.DEPLOY_SERVICE_HOST}:{self.DEPLOY_SERVICE_PORT}"
     
 @lru_cache
 def get_settings() -> Settings:
