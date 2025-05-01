@@ -1,6 +1,6 @@
 [project]
 name = "twitter-ambassador-utils"
-version = "0.1.5"
+version = "0.1.6"
 description = "Package that consists utils for Twitter Ambassador"
 authors = [
     {name = "0xDevZip",email = "noreply@example.com"}
