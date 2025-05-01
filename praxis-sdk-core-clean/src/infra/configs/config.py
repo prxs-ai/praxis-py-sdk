@@ -142,7 +142,7 @@ class Settings(BaseSettings):
     AI_REGISTRY_PORT: int = Field(default=8080)
     
     DEPLOY_SERVICE_HOST: str = Field(default="deploy-service.praxis.svc.cluster.local") 
-    DEPLOY_SERVICE_PORT: int = Field(default=8000)
+    DEPLOY_SERVICE_PORT: int = Field(default=80)
     
     @property
     def ai_registry_url(self) -> str:
