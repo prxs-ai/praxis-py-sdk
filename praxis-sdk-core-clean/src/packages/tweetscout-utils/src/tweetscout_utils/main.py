@@ -255,33 +255,38 @@ async def fetch_user_tweets(access_token: str, username: str) -> list[Tweet]:
 
 
 async def search_tweets(access_token: str, query: str) -> list[Tweet]:
-    """Search for tweets using Twitter API v2"""
     url = 'https://api.twitter.com/2/tweets/search/recent'
     params = {
         "query": query,
         "max_results": 100,
-        "tweet.fields": "created_at,public_metrics,referenced_tweets,conversation_id,in_reply_to_user_id",
+        "tweet.fields": "created_at,public_metrics,referenced_tweets,conversation_id,in_reply_to_user_id,in_reply_to_status_id",
         "expansions": "author_id,referenced_tweets.id,referenced_tweets.id.author_id",
         "user.fields": "id,name,username,description,created_at,public_metrics"
     }
-
-    result = await _make_request(url, access_token, params=params)
-
-    tweets_data = result.get('data', [])
-    users_data = {user['id']: user for user in result.get('includes', {}).get('users', [])}
-
-    # Create a dictionary of referenced tweets
-    referenced_tweets = {}
-    for tweet in result.get('includes', {}).get('tweets', []):
-        referenced_tweets[tweet['id']] = tweet
-
-    # Parse the tweets
-    tweets = [
-        parse_tweet_from_twitter_api(tweet_data, users_data, referenced_tweets)
-        for tweet_data in tweets_data
-    ]
-
-    return tweets
+    
+    print(f"Запрос к Twitter API: {url} с запросом: {query}")
+    
+    try:
+        result = await _make_request(url, access_token, params=params)
+        
+        if not result:
+            print(f"API вернул пустой результат для запроса: {query}")
+            return []
+            
+        tweets_data = result.get('data', [])
+        
+        if not tweets_data:
+            error_info = result.get('errors', [])
+            meta_info = result.get('meta', {})
+            print(f"API не вернул твитов. Ошибки: {error_info}, мета: {meta_info}")
+            return []
+            
+        print(f"API вернул {len(tweets_data)} твитов")
+        
+        # Остальной код функции...
+    except Exception as e:
+        print(f"Критическая ошибка при поиске твитов: {str(e)}")
+        return []
 
 
 async def get_tweet_by_link(access_token: str, link: str) -> Tweet:
