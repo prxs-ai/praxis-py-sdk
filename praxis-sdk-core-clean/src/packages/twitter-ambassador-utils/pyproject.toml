@@ -19,7 +19,6 @@ readme = "README.md"
 [tool.poetry]
 packages = [{include = "*", from="src"}]
 
-1!swimminG!1
 [[tool.poetry.source]]
 name = "praxis"
 url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple/"
