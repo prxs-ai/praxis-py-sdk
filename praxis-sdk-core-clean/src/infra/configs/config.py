@@ -89,7 +89,7 @@ class DeployService(BaseSettings):
 
     @property
     def url(self) -> str:
-        return f"http://{self.DEPLOY_SERVICE_HOST}"
+        return f"http://{self.host}"
 
 
 class Settings(BaseSettings):
