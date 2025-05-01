@@ -81,6 +81,16 @@ class TelegramAppSetupServiceConfig(BaseSettings):
     class Config:
         env_prefix = "TELEGRAM_"
 
+class DeployService(BaseSettings):
+    host: str =  Field(default="deploy-service.praxis.svc.cluster.local") 
+    port: int = Field(default=80)
+    connect_timeout: int = Field(default=10)
+    timeout: int = Field(default=300)
+
+    @property
+    def url(self) -> str:
+        return f"http://{self.DEPLOY_SERVICE_HOST}"
+
 
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
@@ -140,17 +150,13 @@ class Settings(BaseSettings):
     
     AI_REGISTRY_HOST: str = Field(default="praxis-dev-ai-registry.praxis.svc.cluster.local")
     AI_REGISTRY_PORT: int = Field(default=8080)
-    
-    DEPLOY_SERVICE_HOST: str = Field(default="deploy-service.praxis.svc.cluster.local") 
-    DEPLOY_SERVICE_PORT: int = Field(default=80)
+
+    deploy_service: DeployService = DeployService()
     
     @property
     def ai_registry_url(self) -> str:
         return f"http://{self.AI_REGISTRY_HOST}:{self.AI_REGISTRY_PORT}"
         
-    @property
-    def deploy_service_url(self) -> str:
-        return f"http://{self.DEPLOY_SERVICE_HOST}"
     
 @lru_cache
 def get_settings() -> Settings:
