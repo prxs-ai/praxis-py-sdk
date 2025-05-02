@@ -3,15 +3,15 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
+from ray.serve.deployment import Application
 
 from base_agent import abc
 from base_agent.ai_registry import ai_registry_builder
 from base_agent.bootstrap import bootstrap_main
 from base_agent.config import BasicAgentConfig, get_agent_config
 from base_agent.langchain import executor_builder
-from base_agent.models import AgentModel, InsightModel, MemoryModel, Task, ToolModel
+from base_agent.models import AgentModel, InsightModel, MemoryModel, ToolModel, Workflow
 from base_agent.prompt import prompt_builder
-from ray.serve.deployment import Application
 
 
 class BaseAgentInputModel(abc.AbstractAgentInputModel): ...
@@ -273,7 +273,7 @@ class BaseAgent(abc.AbstractAgent):
 
     def run_workflow(
         self,
-        plan: dict[int, Task],
+        plan: Workflow,
         context: BaseAgentInputModel | None = None,
     ) -> BaseAgentOutputModel:
         return self.workflow_runner.run(plan, context)
