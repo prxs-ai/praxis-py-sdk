@@ -1,6 +1,6 @@
 [project]
 name = "twitter-ambassador-utils"
-version = "0.1.4"
+version = "0.1.6"
 description = "Package that consists utils for Twitter Ambassador"
 authors = [
     {name = "0xDevZip",email = "noreply@example.com"}
@@ -10,13 +10,14 @@ dependencies = [
     "aiohttp (>=3.11.13)",
     "requests-oauthlib>=1.3.0",
     "cryptography (>=2.3.1)",
+    "loguru==0.7.3",
     "example-package (>=0.0.3,<0.0.4)"
+    
 ]
 readme = "README.md"
 
 [tool.poetry]
 packages = [{include = "*", from="src"}]
-
 
 [[tool.poetry.source]]
 name = "praxis"
