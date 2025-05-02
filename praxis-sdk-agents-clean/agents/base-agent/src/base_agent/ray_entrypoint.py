@@ -279,7 +279,7 @@ class BaseAgent(abc.AbstractAgent):
         return self.workflow_runner.run(plan, context)
 
     def reconfigure(self, config: dict[str, Any]):
-        pass
+        self.workflow_runner.reconfigure(config)
 
     async def handoff(self, endpoint: str, goal: str, plan: dict):
         """This method means that agent can't find a solution (wrong route/wrong plan/etc)
