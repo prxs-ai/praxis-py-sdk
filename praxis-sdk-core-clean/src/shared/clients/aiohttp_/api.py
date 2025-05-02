@@ -1,7 +1,7 @@
 from types import TracebackType
 from typing import Self
 
-from services.shared.api_client.types import API, Command
+from services.shared.clients.types import API
 
 from .session import AiohttpSession
 
@@ -11,9 +11,6 @@ class AiohttpAPI[S: AiohttpSession](API[S]):
 
     def __init__(self, session: S) -> None:
         self._session = session
-
-    def __call__[O](self, command: Command[S, O]) -> O:
-        return command.execute(self._session)
 
     async def __aenter__(self) -> Self:
         await self._session.__aenter__()
