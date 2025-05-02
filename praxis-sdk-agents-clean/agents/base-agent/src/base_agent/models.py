@@ -1,7 +1,7 @@
 from typing import Any, List, Literal, Optional
 import uuid
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ToolModel(BaseModel):
@@ -9,13 +9,12 @@ class ToolModel(BaseModel):
     version: str | None = None
     openai_function_spec: dict[str, Any]
 
-    @field_validator('name', 'version', mode='before')
-    def validate_name_and_version(cls, v, info):
-        if info.field_name == 'name' and '@' in v:
-            name, version = cls.parse_version_from_name(v)
-            info.data['version'] = version
-            return name
-        return v
+    @model_validator(mode='before')
+    def validate_name_and_version(cls, data):
+        if 'version' not in data or data['version'] is None:
+            # If no version is specified, we assume the latest version
+            data['name'], data['version'] = cls.parse_version_from_name(data['name'])
+        return data
 
     @classmethod
     def parse_version_from_name(cls, name: str) -> tuple[str, str | None]:
