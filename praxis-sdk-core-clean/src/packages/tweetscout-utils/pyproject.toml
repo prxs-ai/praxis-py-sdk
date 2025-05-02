@@ -1,6 +1,6 @@
 [project]
 name = "tweetscout-utils"
-version = "0.0.3"
+version = "0.0.4"
 description = "Package that consists utils for Tweetscout"
 authors = [
     {name = "0xDevZip",email = "noreply@example.com"}
