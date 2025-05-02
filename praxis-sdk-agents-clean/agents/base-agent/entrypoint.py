@@ -1,3 +1,5 @@
+from typing import Any
+
 from base_agent.const import EntrypointGroup
 from base_agent.utils import get_entrypoint
 from ray import serve
@@ -15,8 +17,8 @@ if __name__ == "__main__":
     fastapi_app = FastAPI()
 
     @fastapi_app.post("/{goal}")
-    async def handle_request(goal: str, plan: dict | None = None):
-        return await handle.handle.remote(goal, plan)
+    async def handle_request(goal: str, plan: dict | None = None, context: Any = None):
+        return await handle.handle.remote(goal, plan, context)
 
     @fastapi_app.get("/workflows")
     async def get_workflows(status: str | None = None):

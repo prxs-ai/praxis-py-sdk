@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from ray.serve.deployment import Deployment
 
 from base_agent import abc
-from base_agent.workflows import workflow_builder
+from base_agent.orchestration import workflow_builder
 
 
 def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
@@ -16,9 +17,10 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         # launch some tasks on app start
-        runner.start()
+        runner.start_daemon()
+        runner.run_background_workflows()
         yield
-        runner.stop()
+        runner.stop_daemon()
         # handle clean up
 
     fastapi = FastAPI(lifespan=lifespan)
@@ -31,11 +33,11 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
             return runner
 
         @fastapi.post("/{goal}")
-        async def handle(self, goal: str, plan: dict | None = None):
-            return await super().handle(goal, plan)
+        async def handle(self, goal: str, plan: dict | None = None, context: Any = None):
+            return await super().handle(goal, plan, context)
 
         @fastapi.get("/workflows")
         async def list_workflows(self, status: str | None = None):
-            return self.workflow_runner.list_workflows(status)
+            return await self.workflow_runner.list_workflows(status)
 
     return Agent
