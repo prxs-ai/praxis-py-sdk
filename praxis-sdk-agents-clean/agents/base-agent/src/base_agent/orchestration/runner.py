@@ -23,6 +23,14 @@ class DAGRunner(abc.AbstractWorkflowRunner):
     def __init__(self, config: BasicWorkflowConfig):
         self.config = config
 
+    def reconfigure(self, config: dict[str, Any]) -> None:
+        """Reconfigure the agent with new settings.
+
+        Args:
+            config: New configuration settings
+        """
+        self.config = BasicWorkflowConfig(**config)
+
     @classmethod
     def start_daemon(cls: "DAGRunner", include_failed=False) -> None:
         workflow.init()
@@ -41,7 +49,8 @@ class DAGRunner(abc.AbstractWorkflowRunner):
 
         for _, wf_dict in wfs.items():
             wf = Workflow(**wf_dict)
-            self.run(wf, async_mode=True)
+            if wf.id in self.config.WORKFLOWS_TO_RUN and self.config.WORKFLOWS_TO_RUN[wf.id].enabled:
+                self.run(wf, async_mode=True)
 
     async def list_workflows(self, status: str | None = None):
         wf_dict = {}
