@@ -105,7 +105,7 @@ class DAGRunner(abc.AbstractWorkflowRunner):
 
         return func(
             workflow_executor.bind(generate_request_id.bind()),
-            workflow_id=f"dag-{uuid.uuid4().hex[:8]}",  # Unique ID for each workflow
+            workflow_id=dag_spec.id,  # Unique ID for each workflow
             metadata={"dag_spec": dag_spec.model_dump()},  # Store metadata for debugging
         )
 

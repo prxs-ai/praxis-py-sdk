@@ -1,4 +1,5 @@
 from typing import Any, List, Literal, Optional
+import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -96,6 +97,7 @@ class WorkflowStep(BaseModel):
 
 
 class Workflow(BaseModel):
+    id: str = Field(default_factory=lambda x: f"dag-{uuid.uuid4().hex[:8]}")
     name: str
     description: str
     thought: Optional[str] = None
