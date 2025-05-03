@@ -14,11 +14,11 @@ from pages.user_video_page import UserVideoPage
 
 
 class TikTokBot:
-    def __init__(self, api_key: str, session_name: str = "tiktok_session", headless: bool = False):
+    def __init__(self, api_key: str, session_name: str = "tiktok_session", headless: bool = True):
         self.session_name = session_name
         self.cookies_path = f"sessions/{session_name}_cookies.pkl"
 
-        self.driver = uc.Chrome(headless=False, use_subprocess=False)
+        self.driver = uc.Chrome(headless=headless, use_subprocess=False, version_main=135)
         self.start_time = time.time()
         self.sadcaptcha = SeleniumSolver(
             self.driver,
@@ -147,4 +147,4 @@ class TikTokBot:
         """
         Quit the TikTok bot and close the browser.
         """
-        self.driver.quit()
+        self.driver.close()
