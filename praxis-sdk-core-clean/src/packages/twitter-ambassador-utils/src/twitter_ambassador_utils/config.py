@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     TWITTER_CLIENT_SECRET: str
     FERNET_KEY: bytes
     TWITTER_BASIC_BEARER_TOKEN: str
+    VAULT_ADDRESS: str
+    VAULT_NAMESPACE: str
+    VAULT_ROLE_ID: str
+    VAULT_SECRET_ID: str
 
 
 @lru_cache
