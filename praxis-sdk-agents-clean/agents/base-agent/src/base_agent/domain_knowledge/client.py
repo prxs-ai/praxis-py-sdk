@@ -1,62 +1,67 @@
-import asyncio
 from typing import Any
 
-from lightrag import LightRAG, QueryParam
-from lightrag.kg.shared_storage import initialize_pipeline_status
-from lightrag.llm.ollama import ollama_embedding
-from lightrag.llm.zhipu import zhipu_complete
-from lightrag.utils import EmbeddingFunc
+import httpx
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from base_agent.domain_knowledge.config import LightRagConfig
+from base_agent.domain_knowledge.config import LightRagConfig, retries
+
+# ------  Retries --------- #
+stop = stop_after_attempt(retries.stop_attempts)
+wait = wait_exponential(
+    multiplier=retries.wait_multiplier,
+    min=retries.wait_min,
+    max=retries.wait_max,
+)
 
 
 class LightRagClient:
-    def __init__(self, config: LightRagConfig) -> None:
-        self.rag = LightRAG(
-            working_dir=config.working_dir,
-            llm_model_func=zhipu_complete,
-            llm_model_name=config.llm_model_name,
-            llm_model_max_async=config.llm_model_max_async,
-            llm_model_max_token_size=config.llm_model_max_token_size,
-            enable_llm_cache_for_entity_extract=config.enable_llm_cache_for_entity_extract,
-            embedding_func=EmbeddingFunc(
-                embedding_dim=config.embedding_dim,
-                max_token_size=config.embedding_max_token_size,
-                func=lambda texts: ollama_embedding(
-                    texts,
-                    embed_model=config.embedding_model.name,
-                    host=config.embedding_model.url,
-                ),
-            ),
-            kv_storage=config.kv_storage,
-            doc_status_storage=config.doc_status_storage,
-            graph_storage=config.graph_storage,
-            vector_storage=config.vector_storage,
-            auto_manage_storages_states=config.auto_manage_storages_states,
-        )
+    def __init__(self, config: LightRagConfig):
+        self.url = config.url
+        self.timeout = config.timeout
+        self.endpoints = config.endpoints
 
-    async def initialize_rag(self) -> None:
-        """
-        Initialize the LightRAG instance with PostgreSQL as the storage backend.
-        """
+    @retry(
+        stop=stop,
+        wait=wait,
+        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.RequestError)),
+    )
+    def post(self, endpoint: str, json: dict[str, Any]) -> dict:
+        url = f"{self.url}{endpoint}"
 
-        await self.rag.initialize_storages()
-        await initialize_pipeline_status()
+        try:
+            response = httpx.post(url, json=json, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            print(f"HTTP error: {e.response.status_code} - {e.response.text}")
+        except httpx.RequestError as e:
+            print(f"Request error: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
 
-    def query(self, query: str, mode: str = "naive") -> dict[str, Any]:
-        """
-        Synchronously query the LightRAG instance with the specified mode.
-        """
+        return {}
+    
+    @retry(
+        stop=stop,
+        wait=wait,
+        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.RequestError)),
+    )
+    def get(self, endpoint: str, params: dict[str, Any]) -> dict:
+        url = f"{self.url}{endpoint}"
 
-        async def _async_query():
-            param = QueryParam(mode=mode)
-            result = await self.rag.aquery(query, param=param)
-            return {"domain_knowledge": result}
+        try:
+            response = httpx.get(url, params=params, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            print(f"HTTP error: {e.response.status_code} - {e.response.text}")
+        except httpx.RequestError as e:
+            print(f"Request error: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
 
-        return asyncio.run(_async_query())
+        return {}
 
 
 def light_rag_client(config: LightRagConfig) -> LightRagClient:
-    client = LightRagClient(config=config)
-    asyncio.run(client.initialize_rag())
-    return client
+    return LightRagClient(config=config)
