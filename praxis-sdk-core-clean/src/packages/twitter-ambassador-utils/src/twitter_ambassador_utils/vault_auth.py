@@ -1,0 +1,257 @@
+import asyncio
+import base64
+import hashlib
+import os
+import re
+from datetime import datetime
+
+import hvac
+from requests_oauthlib import OAuth2Session
+import aiohttp
+
+from redis_client.main import decode_redis, get_redis_db
+from twitter_ambassador_utils.config import cipher, get_settings, get_hvac_client
+from loguru import logger
+
+settings = get_settings()
+
+
+async def post_request(url: str, token: str, payload: dict):
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=payload) as response:
+            if response.ok:
+                data = await response.json()
+                logger.info(f"Request successful: {data}")
+                return data
+            logger.error(f"Request failed. Status: {response.status}, Response: {await response.text()}")
+            return await response.json()
+
+
+async def create_post(
+    access_token: str,
+    tweet_text: str,
+    quote_tweet_id: str | None = None,
+    commented_tweet_id: str | None = None,
+) -> dict | None:
+    logger.info(f'Posting tweet: {tweet_text=} {quote_tweet_id=} {commented_tweet_id=}')
+    url = "https://api.x.com/2/tweets"
+
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+    payload = {
+        "text": tweet_text,
+    }
+    if quote_tweet_id:
+        payload.update({"quote_tweet_id": quote_tweet_id})
+
+    if commented_tweet_id:
+        payload.update({"reply": {"in_reply_to_tweet_id": commented_tweet_id}})
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload, headers=headers) as response:
+            if response.status == 201:
+                result = await response.json()
+                logger.info(f'Tweet posted: {result}')
+                return result
+            else:
+                logger.error(f'Twit not posted: {await response.text()}')
+
+
+async def retweet(token: str, user_id: str, tweet_id: str):
+    url = f"https://api.x.com/2/users/{user_id}/retweets"
+    payload = {"tweet_id": tweet_id}
+    return await post_request(url, token, payload)
+
+
+async def set_like(token: str, user_id: str, tweet_id: str):
+    url = f"https://api.x.com/2/users/{user_id}/likes"
+    payload = {"tweet_id": tweet_id}
+    return await post_request(url, token, payload)
+
+
+
+class TwitterAuthClient:
+    _CLIENT = OAuth2Session(
+        client_id=settings.TWITTER_CLIENT_ID,
+        redirect_uri=settings.TWITTER_REDIRECT_URI,
+        scope="tweet.read users.read follows.write tweet.write like.write like.read follows.read offline.access",
+    )
+    _DB = get_redis_db()
+    HVAC_CLIENT = get_hvac_client()
+
+    @classmethod
+    def create_auth_link(cls, user_id: str):
+        code_verifier = cls._generate_code_verifier()
+        code_challenge = cls._generate_code_challenge(code_verifier)
+
+        url, state = cls._CLIENT.authorization_url(
+            url='https://twitter.com/i/oauth2/authorize',
+            code_challenge=code_challenge,
+            code_challenge_method="S256",
+        )
+        cls._store_session_data(
+            session_id=state,
+            data={
+                "user_id": str(user_id),
+                "code_challenge": code_challenge,
+                "code_verifier": code_verifier,
+            },
+            ex=60,
+        )
+        return url
+
+    @classmethod
+    async def callback(cls, state: str, code: str):
+        """Twitter send here after user allow to connect to his account"""
+        tokens_data = await cls.get_tokens(state, code)
+        user_data = await cls.get_me(tokens_data['access_token'])
+        cls.save_twitter_data(**tokens_data, **user_data)
+        return True
+
+    @classmethod
+    async def get_tokens(cls, state: str, code: str):
+        """get tokens from state and code that twitter had sent to callback"""
+        if not (data := cls.get_session_data(state)):
+            return
+        loop = asyncio.get_running_loop()
+        tokens_data = await loop.run_in_executor(
+            None,
+            lambda: cls._CLIENT.fetch_token(
+                token_url='https://api.twitter.com/2/oauth2/token',
+                code=code,
+                client_secret=settings.TWITTER_CLIENT_SECRET,
+                code_verifier=data["code_verifier"],
+            ),
+        )
+        return {
+            "user_id": data["user_id"],
+            "access_token": tokens_data["access_token"],
+            "refresh_token": tokens_data["refresh_token"],
+            "expires_at": tokens_data["expires_at"],
+        }
+
+    @classmethod
+    async def get_me(cls, access_token: str) -> dict | None:
+        logger.info("Get me twitter")
+        async with aiohttp.ClientSession(headers={"Authorization": f"Bearer {access_token}"},
+                                         timeout=aiohttp.ClientTimeout(10)) as session:
+            async with session.get("https://api.twitter.com/2/users/me") as response:
+                data = await response.json()
+                if response.status == 403 and "suspended" in data["detail"]:
+                    response.raise_for_status()
+
+                if not response.ok:
+                    logger.error(f"Bad request to twitter get_me - {data}")
+                    return
+
+                return {
+                    "name": data["data"]["name"],
+                    "username": data["data"]["username"],
+                    'twitter_id': data["data"]["id"],
+                }
+
+    @classmethod
+    def _generate_code_verifier(cls) -> str:
+        code_verifier = base64.urlsafe_b64encode(os.urandom(30)).decode("utf-8")
+        return re.sub("[^a-zA-Z0-9]+", "", code_verifier)
+
+    @classmethod
+    def _generate_code_challenge(cls, code_verifier: str) -> str:
+        code_challenge = hashlib.sha256(code_verifier.encode("utf-8")).digest()
+        code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8")
+        return code_challenge.replace("=", "")
+
+    @classmethod
+    def _store_session_data(cls, session_id: str, data: dict, ex: int) -> None:
+        """store data created with auth link in order to get it when twitter send callback"""
+        cls._DB.r.hmset(f"session:{session_id}", mapping=data)
+        cls._DB.r.expire(f"session:{session_id}", ex)
+
+    @classmethod
+    def get_session_data(cls, session_id: str) -> dict | None:
+        if session_data := cls._DB.r.hgetall(f"session:{session_id}"):
+            return decode_redis(session_data)
+
+    @classmethod
+    def save_twitter_data(cls, user_id: str, data: dict):
+        """Сохраняет OAuth-данные Twitter для пользователя в Vault."""
+        cls.HVAC_CLIENT.secrets.kv.v2.create_or_update_secret(
+            path=f"admin/user-secrets/dev/{user_id}/twitter",
+            secret=data
+        )
+
+    @classmethod
+    async def _refresh_tokens(cls, refresh: str):
+        loop = asyncio.get_running_loop()
+        tokens_data = await loop.run_in_executor(
+            None,
+            lambda: cls._CLIENT.refresh_token(
+                token_url='https://api.twitter.com/2/oauth2/token',
+                refresh_token=refresh,
+                client_id=settings.TWITTER_CLIENT_ID,
+                client_secret=settings.TWITTER_CLIENT_SECRET,
+                headers={
+                    "Authorization": f"Basic {settings.TWITTER_BASIC_BEARER_TOKEN}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+            ),
+        )
+        return {
+            "access_token": tokens_data["access_token"],
+            "refresh_token": tokens_data["refresh_token"],
+            "expires_at": tokens_data["expires_at"],
+        }
+
+    @classmethod
+    async def update_tokens(cls, user_id: str, new_tokens: dict):
+        """Обновляет access_token, refresh_token и expires_at для пользователя."""
+        cls.HVAC_CLIENT.secrets.kv.v2.patch(
+            path=f"admin/user-secrets/dev/{user_id}/twitter",
+            secret={
+                'access_token': new_tokens['access_token'],
+                'refresh_token': new_tokens['refresh_token'],
+                'expires_at': new_tokens['expires_at']
+            }
+        )
+
+    @classmethod
+    async def disconnect_twitter(cls, user_id: str):
+        cls._DB.r.delete(f'twitter_data:{user_id}')
+
+    @classmethod
+    async def get_twitter_data(cls, user_id: str) -> dict:
+        """Возвращает словарь со всеми сохранёнными данными Twitter из Vault."""
+        resp = cls.HVAC_CLIENT.secrets.kv.v2.read_secret_version(
+            path=f"admin/user-secrets/dev/{user_id}/twitter"
+        )
+        return resp['data']['data']
+
+    @classmethod
+    async def get_static_data(cls, user_id: str) -> dict:
+        data = await cls.get_twitter_data(user_id)
+        return {
+            'name': data['name'],
+            'username': data['username'],
+            'id': data['id'],
+            'guest_id': data.get('guest_id')
+        }
+
+    @classmethod
+    async def get_access_token(cls, username: str) -> str:
+        twitter_data = await cls.get_twitter_data(username)
+        if not twitter_data:
+            logger.error(f"No twitter data found for {username}")
+            raise ValueError(f"Twitter data not found for user {username}")
+        try:
+            access_token = cipher.decrypt(twitter_data["access_token"]).decode()
+            logger.info(f'Decoded access token successfully')
+            return access_token
+        except (KeyError, TypeError) as e:
+            logger.error(f"Error decrypting access token for {username}: {e}")
+            raise e
+
