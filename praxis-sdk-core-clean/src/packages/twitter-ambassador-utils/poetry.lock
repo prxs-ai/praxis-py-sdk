@@ -481,23 +481,6 @@ url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/p
 reference = "praxis"
 
 [[package]]
-name = "example-package"
-version = "0.0.3"
-description = "This is an example package."
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-files = [
-    {file = "example_package-0.0.3-py3-none-any.whl", hash = "sha256:bd5a0acf8a2a189ea424c06449c1776abb882e775b317bbb066d12da93a18c0e"},
-    {file = "example_package-0.0.3.tar.gz", hash = "sha256:628e62334dbad0d0f0b749f1454ed7f16c9e923e4aa963e0c3d78aa591eac8ac"},
-]
-
-[package.source]
-type = "legacy"
-url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple"
-reference = "praxis"
-
-[[package]]
 name = "frozenlist"
 version = "1.5.0"
 description = "A list-like structure which implements collections.abc.MutableSequence"
@@ -1152,4 +1135,4 @@ reference = "praxis"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "ce7d2e7462c84b468c8b0e04f529dbe14467712785f02dbedc3bf36ce27ddc5d"
+content-hash = "385501516a6d8f79894a84e24c8e63fdcef77c64fc926f1560f511d42fcc045f"

@@ -10,7 +10,7 @@ from requests_oauthlib import OAuth2Session
 import aiohttp
 
 from redis_client.main import decode_redis, get_redis_db
-from twitter_ambassador_utils.config import cipher, get_settings
+from twitter_ambassador_utils.config import cipher, get_settings, get_hvac_client
 from loguru import logger
 
 settings = get_settings()
@@ -81,14 +81,8 @@ class TwitterAuthClient:
         redirect_uri=settings.TWITTER_REDIRECT_URI,
         scope="tweet.read users.read follows.write tweet.write like.write like.read follows.read offline.access",
     )
-    HVAC_CLIENT = hvac.Client(url=settings.VAULT_ADDRESS, namespace=settings.VAULT_NAMESPACE)
-    auth_response = HVAC_CLIENT.auth.approle.login(role_id=settings.VAULT_ROLE_ID, secret_id=settings.VAULT_SECRET_ID)
-
-    if HVAC_CLIENT.is_authenticated():
-        logger.info("Successfully connect to Vault")
-    else:
-        logger.info("Error while connecting to Vault.")
     _DB = get_redis_db()
+    HVAC_CLIENT = get_hvac_client()
 
     @classmethod
     def create_auth_link(cls, user_id: str):
