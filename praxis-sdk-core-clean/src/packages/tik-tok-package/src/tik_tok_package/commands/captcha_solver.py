@@ -1,7 +1,7 @@
 import functools
 
 
-from log import log
+from tik_tok_package.log import log
 
 
 def handle_captcha(method):

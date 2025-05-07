@@ -5,12 +5,12 @@ from typing import Optional
 import undetected_chromedriver as uc
 from tiktok_captcha_solver import SeleniumSolver
 
-from log import log
-from pages.login_page import LoginPage
-from pages.scroll_page import ScrollPage
-from pages.upload_page import UploadPage
-from pages.user_profile_page import UserProfilePage
-from pages.user_video_page import UserVideoPage
+from tik_tok_package.log import log
+from tik_tok_package.pages.login_page import LoginPage
+from tik_tok_package.pages.scroll_page import ScrollPage
+from tik_tok_package.pages.upload_page import UploadPage
+from tik_tok_package.pages.user_profile_page import UserProfilePage
+from tik_tok_package.pages.user_video_page import UserVideoPage
 
 
 class TikTokBot:
