@@ -5,8 +5,8 @@ import time
 
 from tiktok_captcha_solver import SeleniumSolver
 
-from commands.captcha_solver import handle_captcha
-from log import log
+from tik_tok_package.commands.captcha_solver import handle_captcha
+from tik_tok_package.log import log
 
 
 class UserProfilePage:

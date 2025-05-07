@@ -5,7 +5,7 @@ import pickle
 
 from tiktok_captcha_solver import SeleniumSolver
 
-from log import log
+from tik_tok_package.log import log
 
 
 class LoginPage:
