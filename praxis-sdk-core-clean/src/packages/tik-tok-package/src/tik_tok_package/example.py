@@ -1,5 +1,5 @@
 
-from main import TikTokBot
+from tik_tok_package.main import TikTokBot
 
 
 def run_bot(username: str, password: str, api_key: str):

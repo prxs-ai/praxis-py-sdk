@@ -5,8 +5,8 @@ import time
 
 from tiktok_captcha_solver import SeleniumSolver
 
-from commands.captcha_solver import handle_captcha
-from log import log
+from tik_tok_package.commands.captcha_solver import handle_captcha
+from tik_tok_package.log import log
 
 
 class UserProfilePage:
@@ -27,19 +27,19 @@ class UserProfilePage:
     def follow_user(self, follow : bool=True):
         """Method for following a user"""
         log.info("Waiting for the follow button to load...")
-        try:
+        # try:
 
-            # if follow is True and is_already_followed is True:
-            #     log.info("Already followed")
-            #     return
-            # elif follow is False and is_already_followed is False:
-            #     log.info("Already unfollowed")
-            #     return
-            button_locator = self.driver.find_element(By.CSS_SELECTOR, 'button[data-e2e="follow-button"]')
-            button_locator.click()
-            time.sleep(3)
-        except Exception as e:
-            log.error(f"Error while following a user: {e}")
+        # if follow is True and is_already_followed is True:
+        #     log.info("Already followed")
+        #     return
+        # elif follow is False and is_already_followed is False:
+        #     log.info("Already unfollowed")
+        #     return
+        button_locator = self.driver.find_element(By.CSS_SELECTOR, 'button[data-e2e="follow-button"]')
+        button_locator.click()
+        time.sleep(3)
+        # except Exception as e:
+        #     log.error(f"Error while following a user: {e}")
     @handle_captcha
     def verify_captcha(self):
         """Method for verifying captcha"""

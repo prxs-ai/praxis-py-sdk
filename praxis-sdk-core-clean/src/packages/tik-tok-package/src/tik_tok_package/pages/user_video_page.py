@@ -8,8 +8,8 @@ import time
 from selenium.webdriver.support.wait import WebDriverWait
 from tiktok_captcha_solver import SeleniumSolver
 
-from commands.captcha_solver import handle_captcha
-from log import log
+from tik_tok_package.commands.captcha_solver import handle_captcha
+from tik_tok_package.log import log
 
 
 class UserVideoPage:
@@ -25,26 +25,26 @@ class UserVideoPage:
 
     def like_video(self):
         """Method for liking a video"""
-        try:
-            log.info("Waiting for the like button to load...")
-            button_locator = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[2]/div[2]/div/div[2]/div[1]/div/article[1]/div/section[2]/button[1]')
-            is_pressed = button_locator.get_attribute("aria-pressed")
-            if is_pressed == "true":
-                log.info("Video already liked")
-                return
-            else:
-                log.info("Video not liked yet")
+        # try:
+        log.info("Waiting for the like button to load...")
+        button_locator = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[2]/div[2]/div/div[2]/div[1]/div/article[1]/div/section[2]/button[1]')
+        is_pressed = button_locator.get_attribute("aria-pressed")
+        if is_pressed == "true":
+            log.info("Video already liked")
+            return
+        else:
+            log.info("Video not liked yet")
 
-                button_locator.click()
-                log.info("Video liked")
-            time.sleep(3)
-        except Exception as e:
-            log.error(f"Error while liking video: {e}")
+            button_locator.click()
+            log.info("Video liked")
+        time.sleep(3)
+        # except Exception as e:
+        #     log.error(f"Error while liking video: {e}")
 
     def open_comment_page(self):
         """Method for opening the comment page"""
 
-        try:
+        try: # todo fix on linux some other ui
             log.info("Waiting for the comment button to load...")
             button_locator = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[2]/div[2]/div/div[2]/div[1]/div/article[1]/div/section[2]/button[2]')
             button_locator.click()
@@ -57,44 +57,44 @@ class UserVideoPage:
     def left_comment(self, comment: str):
         """Method for leaving a comment on a video
         """
-        try:
-            log.info("Waiting for the comment input to load...")
+        # try:
+        log.info("Waiting for the comment input to load...")
 
-            comment_input = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div[contenteditable='true'][role='textbox']"))
-            )
+        comment_input = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div[contenteditable='true'][role='textbox']"))
+        )
 
-            # Активируем поле (кликаем в него)
-            ActionChains(self.driver).move_to_element(comment_input).click().perform()
+        # Активируем поле (кликаем в него)
+        ActionChains(self.driver).move_to_element(comment_input).click().perform()
 
-            # Медленно печатаем комментарий
-            self.slow_typing(comment_input, comment)
+        # Медленно печатаем комментарий
+        self.slow_typing(comment_input, comment)
 
-            # Можно подождать чуть-чуть
-            time.sleep(1)
+        # Можно подождать чуть-чуть
+        time.sleep(1)
 
-            # Жмем Enter
-            comment_input.send_keys(Keys.ENTER)
+        # Жмем Enter
+        comment_input.send_keys(Keys.ENTER)
 
-            log.info("Comment left")
+        log.info("Comment left")
 
-        except Exception as e:
-            log.error(f"Error while leaving a comment: {e}")
+        # except Exception as e:
+        #     log.error(f"Error while leaving a comment: {e}")
 
     def publish_comment(self):
         """Method for publishing a comment"""
-        try:
-            log.info("Waiting for the publish button to load...")
-            post_button = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, 'div[data-e2e="comment-post"]'))
-            )
+        # try:
+        log.info("Waiting for the publish button to load...")
+        post_button = WebDriverWait(self.driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, 'div[data-e2e="comment-post"]'))
+        )
 
-            # Нажимаем
-            self.driver.execute_script("arguments[0].click();", post_button)
-            log.info("Comment published")
-            time.sleep(1)
-        except Exception as e:
-            log.error(f"Error while publishing comment: {e}")
+        # Нажимаем
+        self.driver.execute_script("arguments[0].click();", post_button)
+        log.info("Comment published")
+        time.sleep(1)
+        # except Exception as e:
+        #     log.error(f"Error while publishing comment: {e}")
 
     def slow_typing(self,element, text, delay=0.1):
         """Печатает текст по одной букве с задержкой"""
