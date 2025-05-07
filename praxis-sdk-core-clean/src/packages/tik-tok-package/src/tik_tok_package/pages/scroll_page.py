@@ -15,13 +15,13 @@ class ScrollPage:
 
     def accept_policy(self):
         """Method for accepting the privacy policy"""
-        try:
-            log.info("Waiting for the privacy policy to load...")
-            button_locator = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[9]/div/div/div[2]/div/button/div/div')
-            button_locator.click()
-            log.info("Policy accepted")
-        except Exception as e:
-            log.error(f"Error while accepting policy")
+        # try:
+        log.info("Waiting for the privacy policy to load...")
+        button_locator = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[9]/div/div/div[2]/div/button/div/div')
+        button_locator.click()
+        log.info("Policy accepted")
+        # except Exception as e:
+        #     log.error(f"Error while accepting policy")
 
     @handle_captcha
     def wait_for_open_scroll_page(self):
