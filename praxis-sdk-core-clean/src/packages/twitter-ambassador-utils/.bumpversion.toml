@@ -1,5 +1,5 @@
 [tool.bumpversion]
-current_version = "0.1.7"
+current_version = "0.1.8"
 message = "Bump version of twitter-ambassador-utils: {current_version} -> {new_version}"
 tag_name = "packages/twitter-ambassador-utils-v{new_version}"
 commit = false
