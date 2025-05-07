@@ -1,24 +1,28 @@
 import os
 import time
 import pickle
+import subprocess
+import platform
 from typing import Optional
 import undetected_chromedriver as uc
 from tiktok_captcha_solver import SeleniumSolver
 
-from log import log
-from pages.login_page import LoginPage
-from pages.scroll_page import ScrollPage
-from pages.upload_page import UploadPage
-from pages.user_profile_page import UserProfilePage
-from pages.user_video_page import UserVideoPage
+from tik_tok_package.log import log
+from tik_tok_package.pages.login_page import LoginPage
+from tik_tok_package.pages.scroll_page import ScrollPage
+from tik_tok_package.pages.upload_page import UploadPage
+from tik_tok_package.pages.user_profile_page import UserProfilePage
+from tik_tok_package.pages.user_video_page import UserVideoPage
 
 
 class TikTokBot:
-    def __init__(self, api_key: str, session_name: str = "tiktok_session", headless: bool = True):
+    def __init__(self, api_key: str, session_name: str = "tiktok_session", headless: bool = True,
+                 browser_executable_path: Optional[str] = None):
         self.session_name = session_name
         self.cookies_path = f"sessions/{session_name}_cookies.pkl"
-
-        self.driver = uc.Chrome(headless=headless, use_subprocess=False, version_main=135)
+        self.browser_executable_path = browser_executable_path or self._ensure_chrome_installed()
+        self.driver = uc.Chrome(headless=headless, use_subprocess=False, version_main=135,
+                                browser_executable_path=browser_executable_path)
         self.start_time = time.time()
         self.sadcaptcha = SeleniumSolver(
             self.driver,
@@ -37,6 +41,25 @@ class TikTokBot:
         self.driver.get("https://www.tiktok.com/")
         self._load_cookies()
         self.driver.get("https://www.tiktok.com/")  # обновим после загрузки
+
+    def _ensure_chrome_installed(self):
+        os_type = platform.system().lower()
+        if os_type == "linux":
+            print("Attempting to install Chrome on Linux...")
+            subprocess.run("wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -",
+                           shell=True)
+            subprocess.run(
+                'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list',
+                shell=True)
+            subprocess.run(["sudo", "apt", "update"])
+            subprocess.run(["sudo", "apt", "install", "-y", "google-chrome-stable"])
+
+            # Получим путь до chrome как строку
+            result = subprocess.run("which google-chrome", capture_output=True, shell=True, text=True)
+            return result.stdout.strip()
+        else:
+            print("Unsupported OS")
+            return None
 
     def _load_cookies(self):
         if os.path.exists(self.cookies_path):
