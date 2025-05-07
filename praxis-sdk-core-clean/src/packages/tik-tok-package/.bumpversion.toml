@@ -1,5 +1,5 @@
 [tool.bumpversion]
-current_version = "0.0.4"
+current_version = "0.0.5"
 message = "Bump version of tik-tok-package: {current_version} -> {new_version}"
 tag_name = "packages/tik-tok-package-v{new_version}"
 commit = false
