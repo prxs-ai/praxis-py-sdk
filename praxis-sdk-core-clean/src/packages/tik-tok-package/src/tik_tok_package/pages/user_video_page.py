@@ -44,14 +44,14 @@ class UserVideoPage:
     def open_comment_page(self):
         """Method for opening the comment page"""
 
-        # try:
-        log.info("Waiting for the comment button to load...")
-        button_locator = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[2]/div[2]/div/div[2]/div[1]/div/article[1]/div/section[2]/button[2]')
-        button_locator.click()
-        log.info("Comment page opened")
-        time.sleep(10)
-        # except Exception as e:
-        #     log.error(f"Error while opening comment page: {e}")
+        try: # todo fix on linux some other ui
+            log.info("Waiting for the comment button to load...")
+            button_locator = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[2]/div[2]/div/div[2]/div[1]/div/article[1]/div/section[2]/button[2]')
+            button_locator.click()
+            log.info("Comment page opened")
+            time.sleep(10)
+        except Exception as e:
+            log.error(f"Error while opening comment page: {e}")
 
     @handle_captcha
     def left_comment(self, comment: str):
