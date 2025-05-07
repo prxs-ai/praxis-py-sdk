@@ -22,16 +22,16 @@ class LoginPage:
 
     def accept_cookies(self):
         """Method for accepting cookies"""
-        # try:
-        log.info("Waiting for the cookie banner to load...")
-        time.sleep(2)
-        shadow_host = self.driver.find_element(By.CSS_SELECTOR, "body > tiktok-cookie-banner")
-        shadow_root = shadow_host.shadow_root
-        button = shadow_root.find_element(By.CSS_SELECTOR, "div > div.button-wrapper > button:nth-child(2)")
-        button.click()
-        log.info("Cookies accepted")
-        # except Exception as e:
-        #     log.error(f"error while accepting cookies: {e}")
+        try:
+            log.info("Waiting for the cookie banner to load...")
+            time.sleep(2)
+            shadow_host = self.driver.find_element(By.CSS_SELECTOR, "body > tiktok-cookie-banner")
+            shadow_root = shadow_host.shadow_root
+            button = shadow_root.find_element(By.CSS_SELECTOR, "div > div.button-wrapper > button:nth-child(2)")
+            button.click()
+            log.info("Cookies accepted")
+        except Exception as e:
+            log.error(f"error while accepting cookies: {e}")
 
     def login(self, username: str, password: str):
         """Login method"""
