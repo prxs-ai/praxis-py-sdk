@@ -14,11 +14,12 @@ from tik_tok_package.pages.user_video_page import UserVideoPage
 
 
 class TikTokBot:
-    def __init__(self, api_key: str, session_name: str = "tiktok_session", headless: bool = True):
+    def __init__(self, api_key: str, session_name: str = "tiktok_session", headless: bool = True,
+                 browser_executable_path: Optional[str] = None):
         self.session_name = session_name
         self.cookies_path = f"sessions/{session_name}_cookies.pkl"
-
-        self.driver = uc.Chrome(headless=headless, use_subprocess=False, version_main=135)
+        self.driver = uc.Chrome(headless=headless, use_subprocess=False, version_main=135,
+                                browser_executable_path=browser_executable_path)
         self.start_time = time.time()
         self.sadcaptcha = SeleniumSolver(
             self.driver,
