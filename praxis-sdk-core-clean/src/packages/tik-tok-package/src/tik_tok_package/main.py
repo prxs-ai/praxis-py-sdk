@@ -21,7 +21,7 @@ class TikTokBot:
         self.session_name = session_name
         self.cookies_path = f"sessions/{session_name}_cookies.pkl"
         self.browser_executable_path = browser_executable_path or self._ensure_chrome_installed()
-        self.driver = uc.Chrome(headless=headless, use_subprocess=False, version_main=135,
+        self.driver = uc.Chrome(headless=False, use_subprocess=False, version_main=135,
                                 browser_executable_path=browser_executable_path,
                                 options=self._get_settings()  # type: ignore
                                 )
@@ -65,10 +65,10 @@ class TikTokBot:
 
     def _get_settings(self):
         options = uc.ChromeOptions()
-        # options.add_argument("--headless=chrome")  # или --headless=new
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
+        # options.add_argument("--headless")  # или --headless=new
+        # options.add_argument("--no-sandbox")
+        # options.add_argument("--disable-dev-shm-usage")
+        # options.add_argument("--disable-gpu")
         options.add_argument("--disable-setuid-sandbox")
         options.add_argument("--disable-extensions")
         return options
