@@ -1,6 +1,6 @@
 [project]
 name = "tik-tok-package"
-version = "0.1.5"
+version = "0.1.6"
 description = "Tik tok video uploader"
 authors = [
     {name = "hexavor",email = "bychynski.valiantsin@gmail.com"}
