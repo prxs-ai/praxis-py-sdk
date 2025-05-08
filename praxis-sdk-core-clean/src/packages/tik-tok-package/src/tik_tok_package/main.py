@@ -22,7 +22,9 @@ class TikTokBot:
         self.cookies_path = f"sessions/{session_name}_cookies.pkl"
         self.browser_executable_path = browser_executable_path or self._ensure_chrome_installed()
         self.driver = uc.Chrome(headless=headless, use_subprocess=False, version_main=135,
-                                browser_executable_path=browser_executable_path)
+                                browser_executable_path=browser_executable_path,
+                                options=self._get_settings()  # type: ignore
+                                )
         self.start_time = time.time()
         self.sadcaptcha = SeleniumSolver(
             self.driver,
@@ -61,6 +63,15 @@ class TikTokBot:
             print("Unsupported OS")
             return None
 
+    def _get_settings(self):
+        options = uc.ChromeOptions()
+        options.add_argument("--headless=new")  # или --headless=chrome
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-setuid-sandbox")
+        options.add_argument("--disable-extensions")
+        return options
     def _load_cookies(self):
         if os.path.exists(self.cookies_path):
             with open(self.cookies_path, "rb") as f:
