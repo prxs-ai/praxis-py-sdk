@@ -65,7 +65,7 @@ class TikTokBot:
 
     def _get_settings(self):
         options = uc.ChromeOptions()
-        options.add_argument("--headless=chrome")  # или --headless=new
+        # options.add_argument("--headless=chrome")  # или --headless=new
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
@@ -173,7 +173,7 @@ class TikTokBot:
         #     log.info(f"[!] Session is too young. Please wait more than 5 minutes.")
         #     raise ValueError("Session is too young. Please wait more than 5 minutes.")
         self.user_video_page.open_page(video_url)
-        self.user_video_page.open_comment_page()
+        # self.user_video_page.open_comment_page()
         self.user_video_page.left_comment(comment)
         self.user_video_page.publish_comment()
 
