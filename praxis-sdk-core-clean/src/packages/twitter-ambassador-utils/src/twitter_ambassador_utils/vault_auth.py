@@ -86,7 +86,7 @@ class TwitterAuthClient:
     SESSION_PATH = "sessions/{session_id}"
 
     @classmethod
-    def create_auth_link(cls, user_id: str):
+    def create_auth_link(cls, user_id: str = None):
         code_verifier = cls._generate_code_verifier()
         code_challenge = cls._generate_code_challenge(code_verifier)
 
@@ -99,7 +99,7 @@ class TwitterAuthClient:
         cls._store_session_data_in_vault(
             session_id=state,
             data={
-                "user_id": str(user_id),
+                # "user_id": str(user_id),
                 "code_challenge": code_challenge,
                 "code_verifier": code_verifier,
                 "created_at": datetime.now().timestamp(),
@@ -169,7 +169,7 @@ class TwitterAuthClient:
                 ),
             )
             return {
-                "user_id": data["user_id"],
+                # "user_id": data["user_id"],
                 "access_token": tokens_data["access_token"],
                 "refresh_token": tokens_data["refresh_token"],
                 "expires_at": tokens_data["expires_at"],
@@ -280,15 +280,15 @@ class TwitterAuthClient:
             cls._DB.r.delete(f"session:{session_id}")
 
     @classmethod
-    def save_twitter_data(cls, user_id: str, data: dict):
+    def save_twitter_data(cls, data: dict,  user_id: str = None):
         """Сохраняет OAuth-данные Twitter для пользователя в Vault."""
         try:
             cls.HVAC_CLIENT.secrets.kv.v2.create_or_update_secret(
-                path=cls.AUTH_PATH.format(user_id=user_id),
+                path=cls.AUTH_PATH.format(user_id=data['username']),
                 secret=data,
                 mount_point="dev/",
             )
-            logger.info(f"Twitter data saved in Vault for user ID: {user_id}")
+            logger.info(f"Twitter data saved in Vault for user ID: {data['username']}")
         except Exception as e:
             logger.error(f"Failed to save Twitter data in Vault: {e}")
 
@@ -326,7 +326,7 @@ class TwitterAuthClient:
             return None
 
     @classmethod
-    async def update_tokens(cls, user_id: str, new_tokens: dict):
+    async def update_tokens(cls, username: str, new_tokens: dict):
         """Обновляет access_token, refresh_token и expires_at для пользователя."""
         try:
             # Encrypt tokens before storing
@@ -337,55 +337,55 @@ class TwitterAuthClient:
             }
 
             cls.HVAC_CLIENT.secrets.kv.v2.patch(
-                path=cls.AUTH_PATH.format(user_id=user_id),
+                path=cls.AUTH_PATH.format(user_id=username),
                 secret=encrypted_tokens,
                 mount_point="dev/",
             )
-            logger.info(f"Tokens updated in Vault for user ID: {user_id}")
+            logger.info(f"Tokens updated in Vault for user ID: {username}")
         except Exception as e:
             logger.error(f"Failed to update tokens in Vault: {e}")
 
     @classmethod
-    async def disconnect_twitter(cls, user_id: str):
+    async def disconnect_twitter(cls, username: str):
         """Delete Twitter data for a user"""
         try:
             # Delete from Vault
             cls.HVAC_CLIENT.secrets.kv.v2.delete_metadata_and_all_versions(
-                path=cls.AUTH_PATH.format(user_id=user_id),
+                path=cls.AUTH_PATH.format(user_id=username),
                 mount_point="dev/",
             )
-            logger.info(f"Twitter data deleted from Vault for user ID: {user_id}")
+            logger.info(f"Twitter data deleted from Vault for user ID: {username}")
 
             # Also delete from Redis if it exists
-            cls._DB.r.delete(f'twitter_data:{user_id}')
-            logger.info(f"Twitter data deleted from Redis for user ID: {user_id}")
+            cls._DB.r.delete(f'twitter_data:{username}')
+            logger.info(f"Twitter data deleted from Redis for user ID: {username}")
 
             return True
         except Exception as e:
-            logger.error(f"Failed to disconnect Twitter for user {user_id}: {e}")
+            logger.error(f"Failed to disconnect Twitter for user {username}: {e}")
             return False
 
     @classmethod
-    async def get_twitter_data(cls, user_id: str) -> dict:
+    async def get_twitter_data(cls, username: str) -> dict:
         """Возвращает словарь со всеми сохранёнными данными Twitter из Vault."""
         try:
             resp = cls.HVAC_CLIENT.secrets.kv.v2.read_secret_version(
-                path=cls.AUTH_PATH.format(user_id=user_id),
+                path=cls.AUTH_PATH.format(user_id=username),
                 mount_point="dev/"
             )
-            logger.info(f"Retrieved Twitter data from Vault for user ID: {user_id}")
+            logger.info(f"Retrieved Twitter data from Vault for user ID: {username}")
             return resp['data']['data']
         except Exception as e:
-            logger.error(f"Failed to get Twitter data from Vault for user {user_id}: {e}")
+            logger.error(f"Failed to get Twitter data from Vault for user {username}: {e}")
             return {}
 
     @classmethod
-    async def get_static_data(cls, user_id: str) -> dict:
+    async def get_static_data(cls, username: str) -> dict:
         """Get non-sensitive Twitter user data"""
         try:
-            data = await cls.get_twitter_data(user_id)
+            data = await cls.get_twitter_data(username)
             if not data:
-                logger.warning(f"No Twitter data found for user ID: {user_id}")
+                logger.warning(f"No Twitter data found for user ID: {username}")
                 return {}
 
             return {
@@ -395,16 +395,16 @@ class TwitterAuthClient:
                 'connected_at': data.get('connected_at', datetime.now().timestamp()),
             }
         except Exception as e:
-            logger.error(f"Error getting static data for user {user_id}: {e}")
+            logger.error(f"Error getting static data for user {username}: {e}")
             return {}
 
     @classmethod
-    async def get_access_token(cls, user_id: str) -> str:
+    async def get_access_token(cls, username: str) -> str:
         """Get and possibly refresh the access token"""
-        twitter_data = await cls.get_twitter_data(user_id)
+        twitter_data = await cls.get_twitter_data(username)
         if not twitter_data:
-            logger.error(f"No twitter data found for {user_id}")
-            raise ValueError(f"Twitter data not found for user {user_id}")
+            logger.error(f"No twitter data found for {username}")
+            raise ValueError(f"Twitter data not found for user {username}")
 
         try:
             # Check if token is expired
@@ -413,10 +413,10 @@ class TwitterAuthClient:
 
             # If token expires in less than 5 minutes, refresh it
             if current_time + 300 > expires_at:
-                logger.info(f"Token expired or expiring soon for user {user_id}, refreshing...")
+                logger.info(f"Token expired or expiring soon for user {username}, refreshing...")
                 new_tokens = await cls._refresh_tokens(twitter_data.get("refresh_token"))
                 if new_tokens:
-                    await cls.update_tokens(user_id, new_tokens)
+                    await cls.update_tokens(username, new_tokens)
                     access_token = new_tokens["access_token"]
                 else:
                     # If refresh failed, try to use existing token if not expired yet
@@ -427,19 +427,19 @@ class TwitterAuthClient:
             else:
                 access_token = cipher.decrypt(twitter_data["access_token"].encode()).decode()
 
-            logger.info(f'Access token retrieved successfully for user {user_id}')
+            logger.info(f'Access token retrieved successfully for user {username}')
             return access_token
         except Exception as e:
-            logger.error(f"Error processing access token for {user_id}: {e}")
+            logger.error(f"Error processing access token for {username}: {e}")
             raise e
 
     @classmethod
-    async def check_token_validity(cls, user_id: str) -> bool:
+    async def check_token_validity(cls, username: str) -> bool:
         """Check if the stored tokens are still valid"""
         try:
-            access_token = await cls.get_access_token(user_id)
+            access_token = await cls.get_access_token(username)
             user_data = await cls.get_me(access_token)
             return user_data is not None
         except Exception as e:
-            logger.error(f"Token validity check failed for user {user_id}: {e}")
+            logger.error(f"Token validity check failed for user {username}: {e}")
             return False
