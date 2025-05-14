@@ -102,10 +102,15 @@ class BaseAgent(abc.AbstractAgent):
 
     def get_relevant_insights(self, goal: str) -> list[InsightModel]:
         """Retrieve relevant insights from LightRAG memory for the given goal."""
-        response = self.lightrag_client.get(endpoint=self.lightrag_client.endpoints.query, params={"query": goal})
-
-        matches = response.get("matches", [])
-        return [InsightModel(domain_knowledge=match["text"]) for match in matches if "text" in match]
+        response = self.lightrag_client.post(
+            endpoint=self.lightrag_client.endpoints.query,
+            json={
+                "query": goal,
+                "mode": "naive",
+            },
+        )
+        texts = response.get("texts", [])
+        return [InsightModel(domain_knowledge=text["text"]) for text in texts if "text" in text]
 
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
         """This method is used to find the most useful agents for the given goal."""
