@@ -46,7 +46,7 @@ class BasicLangChainConfig(BaseSettings):
     deepseek: DeepSeekConfig | None = None
     anthropic: AnthropicConfig | None = None
 
-    openai_api_key: SecretStr = SecretStr("***REMOVED***")
+    openai_api_key: SecretStr
     openai_api_model: str = "gpt-4o"
 
     langfuse_enabled: bool = False
