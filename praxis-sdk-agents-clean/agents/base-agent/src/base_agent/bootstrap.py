@@ -6,6 +6,7 @@ from ray.serve.deployment import Deployment
 
 from base_agent import abc
 from base_agent.orchestration import workflow_builder
+from base_agent.card import card_builder
 
 
 def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
@@ -13,6 +14,7 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
     from ray import serve
 
     runner: abc.AbstractWorkflowRunner = workflow_builder()
+    card: abc.AbstractAgentCard = card_builder()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -32,12 +34,20 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
         def workflow_runner(self):
             return runner
 
-        @fastapi.post("/{goal}")
-        async def handle(self, goal: str, plan: dict | None = None, context: Any = None):
-            return await super().handle(goal, plan, context)
+        @property
+        def agent_card(self):
+            return card
+
+        @fastapi.post("/card")
+        async def get_card(self):
+            return self.agent_card
 
         @fastapi.get("/workflows")
         async def list_workflows(self, status: str | None = None):
             return await self.workflow_runner.list_workflows(status)
+
+        @fastapi.post("/{goal}")
+        async def handle(self, goal: str, plan: dict | None = None, context: Any = None):
+            return await super().handle(goal, plan, context)
 
     return Agent

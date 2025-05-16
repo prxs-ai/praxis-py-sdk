@@ -60,6 +60,9 @@ basic = "base_agent.memory.config:get_memory_config"
 [project.entry-points."memory.entrypoint"]
 basic = "base_agent.memory.client:memory_client"
 
+[project.entry-points."card.entrypoint"]
+basic = "base_agent.card.builder:get_agent_card"
+
 [tool.poetry.group.dev.dependencies]
 ray = { extras = ["serve"], version = "^2.42.1" }
 pytest = "^8.3.4"
