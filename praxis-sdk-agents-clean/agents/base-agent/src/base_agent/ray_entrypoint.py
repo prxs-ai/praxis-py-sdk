@@ -1,7 +1,9 @@
+import datetime
+import uuid
 from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urljoin
-
+from loguru import logger
 import requests
 
 from base_agent import abc, const
@@ -11,7 +13,15 @@ from base_agent.config import BasicAgentConfig, get_agent_config
 from base_agent.domain_knowledge import light_rag_builder
 from base_agent.langchain import executor, executor_builder
 from base_agent.memory import memory_builder
-from base_agent.models import AgentModel, GoalModel, InsightModel, MemoryModel, QueryData, Task, ToolModel
+from base_agent.models import (
+    AgentModel,
+    ChatMessageModel,
+    GoalModel,
+    InsightModel,
+    MemoryModel,
+    Task,
+    ToolModel,
+)
 from base_agent.prompt import prompt_builder
 from base_agent.workflows import workflow_builder
 
@@ -56,8 +66,7 @@ class BaseAgent(abc.AbstractAgent):
         If a predefined plan is provided, it skips plan generation and executes the plan directly.
         Otherwise, it follows the standard logic to generate a plan and execute it.
         """
-
-        if plan is not None:
+        if isinstance(plan, dict) and plan and all(isinstance(v, Task) for v in plan.values()):
             result = self.run_workflow(plan, context)
             self.store_interaction(goal, plan, result, context)
             return result
@@ -75,7 +84,6 @@ class BaseAgent(abc.AbstractAgent):
             past_interactions=past_interactions,
             plan=None,
         )
-
         result = self.run_workflow(plan, context)
         self.store_interaction(goal, plan, result, context)
         return result
@@ -95,10 +103,23 @@ class BaseAgent(abc.AbstractAgent):
                 "goal": goal,
                 "plan": plan,
                 "result": result.model_dump(),
-                "context": context.model_dump(),
+                "context": context.model_dump() if context else None,
             }
         )
         self.memory_client.store(key=goal, interaction=interaction.model_dump())
+
+    def store_chat_context(
+        self,
+        uuid: str,
+        messages: list[dict],
+    ) -> None:
+        normalized_messages = [msg if isinstance(msg, dict) else msg.model_dump() for msg in messages]
+        self.memory_client.store(key=f"chat:{uuid}", interaction=normalized_messages)
+
+    def get_chat_context(self, uuid: str) -> list[dict]:
+        results = self.memory_client.read(key=f"chat:{uuid}").get("results")
+        logger.info(f'Fetched {len(results)} results')
+        return results
 
     def get_relevant_insights(self, goal: str) -> list[InsightModel]:
         """Retrieve relevant insights from LightRAG memory for the given goal."""
@@ -116,7 +137,7 @@ class BaseAgent(abc.AbstractAgent):
         """This method is used to find the most useful agents for the given goal."""
         response = self.ai_registry_client.post(
             endpoint=self.ai_registry_client.endpoints.find_agents,
-            json=QueryData(goal=goal).model_dump(),
+            json=GoalModel(goal=goal).model_dump(),
         )
 
         if not response:
@@ -223,41 +244,141 @@ class BaseAgent(abc.AbstractAgent):
         self,
         user_prompt: str,
         action: str | None,
-        context: list[str],
+        session_uuid: str | None = None,
     ) -> executor.ChatResponse:
+        if not session_uuid:
+            session_uuid = str(uuid.uuid4())
+
+        prior_context = self.get_chat_context(session_uuid)
+        chat_history = [
+            ChatMessageModel(role="user", content=m.get("memory", ""), timestamp=m.get("created_at"))
+            for m in prior_context
+        ]
+
+        chat_history.append(
+            ChatMessageModel(
+                role="user",
+                content=user_prompt,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+            )
+        )
+
+        self.store_chat_context(session_uuid, chat_history)
 
         if action == const.Intents.CHANGE_SETTINGS:
-            ...
+            existing_config = self.config
+            # ToDo: use langchain to call LLM for updated config
+            updated_config = None
+            if updated_config:
+                self.reconfigure(updated_config.model_dump())
+                self.config = updated_config
+                response = executor.ChatResponse(
+                    response_text="Settings updated successfully.",
+                    action=None,
+                    session_uuid=session_uuid,
+                )
+            else:
+                response = executor.ChatResponse(
+                    response_text="Sorry, I couldn't parse the settings you want to change. Please try again.",
+                    action=const.Intents.CHANGE_SETTINGS,
+                    session_uuid=session_uuid,
+                )
+            chat_history.append(
+                ChatMessageModel(
+                    role="assistant",
+                    content=response.response_text,
+                    timestamp=datetime.datetime.now(datetime.timezone.utc),
+                )
+            )
+            self.store_chat_context(session_uuid, chat_history)
+            return response
 
         if action == const.Intents.ADD_KNOWLEDGE:
-            ...
+            goal = f"Add to knowledge base: {user_prompt}"
+            self.handle(goal=goal)
+            response = executor.ChatResponse(
+                response_text="Information added to the knowledge base.",
+                action=None,
+                session_uuid=session_uuid,
+            )
+            chat_history.append(
+                ChatMessageModel(
+                    role="assistant",
+                    content=response.response_text,
+                    timestamp=datetime.datetime.now(datetime.timezone.utc),
+                )
+            )
+            self.store_chat_context(session_uuid, chat_history)
+            return response
 
         if action is None:
             intent = self.agent_executor.classify_intent(
                 prompt=self.prompt_builder.generate_intent_classifier_prompt(
                     system_prompt=self.config.system_prompt,
                     user_prompt=user_prompt,
-                )
+                ),
+                user_message=user_prompt,
+                context=[m.content for m in chat_history],
             )
             if intent == const.Intents.CHANGE_SETTINGS:
-                return executor.ChatResponse(
+                logger.info(f'Intent: {const.Intents.CHANGE_SETTINGS}')
+                response = executor.ChatResponse(
                     response_text=const.ExtraQuestions.WHICH_SETTINGS,
                     action=const.Intents.CHANGE_SETTINGS,
+                    session_uuid=session_uuid,
                 )
+                chat_history.append(
+                    ChatMessageModel(
+                        role="assistant",
+                        content=response.response_text,
+                        timestamp=datetime.datetime.now(datetime.timezone.utc),
+                    )
+                )
+                self.store_chat_context(session_uuid, chat_history)
+                return response
+
             if intent == const.Intents.ADD_KNOWLEDGE:
-                return executor.ChatResponse(
+                logger.info(f'Intent: {const.Intents.ADD_KNOWLEDGE}')
+                response = executor.ChatResponse(
                     response_text=const.ExtraQuestions.WHAT_INFO,
                     action=const.Intents.ADD_KNOWLEDGE,
+                    session_uuid=session_uuid,
                 )
-        # Final case: the action is const.Intents.CHIT_CHAT or intent is const.Intents.CHIT_CHAT
-        # TODO: transform context (maximum 10 messages into one string)
-        return self.agent_executor.chat(
+                chat_history.append(
+                    ChatMessageModel(
+                        role="assistant",
+                        content=response.response_text,
+                        timestamp=datetime.datetime.now(datetime.timezone.utc),
+                    )
+                )
+                self.store_chat_context(session_uuid, chat_history)
+                return response
+
+        logger.info(f'Intent: {const.Intents.CHIT_CHAT}')
+        chat_context_str = "\n".join([m.content for m in chat_history[-10:]]) if chat_history else ""
+        assistant_reply = self.agent_executor.chat(
             prompt=self.prompt_builder.generate_chat_prompt(
                 system_prompt=self.config.system_prompt,
                 user_prompt=user_prompt,
-                context=context,
+                context=chat_context_str,
+            ),
+            user_message=user_prompt,
+            context=chat_context_str,
+        )
+        response = executor.ChatResponse(
+            response_text=assistant_reply,
+            action=const.Intents.CHIT_CHAT,
+            session_uuid=session_uuid,
+        )
+        chat_history.append(
+            ChatMessageModel(
+                role="assistant",
+                content=response.response_text,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
             )
         )
+        self.store_chat_context(session_uuid, chat_history)
+        return response
 
     def run_workflow(
         self,
@@ -273,9 +394,6 @@ class BaseAgent(abc.AbstractAgent):
         """This method means that agent can't find a solution (wrong route/wrong plan/etc)
         and decide to handoff the task to another agent."""
         return requests.post(urljoin(endpoint, goal), json=plan).json()
-
-
-
 
 
 def agent_builder(args: dict):

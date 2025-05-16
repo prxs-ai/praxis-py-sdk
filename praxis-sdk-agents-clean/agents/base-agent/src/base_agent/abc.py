@@ -4,52 +4,31 @@ from typing import Any
 
 import pydantic
 
-from base_agent.models import AgentModel, ToolModel, Workflow
-
-
-class AbstractAgentCard(pydantic.BaseModel):
-    """Abstract interface for agent cards."""
-
-    ...
-
-
-class AbstractAgentSkill(pydantic.BaseModel):
-    """Abstract interface for agent skills."""
-
-    ...
-
-
-class AbstractAgentParamsModel(pydantic.BaseModel):
-    """Abstract interface for agent params model."""
-
-    ...
+from base_agent.models import AgentModel, Task, ToolModel
 
 
 class AbstractAgentInputModel(pydantic.BaseModel):
     """Abstract interface for agent intput model"""
+
     ...
 
 
 class AbstractAgentOutputModel(pydantic.BaseModel):
     """Abstract interface for agennt output model"""
+
     ...
+
 
 class AbstractChatResponse(pydantic.BaseModel):
     response_text: str
     action: str | None = None
 
 
-class BaseAgentInputModel(AbstractAgentInputModel): ...
-
-
-class BaseAgentOutputModel(AbstractAgentOutputModel): ...
-
-
 class AbstractExecutor(ABC):
     """Abstract interface for agent execution engines."""
 
     @abstractmethod
-    def generate_plan(self, prompt: Any, **kwargs) -> Workflow:
+    def generate_plan(self, prompt: Any, **kwargs) -> dict[int, Task]:
         """Generate a plan based on a prompt and additional parameters.
 
         Args:
@@ -62,7 +41,7 @@ class AbstractExecutor(ABC):
         pass
 
     @abstractmethod
-    def chat(self, prompt: Any, **kwargs) -> AbstractChatResponse:
+    def chat(self, prompt: Any, **kwargs) -> str:
         """Generate a chat response based on a prompt and additional parameters.
 
         Args:
@@ -70,7 +49,7 @@ class AbstractExecutor(ABC):
             **kwargs: Additional parameters to use in chatting
 
         Returns:
-            An instance of AbstractChatResponse
+            An str with response
         """
         pass
 
@@ -117,7 +96,6 @@ class AbstractPromptBuilder(ABC):
         """
         pass
 
-
     @abstractmethod
     def generate_intent_classifier_prompt(self, *args, **kwargs) -> Any:
         """Generat a prompt for intent classification
@@ -130,15 +108,13 @@ class AbstractPromptBuilder(ABC):
         """
 
 
-
-
 class AbstractWorkflowRunner(ABC):
     """Abstract interface for workflow execution engines."""
 
     @abstractmethod
     def run(
         self,
-        plan: Workflow,
+        plan: dict[int, Task],
         context: AbstractAgentInputModel | None = None,
     ) -> AbstractAgentOutputModel:
         """Execute a workflow plan.
@@ -151,35 +127,6 @@ class AbstractWorkflowRunner(ABC):
         """
         pass
 
-    @classmethod
-    @abstractmethod
-    def start_daemon(cls) -> None:
-        """Start the workflow runner engine."""
-        pass
-
-    @classmethod
-    @abstractmethod
-    def stop_daemon(cls) -> None:
-        """Stop the workflow runner engine."""
-        pass
-
-    @abstractmethod
-    def run_background_workflows(self, *args, **kwargs) -> None:
-        """Run static workflows in the workflow runner engine."""
-        pass
-
-    @abstractmethod
-    async def list_workflows(self, *args, **kwargs) -> None:
-         """List all workflows in the workflow runner engine."""
-         pass
-
-    @abstractmethod
-    def reconfigure(self, config: dict[str, Any]) -> None:
-        """Reconfigure the agent with new settings.
-        Args:
-            config: New configuration settings
-        """
-        pass
 
 class AbstractAgent(ABC):
     """Abstract base class for agent implementations."""
@@ -188,7 +135,7 @@ class AbstractAgent(ABC):
     async def handle(
         self,
         goal: str,
-        plan: Workflow | None = None,
+        plan: dict[int, Task] | None = None,
         context: AbstractAgentInputModel | None = None,
     ) -> AbstractAgentOutputModel:
         """Handle an incoming request.
@@ -230,7 +177,7 @@ class AbstractAgent(ABC):
     @abstractmethod
     def generate_plan(
         self, goal: str, agents: Sequence[AgentModel], tools: Sequence[ToolModel], plan: dict | None = None
-    ) -> Workflow:
+    ) -> dict[int, Task]:
         """Generate a plan for achieving a goal.
 
         Args:
@@ -245,7 +192,15 @@ class AbstractAgent(ABC):
         pass
 
     @abstractmethod
-    def run_workflow(self, plan: Workflow) -> Any:
+    def chat(
+        self,
+        user_prompt: str,
+        **kwargs,
+    ) -> AbstractChatResponse:
+        pass
+
+    @abstractmethod
+    def run_workflow(self, plan: dict[int, Task]) -> Any:
         """Execute a workflow plan.
 
         Args:
