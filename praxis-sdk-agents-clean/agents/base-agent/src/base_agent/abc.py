@@ -7,6 +7,24 @@ import pydantic
 from base_agent.models import AgentModel, ToolModel, Workflow
 
 
+class AbstractAgentCard(pydantic.BaseModel):
+    """Abstract interface for agent cards."""
+
+    ...
+
+
+class AbstractAgentSkill(pydantic.BaseModel):
+    """Abstract interface for agent skills."""
+
+    ...
+
+
+class AbstractAgentParamsModel(pydantic.BaseModel):
+    """Abstract interface for agent params model."""
+
+    ...
+
+
 class AbstractAgentInputModel(pydantic.BaseModel):
     """Abstract interface for agent intput model"""
 
@@ -17,6 +35,12 @@ class AbstractAgentOutputModel(pydantic.BaseModel):
     """Abstract interface for agennt output model"""
 
     ...
+
+
+class BaseAgentInputModel(AbstractAgentInputModel): ...
+
+
+class BaseAgentOutputModel(AbstractAgentOutputModel): ...
 
 
 class AbstractExecutor(ABC):
@@ -89,11 +113,10 @@ class AbstractWorkflowRunner(ABC):
         """Run static workflows in the workflow runner engine."""
         pass
 
-
     @abstractmethod
     async def list_workflows(self, *args, **kwargs) -> None:
-         """List all workflows in the workflow runner engine."""
-         pass
+        """List all workflows in the workflow runner engine."""
+        pass
 
     @abstractmethod
     def reconfigure(self, config: dict[str, Any]) -> None:

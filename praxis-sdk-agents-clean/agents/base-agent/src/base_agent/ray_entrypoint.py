@@ -10,14 +10,14 @@ from base_agent.ai_registry import ai_registry_builder
 from base_agent.bootstrap import bootstrap_main
 from base_agent.config import BasicAgentConfig, get_agent_config
 from base_agent.langchain import executor_builder
-from base_agent.models import AgentModel, InsightModel, MemoryModel, ToolModel, Workflow
+from base_agent.models import (
+    AgentModel,
+    InsightModel,
+    MemoryModel,
+    ToolModel,
+    Workflow,
+)
 from base_agent.prompt import prompt_builder
-
-
-class BaseAgentInputModel(abc.AbstractAgentInputModel): ...
-
-
-class BaseAgentOutputModel(abc.AbstractAgentOutputModel): ...
 
 
 class BaseAgent(abc.AbstractAgent):
@@ -45,8 +45,8 @@ class BaseAgent(abc.AbstractAgent):
         self,
         goal: str,
         plan: dict | None = None,
-        context: BaseAgentInputModel | None = None,
-    ) -> BaseAgentOutputModel:
+        context: abc.BaseAgentInputModel | None = None,
+    ) -> abc.BaseAgentOutputModel:
         """This is one of the most important endpoints of MAS.
         It handles all requests made by handoff from other agents or by user.
 
@@ -85,8 +85,8 @@ class BaseAgent(abc.AbstractAgent):
         self,
         goal: str,
         plan: dict,
-        result: BaseAgentOutputModel,
-        context: BaseAgentInputModel | None = None,
+        result: abc.BaseAgentOutputModel,
+        context: abc.BaseAgentInputModel | None = None,
     ) -> None:
         interaction = MemoryModel(
             **{
@@ -274,8 +274,8 @@ class BaseAgent(abc.AbstractAgent):
     def run_workflow(
         self,
         plan: Workflow,
-        context: BaseAgentInputModel | None = None,
-    ) -> BaseAgentOutputModel:
+        context: abc.BaseAgentInputModel | None = None,
+    ) -> abc.BaseAgentOutputModel:
         return self.workflow_runner.run(plan, context)
 
     def reconfigure(self, config: dict[str, Any]):

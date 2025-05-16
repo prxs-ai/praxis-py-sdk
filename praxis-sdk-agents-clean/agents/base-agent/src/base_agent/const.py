@@ -23,6 +23,8 @@ class EntrypointGroup(str, Enum):
     MEMORY_CONFIG_ENTRYPOINT = "memory.entrypoint.config"
     MEMORY_ENTRYPOINT = "memory.entrypoint"
 
+    CARD_ENTRYPOINT = "card.entrypoint"
+
     def __str__(self):
         return self.value
 
