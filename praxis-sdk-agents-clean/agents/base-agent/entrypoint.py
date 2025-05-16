@@ -1,11 +1,7 @@
-import os
-
 from base_agent.const import EntrypointGroup
 from base_agent.models import ChatRequest
 from base_agent.utils import get_entrypoint
 from ray import serve
-
-os.environ["OPENAI_API_KEY"]= '***REMOVED***'
 
 app = get_entrypoint(EntrypointGroup.AGENT_ENTRYPOINT).load()
 
