@@ -8,7 +8,7 @@ from base_agent.prompt.parser import AgentOutputPlanParser
 
 
 class ChatResponse(AbstractChatResponse):
-    ...
+    session_uuid: str
 
 class LangChainExecutor(AbstractExecutor):
     def __init__(self, config: BasicLangChainConfig | LangChainConfigWithLangfuse):
@@ -52,7 +52,7 @@ class LangChainExecutor(AbstractExecutor):
         return chain.invoke(input=kwargs)
 
 
-    def classify_intent(self, prompt, **kwargs) -> str:
+    def classify_intent(self, prompt: PromptTemplate, **kwargs) -> str:
         agent = ChatOpenAI(callbacks=self._callbacks, model=self.config.openai_api_model)
         output_parser = StrOutputParser()
         chain = prompt | agent | output_parser

@@ -57,9 +57,9 @@ class PromptBuilder(AbstractPromptBuilder):
                     self.jinja2_env.get_template(self.config.system_prompt_template).render(system_prompt=system_prompt)
                 ),
                 HumanMessagePromptTemplate.from_template(
-                    self.jinja2_env.get_template(self.config.chat_template).render(
+                    self.jinja2_env.get_template(self.config.intent_classifier_template).render(
                         user_message=user_prompt,
-                        examples=self.jinja2_env.get_template(self.config.generate_plan_examples_template),
+                        examples=self.jinja2_env.get_template(self.config.intent_classifier_examples_template),
                     )
                 ),
             ]
