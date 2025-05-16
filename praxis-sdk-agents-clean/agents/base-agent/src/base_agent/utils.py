@@ -23,10 +23,3 @@ def get_entrypoint(
         return entrypoints.select(name=target_entrypoint)[0]
     except (KeyError, IndexError):
         return entrypoints.select(name=default_entrypoint)[0]
-
-
-def default_stringify_rule_for_arguments(args):
-    if len(args) == 1:
-        return str(args[0])
-    else:
-        return str(tuple(args))

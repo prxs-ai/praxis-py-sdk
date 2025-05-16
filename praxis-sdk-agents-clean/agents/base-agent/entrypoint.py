@@ -12,11 +12,16 @@ if __name__ == "__main__":
     # Run Ray Serve in local testing mode
     handle = serve.run(app({}), route_prefix="/", _local_testing_mode=True)
 
-    fastapi_app = FastAPI()
+    app = FastAPI()
 
-    @fastapi_app.post("/{goal}")
-    async def handle_request(goal: str, plan: dict | None = None):
-        return await handle.handle.remote(goal, plan)
+    @app.post("/{goal}")
+    async def handle_request(goal: str, plan: Workflow | None = None, context: Any = None):
+        return await handle.handle.remote(goal, plan, context)
+
+    @app.get("/workflows")
+    async def get_workflows(status: str | None = None):
+        return await handle.list_workflows.remote(status)
+
 
     # Run uvicorn server
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
