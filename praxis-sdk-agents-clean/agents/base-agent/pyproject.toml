@@ -34,10 +34,10 @@ basic = "base_agent.prompt.config:get_prompt_config"
 basic = "base_agent.prompt.builder:prompt_builder"
 
 [project.entry-points."agent.workflow.config"]
-basic = "base_agent.workflows.config:get_workflow_config"
+basic = "base_agent.orchestration.config:get_workflow_config"
 
 [project.entry-points."agent.workflow.entrypoint"]
-basic = "base_agent.workflows.runner:dag_runner"
+basic = "base_agent.orchestration.runner:dag_runner"
 
 [project.entry-points."agent.entrypoint"]
 basic = "base_agent.ray_entrypoint:agent_builder"

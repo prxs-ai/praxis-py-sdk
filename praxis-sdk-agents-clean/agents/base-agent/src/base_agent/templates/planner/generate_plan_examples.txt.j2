@@ -1,13 +1,23 @@
 EXAMPLE
 Goal: Return the answer to the question of life, universe and everything.
 Plan:
+{% raw %}
 ```yaml
 name: answer-life-universe-everything
 description: Returns the answer to the question of life, universe and everything
 thought: This is a well-known question in science fiction "The Hitchhiker's Guide to the Galaxy" by Douglas Adams. The answer is 42. Let's return this answer.
-steps: []
+steps:
+ - name: answer-life-universe-everything
+   tool: return_answer_tool
+   thought: This step will be used to returns the answer to the question of life, universe and everything.
+   inputs:
+    - name: answer
+      value: \'{{"answer": 42}}\'
+   outputs:
+      - name: result
 outputs:
   - name: answer
-    value: '{{ "{{\"result\": 42}}" }}'
+    value: \'{{{{steps.answer-life-universe-everything.outputs.result}}}}\'
 ```
+{% endraw %}
 END OF EXAMPLE

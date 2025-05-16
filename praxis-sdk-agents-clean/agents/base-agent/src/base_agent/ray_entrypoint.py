@@ -3,6 +3,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
+from ray.serve.deployment import Application
 
 from base_agent import abc
 from base_agent.ai_registry import ai_registry_builder
@@ -10,6 +11,7 @@ from base_agent.bootstrap import bootstrap_main
 from base_agent.config import BasicAgentConfig, get_agent_config
 from base_agent.domain_knowledge import light_rag_builder
 from base_agent.langchain import executor_builder
+from base_agent.memory import memory_builder
 from base_agent.models import (
     AgentModel,
     GoalModel,
@@ -19,9 +21,7 @@ from base_agent.models import (
     ToolModel,
     Workflow,
 )
-from base_agent.memory import memory_builder
 from base_agent.prompt import prompt_builder
-from base_agent.workflows import workflow_builder
 
 
 class BaseAgent(abc.AbstractAgent):
@@ -33,7 +33,6 @@ class BaseAgent(abc.AbstractAgent):
 
     def __init__(self, config: BasicAgentConfig, *args, **kwargs):
         self.config = config
-        self.workflow_runner = workflow_builder()
         self.agent_executor = executor_builder()
         self.prompt_builder = prompt_builder()
 
@@ -59,7 +58,7 @@ class BaseAgent(abc.AbstractAgent):
         Otherwise, it follows the standard logic to generate a plan and execute it.
         """
 
-        if plan is not None:
+        if plan is not None and plan:
             result = self.run_workflow(plan, context)
             self.store_interaction(goal, plan, result, context)
             return result
@@ -237,5 +236,5 @@ class BaseAgent(abc.AbstractAgent):
         return requests.post(urljoin(endpoint, goal), json=plan).json()
 
 
-def agent_builder(args: dict):
+def agent_builder(args: dict) -> Application:
     return bootstrap_main(BaseAgent).bind(config=get_agent_config(**args))
