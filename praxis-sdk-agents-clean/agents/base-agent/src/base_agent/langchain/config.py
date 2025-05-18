@@ -24,7 +24,7 @@ class BaseLLMProviderConfig(BaseSettings):
 
 # OpenAI provider configuration
 class OpenAIConfig(BaseLLMProviderConfig):
-    api_key: SecretStr | None = SecretStr("***REMOVED***")
+    api_key: SecretStr | None
     model: str = "gpt-4o"
 
 
@@ -61,7 +61,6 @@ class LangChainConfigWithLangfuse(BasicLangChainConfig, BasicLangFuseConfig):
 
 @lru_cache
 def get_langchain_config() -> BasicLangChainConfig:
-
     config = BasicLangChainConfig()
 
     # Initialize provider configs if they're None but selected as provider

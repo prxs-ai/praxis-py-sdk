@@ -40,7 +40,7 @@ class LightRagClient:
             print(f"Unexpected error: {e}")
 
         return {}
-    
+
     @retry(
         stop=stop,
         wait=wait,

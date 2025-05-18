@@ -37,13 +37,15 @@ class BasicPromptConfig(BaseSettings):
     chat_template: str = "chatter/chat.txt.j2"
 
     # CLASSIFY_INTENT
-    intent_classifier_template: str =  "intenter/classify_intent.txt.j2"
-    intent_classifier_examples_template: str = "intenter/classify_intent.txt.j2"
+    intent_classifier_template: str = "intenter/classify_intent.txt.j2"
+    intent_classifier_examples_template: str = "intenter/classify_intent_examples.txt.j2"
 
+    # RECONFIGURE
+    update_config_template: str = "reconfigurator/update_config.txt.j2"
+    update_config_examples_template: str = "reconfigurator/update_config_examples.txt.j2"
 
     # SYSTEM PROMPT
     system_prompt_template: str = "system_prompt.txt.j2"
-
 
 
 @lru_cache

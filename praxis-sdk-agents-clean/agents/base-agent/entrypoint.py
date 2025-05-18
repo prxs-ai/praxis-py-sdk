@@ -26,4 +26,4 @@ if __name__ == "__main__":
         return await handle.handle.remote(goal, plan)
 
     # Run uvicorn server
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8888)
