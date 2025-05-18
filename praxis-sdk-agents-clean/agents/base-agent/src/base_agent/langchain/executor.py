@@ -1,4 +1,4 @@
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
@@ -9,6 +9,7 @@ from base_agent.prompt.parser import AgentOutputPlanParser
 
 class ChatResponse(AbstractChatResponse):
     session_uuid: str
+
 
 class LangChainExecutor(AbstractExecutor):
     def __init__(self, config: BasicLangChainConfig | LangChainConfigWithLangfuse):
@@ -44,13 +45,11 @@ class LangChainExecutor(AbstractExecutor):
 
         return chain.invoke(input=kwargs)
 
-
     def chat(self, prompt: PromptTemplate, **kwargs) -> str:
         agent = ChatOpenAI(callbacks=self._callbacks, model=self.config.openai_api_model)
         output_parser = StrOutputParser()
         chain = prompt | agent | output_parser
         return chain.invoke(input=kwargs)
-
 
     def classify_intent(self, prompt: PromptTemplate, **kwargs) -> str:
         agent = ChatOpenAI(callbacks=self._callbacks, model=self.config.openai_api_model)
@@ -58,7 +57,11 @@ class LangChainExecutor(AbstractExecutor):
         chain = prompt | agent | output_parser
         return chain.invoke(input=kwargs)
 
-
+    def reconfigure(self, prompt: PromptTemplate, **kwargs) -> dict:
+        agent = ChatOpenAI(callbacks=self._callbacks, model=self.config.openai_api_model)
+        output_parser = JsonOutputParser()
+        chain = prompt | agent | output_parser
+        return chain.invoke(input=kwargs)
 
 
 def agent_executor(config: BasicLangChainConfig | LangChainConfigWithLangfuse):

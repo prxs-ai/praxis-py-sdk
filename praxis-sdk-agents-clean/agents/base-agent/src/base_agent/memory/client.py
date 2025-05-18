@@ -19,7 +19,7 @@ class MemoryClient:
 
     def read(self, key: str, limit: int = 10) -> list[dict[str, Any]]:
         try:
-            logger.info(f'Fetching all memories for key: {key}')
+            logger.info(f"Fetching all memories for key: {key}")
             return self.memory.get_all(run_id=key, limit=limit)
         except Exception as e:
             logger.error(f"Error retrieving interactions from Redis: {e}")

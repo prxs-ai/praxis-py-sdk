@@ -3,7 +3,7 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urljoin
-from loguru import logger
+
 import requests
 
 from base_agent import abc, const
@@ -118,7 +118,7 @@ class BaseAgent(abc.AbstractAgent):
 
     def get_chat_context(self, uuid: str) -> list[dict]:
         results = self.memory_client.read(key=f"chat:{uuid}").get("results")
-        logger.info(f'Fetched {len(results)} results')
+        print(f"Fetched {len(results)} results")
         return results
 
     def get_relevant_insights(self, goal: str) -> list[InsightModel]:
@@ -132,6 +132,16 @@ class BaseAgent(abc.AbstractAgent):
         )
         texts = response.get("texts", [])
         return [InsightModel(domain_knowledge=text["text"]) for text in texts if "text" in text]
+
+    def store_knowledge(self, filename: str | None, content: str) -> dict:
+        data = {"content": content}
+        if filename:
+            data["filename"] = filename
+
+        return self.lightrag_client.post(
+            endpoint=self.lightrag_client.endpoints.insert,
+            json=data,
+        )
 
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
         """This method is used to find the most useful agents for the given goal."""
@@ -265,13 +275,25 @@ class BaseAgent(abc.AbstractAgent):
 
         self.store_chat_context(session_uuid, chat_history)
 
+        # ------ Reconfigure Agent ----- #
         if action == const.Intents.CHANGE_SETTINGS:
-            existing_config = self.config
-            # ToDo: use langchain to call LLM for updated config
-            updated_config = None
+            existing_config = str(self.config)
+            print(f"Current config: {existing_config}")
+
+            updated_config = self.agent_executor.reconfigure(
+                prompt=self.prompt_builder.generate_reconfigure_prompt(
+                    system_prompt=self.config.system_prompt,
+                    user_prompt=user_prompt,
+                    existing_config=existing_config,
+                ),
+                user_message=user_prompt,
+                existing_config=existing_config,
+                system_prompt=self.config.system_prompt,
+            )
+
             if updated_config:
-                self.reconfigure(updated_config.model_dump())
-                self.config = updated_config
+                print(f"Updated config: {updated_config}")
+                self.reconfigure(updated_config)
                 response = executor.ChatResponse(
                     response_text="Settings updated successfully.",
                     action=None,
@@ -293,11 +315,18 @@ class BaseAgent(abc.AbstractAgent):
             self.store_chat_context(session_uuid, chat_history)
             return response
 
+        # ------ Add Knowledge to Knowledge Base ----- #
         if action == const.Intents.ADD_KNOWLEDGE:
-            goal = f"Add to knowledge base: {user_prompt}"
-            self.handle(goal=goal)
+            print(f"Trying to add to knowledge base: {user_prompt}")
+            result: dict = self.store_knowledge(filename=None, content=user_prompt)
+
+            # Default message
+            response_text = "I failed to add information to the knowledge base."
+            if result and result.get("status") and result["status"] == "success":
+                response_text = "Information added to the knowledge base."
+
             response = executor.ChatResponse(
-                response_text="Information added to the knowledge base.",
+                response_text=response_text,
                 action=None,
                 session_uuid=session_uuid,
             )
@@ -311,6 +340,7 @@ class BaseAgent(abc.AbstractAgent):
             self.store_chat_context(session_uuid, chat_history)
             return response
 
+        # ------ Classify Intent ----- #
         if action is None:
             intent = self.agent_executor.classify_intent(
                 prompt=self.prompt_builder.generate_intent_classifier_prompt(
@@ -321,7 +351,7 @@ class BaseAgent(abc.AbstractAgent):
                 context=[m.content for m in chat_history],
             )
             if intent == const.Intents.CHANGE_SETTINGS:
-                logger.info(f'Intent: {const.Intents.CHANGE_SETTINGS}')
+                print(f"Intent: {intent}")
                 response = executor.ChatResponse(
                     response_text=const.ExtraQuestions.WHICH_SETTINGS,
                     action=const.Intents.CHANGE_SETTINGS,
@@ -338,7 +368,7 @@ class BaseAgent(abc.AbstractAgent):
                 return response
 
             if intent == const.Intents.ADD_KNOWLEDGE:
-                logger.info(f'Intent: {const.Intents.ADD_KNOWLEDGE}')
+                print(f"Intent: {intent}")
                 response = executor.ChatResponse(
                     response_text=const.ExtraQuestions.WHAT_INFO,
                     action=const.Intents.ADD_KNOWLEDGE,
@@ -354,7 +384,8 @@ class BaseAgent(abc.AbstractAgent):
                 self.store_chat_context(session_uuid, chat_history)
                 return response
 
-        logger.info(f'Intent: {const.Intents.CHIT_CHAT}')
+        # ------ Chit Chat ----- #
+        print(f"Intent: {const.Intents.CHIT_CHAT}")
         chat_context_str = "\n".join([m.content for m in chat_history[-10:]]) if chat_history else ""
         assistant_reply = self.agent_executor.chat(
             prompt=self.prompt_builder.generate_chat_prompt(

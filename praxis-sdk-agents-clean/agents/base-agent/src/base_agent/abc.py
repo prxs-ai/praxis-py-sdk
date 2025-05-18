@@ -66,6 +66,19 @@ class AbstractExecutor(ABC):
         """
         pass
 
+    @abstractmethod
+    def reconfigure(self, prompt: Any, **kwargs) -> dict:
+        """Create new config bases on the currenct config and the user reuqest
+
+        Args:
+            prompt: The prompt to use for updating config
+            **kwargs: Additional parameters to use in chatting
+
+        Returns:
+            A dict with the updated config
+        """
+        pass
+
 
 class AbstractPromptBuilder(ABC):
     """Abstract interface for prompt building components."""
@@ -99,6 +112,17 @@ class AbstractPromptBuilder(ABC):
     @abstractmethod
     def generate_intent_classifier_prompt(self, *args, **kwargs) -> Any:
         """Generat a prompt for intent classification
+        Args:
+            *args: Positional arguments for prompt generation
+            **kwargs: Keyword arguments for prompt generation
+
+        Returns:
+            A prompt object that can be used by an executor
+        """
+
+    @abstractmethod
+    def generate_reconfigure_prompt(self, *args, **kwargs) -> Any:
+        """Generat a prompt for reconfiguration
         Args:
             *args: Positional arguments for prompt generation
             **kwargs: Keyword arguments for prompt generation

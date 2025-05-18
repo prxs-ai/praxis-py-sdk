@@ -65,6 +65,24 @@ class PromptBuilder(AbstractPromptBuilder):
             ]
         )
 
+    def generate_reconfigure_prompt(
+        self, *args, system_prompt: str, user_prompt: str, existing_config: str, **kwargs
+    ) -> ChatPromptTemplate:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(
+                    self.jinja2_env.get_template(self.config.system_prompt_template).render(system_prompt=system_prompt)
+                ),
+                HumanMessagePromptTemplate.from_template(
+                    self.jinja2_env.get_template(self.config.update_config_template).render(
+                        user_message=user_prompt,
+                        existing_config=existing_config,
+                        examples=self.jinja2_env.get_template(self.config.update_config_examples_template),
+                    )
+                ),
+            ]
+        )
+
 
 def prompt_builder(config: BasicPromptConfig) -> PromptBuilder:
     return PromptBuilder(config, get_environment(config.template_path))
