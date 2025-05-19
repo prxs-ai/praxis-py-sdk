@@ -2,11 +2,15 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
+from base_agent.abc import AbstractChatResponse, AbstractExecutor
 from base_agent.langchain.config import BasicLangChainConfig, LangChainConfigWithLangfuse
 from base_agent.prompt.parser import AgentOutputPlanParser
 
 
-class LangChainExecutor:
+class ChatResponse(AbstractChatResponse):
+    ...
+
+class LangChainExecutor(AbstractExecutor):
     def __init__(self, config: BasicLangChainConfig | LangChainConfigWithLangfuse):
         self.config = config
 
@@ -25,7 +29,7 @@ class LangChainExecutor:
             )
         )
 
-    def generate_plan(self, prompt: PromptTemplate, **kwargs):
+    def generate_plan(self, prompt: PromptTemplate, **kwargs) -> str:
         agent = ChatOpenAI(callbacks=self._callbacks, model=self.config.openai_api_model)
         output_parser = StrOutputParser()
         if "available_functions" in kwargs:
@@ -39,6 +43,22 @@ class LangChainExecutor:
         chain = prompt | agent | output_parser
 
         return chain.invoke(input=kwargs)
+
+
+    def chat(self, prompt: PromptTemplate, **kwargs) -> str:
+        agent = ChatOpenAI(callbacks=self._callbacks, model=self.config.openai_api_model)
+        output_parser = StrOutputParser()
+        chain = prompt | agent | output_parser
+        return chain.invoke(input=kwargs)
+
+
+    def classify_intent(self, prompt, **kwargs) -> str:
+        agent = ChatOpenAI(callbacks=self._callbacks, model=self.config.openai_api_model)
+        output_parser = StrOutputParser()
+        chain = prompt | agent | output_parser
+        return chain.invoke(input=kwargs)
+
+
 
 
 def agent_executor(config: BasicLangChainConfig | LangChainConfigWithLangfuse):

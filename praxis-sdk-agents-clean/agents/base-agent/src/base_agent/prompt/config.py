@@ -29,10 +29,21 @@ def determine_template_path(default_path="base_agent") -> str:
 class BasicPromptConfig(BaseSettings):
     template_path: Annotated[str, Field(default_factory=determine_template_path)]
 
+    # GENERATE_PLAN
     generate_plan_template: str = "planner/generate_plan.txt.j2"
     generate_plan_examples_template: str = "planner/generate_plan_examples.txt.j2"
 
+    # CHAT
+    chat_template: str = "chatter/chat.txt.j2"
+
+    # CLASSIFY_INTENT
+    intent_classifier_template: str =  "intenter/classify_intent.txt.j2"
+    intent_classifier_examples_template: str = "intenter/classify_intent.txt.j2"
+
+
+    # SYSTEM PROMPT
     system_prompt_template: str = "system_prompt.txt.j2"
+
 
 
 @lru_cache
