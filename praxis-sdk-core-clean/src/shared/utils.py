@@ -1,5 +1,5 @@
 import json
-# from services.ai_tools.openai_client import send_openai_request OPENAI
+from services.ai_connectors.openai_client import send_openai_request
 from services.ai_connectors.claude_client_instance import client
 
 from infrastructure.configs.logger import configure_logging, get_logger
@@ -18,7 +18,7 @@ async def format_text(text: str) -> str:
                 "role": "system",
                 "content": "You are a text shortener. Your task is to reduce the text length, keeping "
                            "its meaning and style unchanged. You can remove some sentences as long as it "
-                           "doesn't harm the overall meaning of the text. Also remove emojis. DO NOT REMOVE HASHTAGS"
+                           "doesn't harm the overall meaning of the text. Also remove emojis. REMOVE HASHTAGS"
             },
             {
                 "role": "user",
@@ -29,10 +29,10 @@ async def format_text(text: str) -> str:
         system_prompt = (
         "You are a text shortener. Your task is to reduce the text length, keeping "
         "its meaning and style unchanged. You can remove some sentences as long as it "
-        "doesn't harm the overall meaning of the text. Also remove emojis. DO NOT REMOVE HASHTAGS\n\n"
+        "doesn't harm the overall meaning of the text. Also remove emojis. REMOVE HASHTAGS\n\n"
         f"{text}"
 )
-        text = await client.generate_response(messages=messages, temperature=1.0)
+        text = await send_openai_request(messages=messages, temperature=1.0)
 
         logger.info(f'Tweet validating 1 {text}')
         text = await add_blank_lines(text)
@@ -80,6 +80,6 @@ Who needs thumbs? Unleash the hyper-advanced AI bot and watch it fetch not just 
             "#NFINITY @nfinityAI 🚀\n\n"
             f"{text}"
             )
-    text = await client.generate_response(messages=messages, temperature=1.0)
+    text = await send_openai_request(messages=messages, temperature=1.0)
     logger.info(f'Tweet validating 2 {text}')
     return text

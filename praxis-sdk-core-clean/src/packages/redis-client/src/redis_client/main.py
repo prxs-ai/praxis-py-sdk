@@ -1,26 +1,20 @@
-# fmt: off
 import json
-import os
 import threading
 import time
 from random import random
 from typing import Any, List
 from dataclasses import dataclass
 from dataclasses import asdict
-
+import asyncio
+from random import randint
+from datetime import datetime
 from typing import Set
 import inspect
 from functools import wraps
-import asyncio
 import redis
-from redis.asyncio import Redis
+from redis_client.config import get_settings
 
-from infrastructure.configs.config import server
-from infrastructure.configs.logger import configure_logging, get_logger
-from schemas.knowledgebase.knowledgetype import KnowledgeType
-
-configure_logging()
-logger = get_logger(__name__)
+settings = get_settings()
 
 
 @dataclass
@@ -59,20 +53,23 @@ class RedisDB:
         """
         Initialize the Redis connection.
         """
-        logger.info(
-            f'Redis: {os.environ.get("REDIS_HOST", "localhost")}:{os.environ.get("REDIS_PORT", 6379)} '
-            f'db={os.environ.get("REDIS_DB", 0)}'
+        REDIS_HOST = settings.REDIS_HOST if settings.REDIS_HOST else "localhost"
+        REDIS_PORT = settings.REDIS_PORT if settings.REDIS_PORT else 6379
+        REDIS_DB = settings.REDIS_DB if settings.REDIS_DB else 0
+        print(
+            f'Redis: {REDIS_HOST}:{REDIS_PORT} '
+            f'db={REDIS_DB}'
         )
         self.r = redis.Redis(
-            host=os.environ.get('REDIS_HOST', 'localhost'),
-            port=int(os.environ.get('REDIS_PORT', 6379)),
-            db=int(os.environ.get('REDIS_DB', 0))  # 0 - main, 1 - test
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB  # 0 - main, 1 - test
         )
 
         if self.wait_for_redis(timeout=100):
-            logger.info('Redis connected')
+            print('Redis connected')
         else:
-            logger.error('Failed to connect to Redis after the timeout.')
+            print('Failed to connect to Redis after the timeout.')
             raise ConnectionError('Failed to connect to Redis.')
         self._save_function_variables_on_startup()
 
@@ -105,15 +102,15 @@ class RedisDB:
                 self.r.delete('__temp_test_key__')
                 return True
             except redis.exceptions.BusyLoadingError:
-                logger.info('Redis is still loading. Waiting...')
+                print('Redis is still loading. Waiting...')
                 time.sleep(1)
             except redis.exceptions.ConnectionError as e:
-                logger.info(f'Redis is not available {type(e)=}, {e=}. Waiting...')
+                repr(e)
                 time.sleep(1)
             except Exception as e:
-                logger.exception(f"An unexpected error occurred: {type(e)} {e}")
+                repr(e)
                 if 'Temporary failure in name resolution' in str(e):
-                    logger.info('Temporary failure in name resolution. Waiting...')
+                    print('Temporary failure in name resolution. Waiting...')
                     time.sleep(1)
                 else:
                     return False
@@ -142,7 +139,7 @@ class RedisDB:
             keep_ttl (bool): If True, the current TTL is preserved.
         """
         if log:
-            logger.info(f'Set {key} to {value}')
+            print(f'Set {key} to {value}')
         if value is None:
             self.r.delete(key)
         else:
@@ -155,9 +152,9 @@ class RedisDB:
         If value is None, the key will be deleted.
         """
         if log:
-            logger.info(f'Set EXPIRY {key} to {value}, expiry: {ex}')
+            print(f'Set EXPIRY {key} to {value}, expiry: {ex}')
         if value is None:
-            logger.warning(f'Set EXPIRY value is None, deleting {key}')
+            print(f'Set EXPIRY value is None, deleting {key}')
             self.r.delete(key)
         else:
             self.r.setex(key, ex, json.dumps(value))
@@ -176,7 +173,7 @@ class RedisDB:
         Delete the given key.
         """
         if log:
-            logger.info(f'Delete {key}')
+            print(f'Delete {key}')
         self.r.delete(key)
 
     def get_keys_by_pattern(self, pattern: str) -> List[str]:
@@ -302,7 +299,7 @@ class RedisDB:
         # Удаляем историю ответов
         self.delete(f"gorilla_marketing_answered:{username}")
 
-        logger.info(f"Account {username} removed from Redis")
+        print(f"Account {username} removed from Redis")
 
     def get_function_variables(self) -> dict[str, list[str]]:
 
@@ -320,40 +317,9 @@ class RedisDB:
         link = f"https://twitter.com/i/web/status/{tweet_id}"
         self.r.rpush(key, link)
 
-class AsyncRedis:
-    def __init__(self):
-        self.client = Redis(
-            host=server.redis.redis_host,
-            port=server.redis.redis_port,
-            db=server.redis.redis_db
-        )
 
-    async def set(
-        self, key: str, value: str,
-        log: bool = True, keep_ttl: bool = False
-    ) -> None:
-        if log:
-            logger.info(f'Set {key} to {value}')
-        await self.client.set(key, value, keepttl=keep_ttl)
-
-    async def wait_for_key(self, key, timeout=120) -> dict | None:
-        result = await self.client.blpop(key, timeout=timeout)
-        if result:
-            key_name, value = result
-            return value
-
-        else:
-            logger.error("Redis key not awaited")
-            return None
-
-
-# Initialize a default instance
-async_redis = AsyncRedis()
-db = RedisDB()
-
-
-def get_redis_db() -> RedisDB:
-    return db
+def get_redis_db(*args, **kwargs) -> RedisDB:
+    return RedisDB(*args, **kwargs)
 
 
 class PromptManager:
@@ -392,9 +358,9 @@ class PromptManager:
                         prompt_key = message['data'].decode('utf-8')
                         if prompt_key in self.prompt_cache:
                             del self.prompt_cache[prompt_key]
-                            logger.info(f"Промпт обновлен: {prompt_key}")
+                            print(f"Промпт обновлен: {prompt_key}")
                 except Exception as e:
-                    logger.error(f"Ошибка в subscriber_worker: {e}")
+                    print(f"Ошибка в subscriber_worker: {e}")
                 time.sleep(0.1)
 
             pubsub.close()
@@ -449,7 +415,7 @@ def use_dynamic_prompt(function_name: str):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            prompt_manager = PromptManager(db)
+            prompt_manager = PromptManager(get_redis_db())
             template = prompt_manager.get_prompt(function_name)
 
             # Проверяем разрешенные переменные
@@ -490,13 +456,13 @@ def use_dynamic_prompt(function_name: str):
                 kwargs['prompt'] = formatted_prompt
                 return await func(*args, **kwargs)
             except KeyError as e:
-                logger.error(f"Отсутствует переменная для форматирования промпта: {e}")
+                print(f"Отсутствует переменная для форматирования промпта: {e}")
                 raise ValueError(
                     f"В промпте для {function_name} отсутствует значение для переменной {e}. "
                     f"Проверьте, что все необходимые параметры переданы в функцию."
                 )
             except Exception as e:
-                logger.error(f"Ошибка при применении промпта для {function_name}: {e}")
+                print(f"Ошибка при применении промпта для {function_name}: {e}")
                 raise
 
         return wrapper
@@ -509,9 +475,6 @@ DEFAULT_PROMPTS = {
 You need to create one comment for the twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
-
-Use this context from our knowledge base to inform your response:
-{relevant_knowledge}
 
 The comments should be positive, bullish, and as human-like as possible. Use simple, natural language, as if it's a genuine opinion from a person. 
 Max length of comment is 1 sentence. Make comment as short as possible. DO NOT USE ROCKET EMOJI. Use hashtags from our knowledge base if appropriate.
@@ -527,8 +490,6 @@ You need to create one comment for the twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
 
-Context from knowledge base:
-{relevant_knowledge}
 
 Conversation to respond to:
 {comment_text}
@@ -555,8 +516,6 @@ Reply Guidelines:
 """,
 'create_tweet': """ DONT USE HASHTAG You are an autonomous AI Twitter Ambassador and enthusiast. Your task is to generate engaging content using the provided knowledge base context.
 
-Context from knowledge base:
-{relevant_knowledge}
 
 Guidelines for tweet creation:
 1. Length: Maximum 260 characters
@@ -591,9 +550,6 @@ Generate a unique tweet that differs from previous ones in approach and style.""
 
 YOUR TASK IS TO COMMENT THIS TWEET: {tweet_for_quote}
 
-Use this context from our knowledge base to inform your response:
-{relevant_knowledge}
-
 The tweet should be bullish, positive, with humor.
 You can add sarcasm if it's appropriate, and include memes if relevant. 
 The tweet should be written in simple, human language. 
@@ -614,9 +570,6 @@ Previous tweets for reference: {my_tweets}""",
 You need to create one twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
-
-Context from knowledge base:
-{relevant_knowledge}
 
 Analyze these tweets and themes:
 {news_tweets}
@@ -653,8 +606,6 @@ You need to create one comment for the twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
 
-Context from knowledge base:
-{relevant_knowledge}
 
 Your task is to write a very brief comment (1-2 sentences) in response to a tweet. 
 The comment should:
@@ -698,8 +649,6 @@ Respond with one word - True or False.""",
 
 'check_tweet_for_marketing': """You are a technology and Web3 enthusiast focused on AI and blockchain innovations.
 
-Use this context from our knowledge base to evaluate relevance:
-{relevant_knowledge}
 
 Your task is to analyze tweets and determine if they discuss topics related to our focus areas.
 You should return True if the tweet provides an opportunity for engaging in a meaningful positive conversation.
@@ -723,4 +672,47 @@ Respond with one word - True or False.""",
 }
 
 
-prompt_manager = PromptManager(db)
+prompt_manager = PromptManager(get_redis_db)
+
+
+async def ensure_delay_between_posts(username: str, delay: int = None):
+    past_date = datetime(2023, 1, 1, 12, 0)
+    past_timestamp = int(past_date.timestamp())
+    posts = [
+        Post(id="1", text="Mock tweet 1", sender_username=username, timestamp=past_timestamp),
+        Post(
+            id="2",
+            text="Mock tweet 2",
+            sender_username=username,
+            timestamp=past_timestamp,
+            is_news_summary_tweet=True,
+        ),
+    ]
+    print(f'ensure_delay_between_posts {username=} {len(posts)=}')
+    if posts:
+        last_post = posts[-1]
+        time_since_last_post = time.time() - last_post.timestamp
+        if not delay:
+            delay = randint(5 * 60, 10 * 60)
+        print(f'ensure_delay_between_posts {username=} {time_since_last_post=}')
+        if time_since_last_post < delay:
+            wait_time = delay - time_since_last_post
+            print(f'Waiting: {username=} {wait_time=}')
+            await asyncio.sleep(wait_time)
+
+
+def decode_redis(src):
+    if isinstance(src, list):
+        rv = []
+        for key in src:
+            rv.append(decode_redis(key))
+        return rv
+    elif isinstance(src, dict):
+        rv = {}
+        for key in src:
+            rv[key.decode()] = decode_redis(src[key])
+        return rv
+    elif isinstance(src, bytes):
+        return src.decode()
+    else:
+        raise Exception("type not handled: " + type(src))
