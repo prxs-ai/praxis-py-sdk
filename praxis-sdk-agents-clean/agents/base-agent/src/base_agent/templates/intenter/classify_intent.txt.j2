@@ -1,0 +1,23 @@
+Given a user message, your task is to classify the user's intent.
+
+ALLOWED INTENTS:
+- chit_chat: The user wants to have a freeform conversation or asks general questions unrelated to configuration or knowledge base updates.
+- change_settings: The user asks about, wants to view, or requests changes to the agent's settings, configuration, parameters, or preferences.
+- add_knowledge: The user wants the agent to store, remember, or add new information, facts, or instructions to its knowledge base.
+
+INTENT CLASSIFICATION GUIDELINES:
+- Only respond with one of the allowed intents: chit_chat, change_settings, add_knowledge.
+- Do not include any explanation, comments, or additional output.
+- If the user's intent is ambiguous, choose the most likely intent based on the message content.
+- If the user refers to settings, configuration, or parameters, select change_settings.
+- If the user asks to store, remember, or add information, select add_knowledge.
+- For everything else, select chit_chat.
+
+EXAMPLES
+{{examples}}
+END OF EXAMPLES
+
+Begin!
+User: {user_message}
+Intent:
+"""
