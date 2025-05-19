@@ -1,108 +1,26 @@
-import uuid
-from typing import Any, Literal, Optional
+from collections.abc import Collection
+from dataclasses import dataclass
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field
+
+from base_agent.utils import default_stringify_rule_for_arguments
 
 
 class ToolModel(BaseModel):
     name: str
-    version: str | None = None
+    version: str
     openai_function_spec: dict[str, Any]
-
-    @model_validator(mode="before")
-    def validate_name_and_version(cls, data):
-        if "version" not in data or data["version"] is None:
-            # If no version is specified, we assume the latest version
-            data["name"], data["version"] = cls.parse_version_from_name(data["name"])
-        return data
-
-    @classmethod
-    def parse_version_from_name(cls, name: str) -> tuple[str, str | None]:
-        """Parse name and version from string in format package@version."""
-        if "@" in name:
-            package, version = name.split("@", 1)
-            return package, version
-        return name, None
-
-    def render_pip_dependency(self) -> str:
-        return f"{self.package_name}=={self.version}" if self.version else self.name
-
-    @property
-    def package_name(self) -> str:
-        return self.name.replace("_", "-")
 
     @property
     def function_name(self) -> str:
         return self.openai_function_spec["function"]["name"]
 
-    def render_function_spec(self) -> str:
+    def render_openai_function_spec(self) -> str:
         return f"""- {self.openai_function_spec["function"]["name"]}
     - description: {self.openai_function_spec["function"]["description"]}
-    - inputs: {self.openai_function_spec["function"]["parameters"]}
+    - parameters: {self.openai_function_spec["function"]["parameters"]}
 """
-
-
-class ParameterItem(BaseModel):
-    name: str
-    value: Any
-
-
-class InputItem(BaseModel):
-    name: str
-    value: Any
-
-
-class OutputItem(BaseModel):
-    name: str
-
-
-class WorkflowStep(BaseModel):
-    name: str
-    tool: ToolModel
-    thought: Optional[str] = None
-    observation: Optional[str] = None
-    parameters: list[ParameterItem] = Field(default_factory=list)
-    inputs: list[InputItem] = Field(default_factory=list)
-    outputs: list[OutputItem] = Field(default_factory=list)
-
-    @property
-    def task_id(self) -> str:
-        return f"{self.name}: {self.tool}"
-
-    @field_validator("tool", mode="before")
-    def validate_tool(cls, v):
-        if isinstance(v, str):
-            return ToolModel(name=v, openai_function_spec={})
-        return v
-
-    @property
-    def env_vars(self) -> dict[str, Any]:
-        return {p.name: p.value for p in self.parameters}
-
-    @property
-    def args(self) -> dict[str, Any]:
-        return {a.name: a.value for a in self.inputs}
-
-    def get_thought_action_observation(self, include_action=True, include_thought=True) -> str:
-        thought_action_observation = ""
-        if self.thought and include_thought:
-            thought_action_observation = f"Thought: {self.thought}\n"
-        if include_action:
-            tool_args = {inp.name: inp.value for inp in self.inputs}
-            thought_action_observation += f"{self.name}{tool_args}\n"
-        if self.observation is not None:
-            thought_action_observation += f"Observation: {self.observation}\n"
-        return thought_action_observation
-
-
-class Workflow(BaseModel):
-    id: str = Field(default_factory=lambda x: f"dag-{uuid.uuid4().hex[:8]}")
-    name: str
-    description: str
-    thought: Optional[str] = None
-    parameters: list[Any] = Field(default_factory=list)
-    steps: list[WorkflowStep]
-    outputs: list[OutputItem] = Field(default_factory=list)
 
 
 class MemoryModel(BaseModel):
@@ -141,3 +59,48 @@ class QueryData(BaseModel):
 
 class InsightModel(BaseModel):
     domain_knowledge: str = Field(..., description="Insight from the private domain knowledge")
+
+
+@dataclass
+class Task:
+    idx: int
+    name: str
+    tool: ToolModel
+    args: Collection[Any]
+    dependencies: Collection[int]
+    thought: str | None = None
+    observation: str | None = None
+    is_finish: bool = False
+
+    @property
+    def task_id(self) -> str:
+        return f"{self.idx}:{self.name}"
+
+    def get_thought_action_observation(
+        self, include_action=True, include_thought=True, include_action_idx=False
+    ) -> str:
+        thought_action_observation = ""
+        if self.thought and include_thought:
+            thought_action_observation = f"Thought: {self.thought}\n"
+        if include_action:
+            idx = f"{self.idx}. " if include_action_idx else ""
+
+            thought_action_observation += f"{idx}{self.name}{default_stringify_rule_for_arguments(self.args)}\n"
+        if self.observation is not None:
+            thought_action_observation += f"Observation: {self.observation}\n"
+        return thought_action_observation
+
+    @staticmethod
+    def _replace_arg_mask_with_real_value(args, dependencies: list[int], tasks: dict[str, "Task"]):
+        if isinstance(args, (list, tuple)):
+            return type(args)(Task._replace_arg_mask_with_real_value(item, dependencies, tasks) for item in args)
+        elif isinstance(args, str):
+            for dependency in sorted(dependencies, reverse=True):
+                # consider both ${1} and $1 (in case planner makes a mistake)
+                for arg_mask in ["${" + str(dependency) + "}", "$" + str(dependency)]:
+                    if arg_mask in args:
+                        if tasks[dependency].observation is not None:
+                            args = args.replace(arg_mask, str(tasks[dependency].observation))
+            return args
+        else:
+            return args

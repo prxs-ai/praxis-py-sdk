@@ -32,9 +32,9 @@ def add_handle_goal_skill() -> AgentSKill:
         name="Handle all requests",
         description="This skill handles all requests",
         path="/{goal}",
-        params_model=GoalHandleParamsModel,
-        input_model=GoalHandleInputModel,
-        output_model=GoalHandleOutputModel,
+        params_schema=GoalHandleParamsModel,
+        input_schema=GoalHandleInputModel,
+        output_schema=GoalHandleOutputModel,
     )
 
 

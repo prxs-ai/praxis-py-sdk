@@ -1,11 +1,14 @@
+import ast
 import re
 from collections.abc import Sequence
+from typing import Any
 
 import yaml
 from langchain.agents.agent import AgentOutputParser
 from langchain.schema import OutputParserException
 
-from base_agent.models import InputItem, OutputItem, ToolModel, Workflow, WorkflowStep
+from base_agent.models import Task, ToolModel
+from base_agent.prompt.const import FINISH_ACTION
 
 THOUGHT_PATTERN = r"Thought: ([^\n]*)"
 ACTION_PATTERN = r"\n*(\d+)\. (\w+)\((.*)\)(\s*#\w+\n)?"
@@ -13,8 +16,6 @@ ACTION_PATTERN = r"\n*(\d+)\. (\w+)\((.*)\)(\s*#\w+\n)?"
 ID_PATTERN = r"\$\{?(\d+)\}?"
 # Pattern to extract YAML content between ```yaml and ``` markers
 YAML_PATTERN = r"```yaml\s+(.*?)\s+```"
-# Pattern for template expressions like {{steps.step-name.outputs.output-name}}
-TEMPLATE_EXPR_PATTERN = r"\{\{(.*?)\}\}"
 
 
 def default_dependency_rule(idx, args: str):
@@ -30,80 +31,111 @@ class AgentOutputPlanParser(AgentOutputParser, extra="allow"):
         super().__init__(**kwargs)
         self.tools = tools
 
-    def parse(self, text: str) -> Workflow:
+    def parse(self, text: str) -> dict[int, Task]:
         # First try to extract YAML content
         yaml_match = re.search(YAML_PATTERN, text, re.DOTALL)
-        if not yaml_match:
-            raise OutputParserException(f"Failed to parse YAML content from text: {text}")
+        if yaml_match:
+            return self._parse_yaml_format(yaml_match.group(1))
 
-        return self._parse_yaml_format(yaml_match.group(1))
+        # If no YAML format found, fall back to the original parsing logic
+        return self._parse_numbered_format(text)
 
-    def _parse_yaml_format(self, yaml_content: str) -> Workflow:
+    def _parse_yaml_format(self, yaml_content: str) -> dict[int, Task]:
         try:
-            # Handle template expressions by temporarily replacing them
-            template_expressions = {}
+            # Pre-process the YAML content to escape curly braces in template expressions
+            # Convert {{...}} to a string that won't be interpreted as a mapping
+            processed_content = re.sub(r"\{\{(.*?)\}\}", r'"{{$1}}"', yaml_content)
 
-            def replace_template(match):
-                placeholder = f"__TEMPLATE_{len(template_expressions)}__"
-                template_expressions[placeholder] = match.group(0)
-                return placeholder
+            plan_data = yaml.safe_load(processed_content)
+            graph_dict = {}
 
-            processed_content = re.sub(r"\{\{(.*?)\}\}", replace_template, yaml_content)
+            # Process each step in the plan
+            for idx, step in enumerate(plan_data.get("steps", [])):
+                tool_name = step.get("tool")
 
-            # Parse YAML content
-            workflow_data = yaml.safe_load(processed_content)
+                # Extract inputs as arguments
+                inputs = step.get("inputs", [])
+                args_dict = {
+                    input_item.get("name"): input_item.get("value")
+                    for input_item in inputs
+                    if "name" in input_item and "value" in input_item
+                }
 
-            # Convert back the template expressions
-            def restore_templates(obj):
-                if isinstance(obj, str):
-                    for placeholder, template in template_expressions.items():
-                        if placeholder in obj:
-                            obj = obj.replace(placeholder, template)
-                    return obj
-                elif isinstance(obj, list):
-                    return [restore_templates(item) for item in obj]
-                elif isinstance(obj, dict):
-                    return {k: restore_templates(v) for k, v in obj.items()}
-                return obj
+                # Convert to a format the existing function can handle
+                args_str = str(args_dict) if args_dict else ""
 
-            workflow_data = restore_templates(workflow_data)
+                task = instantiate_task(
+                    tools=self.tools,
+                    idx=idx,
+                    tool_name=tool_name,
+                    args=args_str,
+                    thought=step.get("thought", plan_data.get("description", "")),
+                )
 
-            # Convert to Workflow model
-            workflow = Workflow(
-                name=workflow_data.get("name", "unnamed_workflow"),
-                description=workflow_data.get("description", ""),
-                thought=workflow_data.get("thought", ""),
-                steps=[
-                    WorkflowStep(
-                        name=step.get("name", f"step_{i}"),
-                        # should pick only the defined tools
-                        tool=_find_tool(step.get("tool", ""), self.tools),
-                        thought=step.get("thought", ""),
-                        inputs=[
-                            InputItem(name=input_item.get("name", ""), value=input_item.get("value", ""))
-                            for input_item in step.get("inputs", [])
-                        ],
-                        outputs=[
-                            OutputItem(name=output_item.get("name", ""), value=output_item.get("value", None))
-                            for output_item in step.get("outputs", [])
-                        ],
-                    )
-                    for i, step in enumerate(workflow_data.get("steps", []))
-                ],
-                outputs=[
-                    OutputItem(name=output_item.get("name", ""), value=output_item.get("value", None))
-                    for output_item in workflow_data.get("outputs", [])
-                ],
+                graph_dict[idx] = task
+
+            idx = len(graph_dict)
+
+            # The last step is implicitly a finish action
+            finish_task = instantiate_task(
+                tools=self.tools,
+                idx=idx + 1,
+                tool_name=FINISH_ACTION,
+                args=str(plan_data.get("outputs", [])),
+                thought=f"Completed all steps in the plan for: {plan_data.get('name', 'unknown')}",
             )
+            graph_dict[idx + 1] = finish_task
 
-            return workflow
+            return graph_dict
 
         except yaml.YAMLError as e:
             raise OutputParserException(f"Failed to parse YAML content: {e}") from e
-        except Exception as e:
-            raise OutputParserException(f"Failed to parse workflow: {e}") from e
+
+    def _parse_numbered_format(self, text: str) -> dict[int, Task]:
+        # Original parsing logic for numbered steps
+        pattern = rf"(?:{THOUGHT_PATTERN}\n)?{ACTION_PATTERN}"
+        matches = re.findall(pattern, text)
+
+        graph_dict = {}
+
+        for match in matches:
+            # idx = 1, function = "search", args = "Ronaldo number of kids"
+            # thought will be the preceding thought, if any, otherwise an empty string
+            thought, idx, tool_name, args, _ = match
+            idx = int(idx)
+
+            task = instantiate_task(
+                tools=self.tools,
+                idx=idx,
+                tool_name=tool_name,
+                args=args,
+                thought=thought,
+            )
+
+            graph_dict[idx] = task
+            if task.is_finish:
+                break
+
+        return graph_dict
+
 
 ### Helper functions
+
+
+def _parse_llm_compiler_action_args(args: str) -> list[Any]:
+    """Parse arguments from a string."""
+    # This will convert the string into a python object
+    # e.g. '"Ronaldo number of kids"' -> ("Ronaldo number of kids", )
+    # '"I can answer the question now.", [3]' -> ("I can answer the question now.", [3])
+    if args == "":
+        return ()
+    try:
+        args = ast.literal_eval(args)
+    except:  # noqa: E722
+        args = args
+    if not isinstance(args, list) and not isinstance(args, tuple):
+        args = (args,)
+    return args
 
 
 def _find_tool(tool_name: str, tools: Sequence[ToolModel]) -> ToolModel:
@@ -116,6 +148,41 @@ def _find_tool(tool_name: str, tools: Sequence[ToolModel]) -> ToolModel:
         Tool or StructuredTool.
     """
     for tool in tools:
-        if tool.package_name == tool_name or tool.function_name == tool_name:
+        if tool.function_name == tool_name:
             return tool
     raise OutputParserException(f"Tool {tool_name} not found.")
+
+
+def _get_dependencies_from_graph(idx: int, tool_name: str, args: Sequence[Any]) -> list[int]:
+    """Get dependencies from a graph."""
+    if tool_name == FINISH_ACTION:
+        # depends on the previous step
+        dependencies = list(range(1, idx))
+    else:
+        # define dependencies based on the dependency rule in tool_definitions.py
+        dependencies = [i for i in range(1, idx) if default_dependency_rule(i, args)]
+
+    return dependencies
+
+
+def instantiate_task(
+    tools: Sequence[ToolModel],
+    idx: int,
+    tool_name: str,
+    args: str,
+    thought: str,
+) -> Task:
+    dependencies = _get_dependencies_from_graph(idx, tool_name, args)
+    args = _parse_llm_compiler_action_args(args)
+
+    tool = _find_tool(tool_name, tools)
+
+    return Task(
+        idx=idx,
+        name=tool_name,
+        tool=tool,
+        args=args,
+        dependencies=dependencies,
+        thought=thought,
+        is_finish=tool_name == FINISH_ACTION,
+    )
