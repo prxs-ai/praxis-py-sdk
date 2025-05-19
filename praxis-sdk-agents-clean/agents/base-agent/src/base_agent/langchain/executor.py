@@ -33,7 +33,7 @@ class LangChainExecutor:
             output_parser = AgentOutputPlanParser(tools=kwargs["available_functions"])
 
         kwargs["available_functions"] = "\n".join(
-            [tool.render_function_spec() for tool in kwargs["available_functions"]]
+            [tool.render_openai_function_spec() for tool in kwargs["available_functions"]]
         )
 
         chain = prompt | agent | output_parser
