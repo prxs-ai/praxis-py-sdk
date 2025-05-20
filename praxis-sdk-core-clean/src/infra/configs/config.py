@@ -3,15 +3,16 @@ from functools import lru_cache
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from pydantic import Field, RedisDsn, SecretStr, ValidationInfo, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
-
-
 class InfrastructureConfig(BaseSettings):
-    postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
-    postgres_db: str = "postgres"
+    postgres_user: str = "rag"
+    postgres_password: str = "rag"
+    postgres_db: str = "rag"
+    # postgres_user: str = "postgres"
+    # postgres_password: str = "postgres"
+    # postgres_db: str = "postgres"
     postgres_host: str = Field(default="localhost", validation_alias="POSTGRES_HOST")
     postgres_port: int = 5432
     postgres_logs: bool = False
@@ -104,6 +105,7 @@ class Settings(BaseSettings):
     ANSWER_MY_COMMENT_INTERVAL: int = 60 * 4
     LIKES_INTERVAL: int = 6 * 60 * 60
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
+    INVEST_TWEET_INTERVAL: int = 15 * 60
     TWITTER_CLIENT_ID: str = 'eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ'
     TWITTER_CLIENT_SECRET: str = '8noXqU32HCtbW-0VIB2bw42Q_ZRdAliBYTq3BAV0nQvwhOTCux'
     TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
@@ -156,6 +158,28 @@ class Settings(BaseSettings):
         return f"http://{self.AI_REGISTRY_HOST}:{self.AI_REGISTRY_PORT}"
         
     
+class InterfaceSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra='ignore')
+
+class CoingeckoSettings(InterfaceSettings):
+    api_key: str = Field(validation_alias="COINGECKO_API_KEY")
+    base_url: str = Field(validation_alias="COINGECKO_API_URL")
+
+class RedisSettings(InterfaceSettings):
+    redis_host: str = Field(validation_alias="REDIS_HOST")
+    redis_port: int = Field(validation_alias="REDIS_PORT")
+    redis_db: int = Field(validation_alias="REDIS_DB")
+
+class HyperLiquidSettings(InterfaceSettings):
+    base_url: str = Field(validation_alias="HYPERLIQUD_API_URL")
+
+class ServerSettings(InterfaceSettings):
+    coingecko: CoingeckoSettings = CoingeckoSettings()
+    redis: RedisSettings = RedisSettings()
+    hyperliquid: HyperLiquidSettings = HyperLiquidSettings()
+
+
+
     REDIS_PERSONA_KEY: str = "available_personas"
 
 @lru_cache
@@ -163,4 +187,5 @@ def get_settings() -> Settings:
     return Settings()  # type: ignore
 
 
+server = ServerSettings()
 cipher = Fernet(get_settings().infrastructure.fernet_key)
