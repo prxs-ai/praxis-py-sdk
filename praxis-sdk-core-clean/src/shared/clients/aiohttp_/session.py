@@ -1,20 +1,50 @@
 from __future__ import annotations
 
+from collections.abc import Coroutine
 from functools import partialmethod
 from types import TracebackType
-from typing import Callable, Self, Unpack
+from typing import Any, Callable, Self, Unpack
 from urllib.parse import urlparse
 
 from aiohttp import ClientResponse, ClientSession
 from aiohttp.client import _BaseRequestContextManager, _RequestOptions
 
+from services.shared.clients.exceptions import APIError
+
 
 def _factory[**P, R](verb: str, _: Callable[P, R]) -> Callable[P, R]:
     @partialmethod
     def method(*args: P.args, **kwargs: P.kwargs) -> R:
-        return args[0].request(verb, *args[1:], **kwargs)
+        return args[0].request(verb, *args[1:], **kwargs)  # type: ignore
 
-    return method
+    return method  # type: ignore
+
+
+class ResponseWrapper[R: ClientResponse]:
+    __slots__ = "_coro", "_resp"
+
+    def __init__(self, coro: Coroutine[Any, None, R]) -> None:
+        self._coro = coro
+
+    async def __aenter__(
+        self,
+    ) -> ClientResponse:
+        self._resp: R = await self._coro
+        if not self._resp.ok:
+            raise APIError(self._resp.status, repr(await self._resp.read()))
+        return await self._resp.__aenter__()
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        await self._resp.__aexit__(exc_type, exc, tb)
+
+
+def _create_session() -> ClientSession:
+    return ClientSession(raise_for_status=True)
 
 
 class AiohttpSession:
@@ -31,7 +61,7 @@ class AiohttpSession:
         session_provider: Callable[[], ClientSession] | None = None,
         base_url: str = "",
     ) -> None:
-        self._session_provider = session_provider or ClientSession
+        self._session_provider = session_provider or _create_session
         self._base_url = base_url
         self._create_session()
 
@@ -49,10 +79,8 @@ class AiohttpSession:
     def _handle_kwargs(self, **kwargs: Unpack[_RequestOptions]) -> _RequestOptions:
         return kwargs
 
-    def get(
-        self, url: str, **kwargs: Unpack[_RequestOptions]
-    ) -> _BaseRequestContextManager[ClientResponse]:
-        return self.request("GET", url, **kwargs)
+    def get(self, url: str, **kwargs: Unpack[_RequestOptions]) -> ResponseWrapper[ClientResponse]:
+        return ResponseWrapper(self.request("GET", url, **kwargs)._coro)
 
     post = _factory("post", get)
     delete = _factory("delete", get)

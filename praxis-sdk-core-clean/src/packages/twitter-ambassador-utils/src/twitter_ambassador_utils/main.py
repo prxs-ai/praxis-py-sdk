@@ -9,6 +9,7 @@ import aiohttp
 
 from redis_client.main import decode_redis, get_redis_db
 from twitter_ambassador_utils.config import cipher, get_settings
+from loguru import logger
 
 settings = get_settings()
 
@@ -23,9 +24,9 @@ async def post_request(url: str, token: str, payload: dict):
         async with session.post(url, headers=headers, json=payload) as response:
             if response.ok:
                 data = await response.json()
-                print(f"Request successful: {data}")
+                logger.info(f"Request successful: {data}")
                 return data
-            print(f"Request failed. Status: {response.status}, Response: {await response.text()}")
+            logger.error(f"Request failed. Status: {response.status}, Response: {await response.text()}")
             return await response.json()
 
 
@@ -35,7 +36,7 @@ async def create_post(
     quote_tweet_id: str | None = None,
     commented_tweet_id: str | None = None,
 ) -> dict | None:
-    print(f'Posting tweet: {tweet_text=} {quote_tweet_id=} {commented_tweet_id=}')
+    logger.info(f'Posting tweet: {tweet_text=} {quote_tweet_id=} {commented_tweet_id=}')
     url = "https://api.x.com/2/tweets"
 
     headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
@@ -53,10 +54,10 @@ async def create_post(
         async with session.post(url, json=payload, headers=headers) as response:
             if response.status == 201:
                 result = await response.json()
-                print(f'Tweet posted: {result}')
+                logger.info(f'Tweet posted: {result}')
                 return result
             else:
-                print(f'Twit not posted: {await response.text()}')
+                logger.error(f'Twit not posted: {await response.text()}')
 
 
 async def retweet(token: str, user_id: str, tweet_id: str):
@@ -81,7 +82,8 @@ class TwitterAuthClient:
     _DB = get_redis_db()
 
     @classmethod
-    def create_auth_link(cls, user_id: str):
+    def create_auth_link(cls, user_id: str = None):
+        """Сохраняем API, но не используем user_id"""
         code_verifier = cls._generate_code_verifier()
         code_challenge = cls._generate_code_challenge(code_verifier)
 
@@ -93,7 +95,6 @@ class TwitterAuthClient:
         cls._store_session_data(
             session_id=state,
             data={
-                "user_id": str(user_id),
                 "code_challenge": code_challenge,
                 "code_verifier": code_verifier,
             },
@@ -125,7 +126,7 @@ class TwitterAuthClient:
             ),
         )
         return {
-            "user_id": data["user_id"],
+            # Убираем user_id, который больше не нужен
             "access_token": tokens_data["access_token"],
             "refresh_token": tokens_data["refresh_token"],
             "expires_at": tokens_data["expires_at"],
@@ -133,7 +134,7 @@ class TwitterAuthClient:
 
     @classmethod
     async def get_me(cls, access_token: str) -> dict | None:
-        print("Get me twitter")
+        logger.info("Get me twitter")
         async with aiohttp.ClientSession(headers={"Authorization": f"Bearer {access_token}"},
                                          timeout=aiohttp.ClientTimeout(10)) as session:
             async with session.get("https://api.twitter.com/2/users/me") as response:
@@ -142,7 +143,7 @@ class TwitterAuthClient:
                     response.raise_for_status()
 
                 if not response.ok:
-                    print(f"Bad request to twitter get_me - {data}")
+                    logger.error(f"Bad request to twitter get_me - {data}")
                     return
 
                 return {
@@ -176,17 +177,19 @@ class TwitterAuthClient:
     @classmethod
     def save_twitter_data(
         cls,
-        user_id: str,
         access_token: str,
         refresh_token: str,
         expires_at: int,
         name: str,
         username: str,
         twitter_id: str,
+        user_id: str = None,
         **_,
     ):
+        user_id_value = user_id if user_id is not None else twitter_id
+        
         cls._DB.r.hmset(
-            f'twitter_data:{user_id}',
+            f'twitter_data:{username}',
             mapping={
                 "access_token": cipher.encrypt(access_token.encode()).decode(),
                 "refresh_token": cipher.encrypt(refresh_token.encode()).decode(),
@@ -194,6 +197,7 @@ class TwitterAuthClient:
                 "name": name,
                 "username": username,
                 'id': twitter_id,
+                'user_id': user_id_value,
             },
         )
 
@@ -220,7 +224,7 @@ class TwitterAuthClient:
         }
 
     @classmethod
-    async def update_tokens(cls, refresh_token: str, user_id: str):
+    async def update_tokens(cls, refresh_token: str, username: str):
         new_tokens = await cls._refresh_tokens(refresh_token)
         tokens_to_save = {
             "access_token": cipher.encrypt(new_tokens['access_token'].encode()).decode(),
@@ -228,25 +232,25 @@ class TwitterAuthClient:
             "expires_at": new_tokens['expires_at'],
         }
         cls._DB.r.hmset(
-            f'twitter_data:{user_id}',
+            f'twitter_data:{username}',
             mapping=tokens_to_save,
         )
         return tokens_to_save
 
     @classmethod
-    async def disconnect_twitter(cls, user_id: str):
-        cls._DB.r.delete(f'twitter_data:{user_id}')
+    async def disconnect_twitter(cls, username: str):
+        cls._DB.r.delete(f'twitter_data:{username}')
 
     @classmethod
-    async def get_twitter_data(cls, user_id: str) -> dict | None:
-        encoded_data = cls._DB.r.hgetall(f"twitter_data:{user_id}")
+    async def get_twitter_data(cls, username: str) -> dict | None:
+        encoded_data = cls._DB.r.hgetall(f"twitter_data:{username}")
         decoded_data = decode_redis(encoded_data)
         if not decoded_data:
             return None
         access_token = decoded_data["access_token"]
         if datetime.utcfromtimestamp(float(decoded_data.get("expires_at"))) < datetime.utcnow():
             refresh_token = cipher.decrypt(decoded_data['refresh_token'].encode()).decode()
-            access_token = (await cls.update_tokens(refresh_token, user_id))['access_token']
+            access_token = (await cls.update_tokens(refresh_token, username))['access_token']
         return {
             "name": decoded_data["name"],
             "username": decoded_data["username"],
@@ -258,8 +262,8 @@ class TwitterAuthClient:
         }
 
     @classmethod
-    def get_static_data(cls, user_id: str) -> dict | None:
-        encoded_data = cls._DB.r.hgetall(f"twitter_data:{user_id}")
+    def get_static_data(cls, username: str) -> dict | None:
+        encoded_data = cls._DB.r.hgetall(f"twitter_data:{username}")
         decoded_data = decode_redis(encoded_data)
         return {
             "name": decoded_data["name"],
@@ -269,16 +273,17 @@ class TwitterAuthClient:
             "csrf_token": decoded_data.get('csrf_token'),  # cookies
             "guest_id": decoded_data.get('guest_id'),  # cookies
         }
-
     @classmethod
     async def get_access_token(cls, username: str) -> str:
         twitter_data = await cls.get_twitter_data(username)
         if not twitter_data:
-            print(f"No twitter data found for {username}")
+            logger.error(f"No twitter data found for {username}")
             raise ValueError(f"Twitter data not found for user {username}")
         try:
-            return cipher.decrypt(twitter_data["access_token"]).decode()
+            access_token = cipher.decrypt(twitter_data["access_token"]).decode()
+            logger.info(f'Decoded access token successfully')
+            return access_token
         except (KeyError, TypeError) as e:
-            print(f"Error decrypting access token for {username}: {e}")
+            logger.error(f"Error decrypting access token for {username}: {e}")
             raise e
 

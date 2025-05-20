@@ -5,20 +5,8 @@ from types import TracebackType
 from typing import Protocol
 
 
-class Command[R, O](Protocol):
-    __slots__ = ()
-
-    @abstractmethod
-    def execute(self, __resource: R) -> O:
-        raise NotImplementedError
-
-
 class API[R](Protocol):
     __slots__ = ()
-
-    @abstractmethod
-    def __call__[O](self, __command: Command[R, O]) -> O:
-        raise NotImplementedError
 
     @abstractmethod
     async def __aenter__(self) -> API[R]:

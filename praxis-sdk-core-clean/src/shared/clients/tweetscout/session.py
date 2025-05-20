@@ -4,7 +4,7 @@ from aiohttp import ClientSession
 from aiohttp.client import _RequestOptions
 from multidict import CIMultiDict
 
-from services.shared.api_client.aiohttp_.session import AiohttpSession
+from services.shared.clients.aiohttp_.session import AiohttpSession
 
 
 class TweetScoutSession(AiohttpSession):

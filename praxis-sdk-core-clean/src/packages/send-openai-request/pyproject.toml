@@ -1,6 +1,6 @@
 [project]
 name = "send-openai-request"
-version = "0.0.2"
+version = "0.1.1"
 description = "Package that send openai request"
 authors = [
     {name = "0xDevZip",email = "noreply@example.com"}
