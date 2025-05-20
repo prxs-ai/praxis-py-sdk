@@ -13,7 +13,9 @@ import inspect
 from functools import wraps
 import asyncio
 import redis
+from redis.asyncio import Redis
 
+from infrastructure.configs.config import server
 from infrastructure.configs.logger import configure_logging, get_logger
 from schemas.knowledgebase.knowledgetype import KnowledgeType
 
@@ -319,7 +321,35 @@ class RedisDB:
         link = f"https://twitter.com/i/web/status/{tweet_id}"
         self.r.rpush(key, link)
 
+class AsyncRedis:
+    def __init__(self):
+        self.client = Redis(
+            host=server.redis.redis_host,
+            port=server.redis.redis_port,
+            db=server.redis.redis_db
+        )
+
+    async def set(
+        self, key: str, value: str,
+        log: bool = True, keep_ttl: bool = False
+    ) -> None:
+        if log:
+            logger.info(f'Set {key} to {value}')
+        await self.client.set(key, value, keepttl=keep_ttl)
+
+    async def wait_for_key(self, key, timeout=120) -> dict | None:
+        result = await self.client.blpop(key, timeout=timeout)
+        if result:
+            key_name, value = result
+            return value
+
+        else:
+            logger.error("Redis key not awaited")
+            return None
+
+
 # Initialize a default instance
+async_redis = AsyncRedis()
 db = RedisDB()
 
 

@@ -3,11 +3,9 @@ from functools import lru_cache
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from pydantic import Field, RedisDsn, SecretStr, ValidationInfo, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
-
-
 class InfrastructureConfig(BaseSettings):
     postgres_user: str = "rag"
     postgres_password: str = "rag"
@@ -160,9 +158,32 @@ class Settings(BaseSettings):
         return f"http://{self.AI_REGISTRY_HOST}:{self.AI_REGISTRY_PORT}"
         
     
+class InterfaceSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra='ignore')
+
+class CoingeckoSettings(InterfaceSettings):
+    api_key: str = Field(validation_alias="COINGECKO_API_KEY")
+    base_url: str = Field(validation_alias="COINGECKO_API_URL")
+
+class RedisSettings(InterfaceSettings):
+    redis_host: str = Field(validation_alias="REDIS_HOST")
+    redis_port: int = Field(validation_alias="REDIS_PORT")
+    redis_db: int = Field(validation_alias="REDIS_DB")
+
+class HyperLiquidSettings(InterfaceSettings):
+    base_url: str = Field(validation_alias="HYPERLIQUD_API_URL")
+
+class ServerSettings(InterfaceSettings):
+    coingecko: CoingeckoSettings = CoingeckoSettings()
+    redis: RedisSettings = RedisSettings()
+    hyperliquid: HyperLiquidSettings = HyperLiquidSettings()
+
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore
 
 
+server = ServerSettings()
 cipher = Fernet(get_settings().infrastructure.fernet_key)
