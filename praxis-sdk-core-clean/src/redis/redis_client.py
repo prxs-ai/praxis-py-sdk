@@ -290,7 +290,8 @@ class RedisDB:
             "last_likes_time",
             "last_comment_agix_time",
             "last_answer_my_comment_time",
-            "last_answer_comment_time"
+            "last_answer_comment_time",
+            "last_invest_tweet_time",
         ]:
             self.delete(f"{action_type}:{username}")
 
