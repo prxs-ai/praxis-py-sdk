@@ -1,10 +1,9 @@
 from functools import lru_cache
 
-from pydantic import field_validator, ValidationInfo, PostgresDsn, RedisDsn, Field
-from pydantic_settings import BaseSettings
-from dotenv import load_dotenv
 from cryptography.fernet import Fernet
-
+from dotenv import load_dotenv
+from pydantic import Field, RedisDsn, SecretStr, ValidationInfo, field_validator
+from pydantic_settings import BaseSettings
 
 load_dotenv()
 
@@ -36,6 +35,9 @@ class InfrastructureConfig(BaseSettings):
 
     QDRANT_HOST: str = Field(default="qdrant", validation_alias="QDRANT_HOST")
     QDRANT_PORT: int = 6333
+
+    LANGFUSE_SECRET_KEY: SecretStr = ""
+    LANGFUSE_PUBLIC_KEY: SecretStr = ""
 
     @property
     def qdrant_url(self) -> str:
@@ -79,6 +81,16 @@ class TelegramAppSetupServiceConfig(BaseSettings):
     class Config:
         env_prefix = "TELEGRAM_"
 
+class DeployService(BaseSettings):
+    host: str =  Field(default="deploy-service.praxis.svc.cluster.local") 
+    port: int = Field(default=80)
+    connect_timeout: int = Field(default=10)
+    timeout: int = Field(default=300)
+
+    @property
+    def url(self) -> str:
+        return f"http://{self.host}"
+
 
 class Settings(BaseSettings):
     infrastructure: InfrastructureConfig = InfrastructureConfig()
@@ -94,10 +106,10 @@ class Settings(BaseSettings):
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
     INVEST_TWEET_INTERVAL: int = 15 * 60
     TWITTER_CLIENT_ID: str = 'eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ'
-    TWITTER_CLIENT_SECRET: str = 'TeK9tRPPirYbpGhiyb_yaOMYJA7ijvCQaU6O5vu5VioA8knBAA'
+    TWITTER_CLIENT_SECRET: str = '8noXqU32HCtbW-0VIB2bw42Q_ZRdAliBYTq3BAV0nQvwhOTCux'
     TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
 
-    TWITTER_REDIRECT_URI: str = 'http://185.53.46.123:8000/twitter/oauth/callback/'
+    TWITTER_REDIRECT_URI: str = '***REMOVED***'
     OPENAI_API_KEY: str = '***REMOVED***'
     OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
     LOGS_DIR: str = "../logs"
@@ -105,6 +117,18 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = '***REMOVED***'
     TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
     TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
+
+    HEYGEN_API_KEY: str = "***REMOVED***"
+
+    LIVEKIT_URL: str = "wss://streamingavatar-o51wm8kk.livekit.cloud"
+    LIVEKIT_API_KEY: str = "***REMOVED***"
+    LIVEKIT_API_SECRET: str = "***REMOVED***"
+
+    TWITCH_CLIENT_ID: str = "d39qf2fhjamywvevtsctdxnrflma20"
+    TWITCH_CLIENT_SECRET: str = "51fkl9bclgwamyfot69wlcrnkz1ajq"
+
+    AVATAR_INTERNAL_REDIS_HOST: str = "localhost"
+    AVATAR_INTERNAL_REDIS_PORT: int = 6379
 
     # FAL AI
     fal_ai_api_key: str = ""
@@ -120,7 +144,21 @@ class Settings(BaseSettings):
     creativity_api_key: str = Field(validation_alias="CREATIVITY_API_KEY")
     creativity_base_url: str = "https://api.creatify.ai/api"
 
+    # confluent_api_key: str = '1'
+    # confluent_api_secret: str = '1'
+    # confluent_bootstrap_server: str = '1'
+    # confluent_rest_endpoint: str = '1'
+    
+    AI_REGISTRY_HOST: str = Field(default="praxis-dev-ai-registry.praxis.svc.cluster.local")
+    AI_REGISTRY_PORT: int = Field(default=8080)
 
+    deploy_service: DeployService = DeployService()
+    
+    @property
+    def ai_registry_url(self) -> str:
+        return f"http://{self.AI_REGISTRY_HOST}:{self.AI_REGISTRY_PORT}"
+        
+    
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore
