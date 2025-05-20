@@ -44,6 +44,9 @@ class EntrypointGroup(StrEnumMixIn):
     MEMORY_CONFIG_ENTRYPOINT = "memory.config"
     MEMORY_ENTRYPOINT = "memory.entrypoint"
 
+    CARD_ENTRYPOINT = "card.entrypoint"
+
+
     @property
     def group_name(self):
         return str(self)

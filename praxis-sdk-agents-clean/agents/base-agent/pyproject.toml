@@ -4,7 +4,7 @@ version = "0.1.1"
 description = "Base agent for Ray Serve"
 authors = [{ name = "Your Name", email = "you@example.com" }]
 readme = "README.md"
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "fastapi (>=0.115.8,<1.0.0)",
     "openai (>=1.63.2,<2.0.0)",
@@ -65,7 +65,7 @@ basic = "base_agent.memory.client:memory_client"
 basic = "base_agent.card.builder:get_agent_card"
 
 [tool.poetry.group.dev.dependencies]
-ray = { extras = ["serve"], version = "^2.42.1" }
+ray = { extras = ["serve"], version = "2.42.1" }
 pytest = "^8.3.4"
 pyarrow = "^19.0.1"
 
