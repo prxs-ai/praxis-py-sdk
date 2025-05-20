@@ -7,9 +7,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 class InfrastructureConfig(BaseSettings):
-    postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
-    postgres_db: str = "postgres"
+    postgres_user: str = "rag"
+    postgres_password: str = "rag"
+    postgres_db: str = "rag"
+    # postgres_user: str = "postgres"
+    # postgres_password: str = "postgres"
+    # postgres_db: str = "postgres"
     postgres_host: str = Field(default="localhost", validation_alias="POSTGRES_HOST")
     postgres_port: int = 5432
     postgres_logs: bool = False
@@ -112,8 +115,6 @@ class Settings(BaseSettings):
     LOGS_DIR: str = "../logs"
     TWEETSCOUT_API_KEY: str = "***REMOVED***"
     ANTHROPIC_API_KEY: str = '***REMOVED***'
-    TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
-    TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
 
     HEYGEN_API_KEY: str = "***REMOVED***"
 
