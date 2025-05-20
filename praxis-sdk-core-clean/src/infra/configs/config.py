@@ -114,8 +114,6 @@ class Settings(BaseSettings):
     LOGS_DIR: str = "../logs"
     TWEETSCOUT_API_KEY: str = "***REMOVED***"
     ANTHROPIC_API_KEY: str = '***REMOVED***'
-    TELEGRAM_BOT_TOKEN: str = "8039253205:AAEFwlG0c2AmhwIXnqC9Q5TsBo_x-7jM2a0"
-    TELEGRAM_CHANNEL_ID: str = "@pantprxcryptonews"
 
     HEYGEN_API_KEY: str = "***REMOVED***"
 
