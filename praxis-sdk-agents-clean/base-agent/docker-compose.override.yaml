@@ -1,0 +1,59 @@
+services:
+  # Mock Relay Registry
+  relay-registry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: base-agent
+    platform: linux/amd64
+    entrypoint: []
+    command: >
+      bash -c "pip install uvicorn && cd /serve_app/tests/e2e && python -m uvicorn test_libp2p_integration:app --host 0.0.0.0 --port 8081"
+    ports:
+      - "8082:8081"
+    volumes:
+      - ./src:/serve_app/src:ro
+      - ./tests:/serve_app/tests:ro
+      - ./py-libp2p:/serve_app/py-libp2p:ro
+    environment:
+      PYTHONPATH: /serve_app/src:/serve_app/py-libp2p
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; r = httpx.get('http://localhost:8081/peers'); r.raise_for_status(); print('OK')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mock Relay Node  
+  relay-node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: base-agent
+    platform: linux/amd64
+    entrypoint: []
+    command: >
+      bash -c "cd /serve_app && python tests/e2e/mock_relay_node.py"
+    ports:
+      - "4001:4001"
+    volumes:
+      - ./src:/serve_app/src:ro
+      - ./tests:/serve_app/tests:ro
+      - ./py-libp2p:/serve_app/py-libp2p:ro
+    environment:
+      PYTHONPATH: /serve_app/src:/serve_app/py-libp2p
+
+  # Override ray-worker to depend on relay services
+  ray-worker:
+    depends_on:
+      ray-head:
+        condition: service_healthy
+      relay-registry:
+        condition: service_healthy
+      relay-node:
+        condition: service_started
+    environment:
+      REGISTRY_HTTP_URL: http://relay-registry:8081
+      REGISTRY_RELAY_PEER_ID: ${REGISTRY_RELAY_PEER_ID:-12D3KooWL1N7R2UDf9bVeyP6QR2hR7F1qXSkX5cv3H5Xz7N4L7kE}
+      REGISTRY_RELAY_MULTIADDR_TEMPLATE: /dns4/relay-node/tcp/4001/p2p/{}
+      AGENT_P2P_LISTEN_ADDR: /ip4/0.0.0.0/tcp/9001
+      AGENT_NAME: base-agent-docker
