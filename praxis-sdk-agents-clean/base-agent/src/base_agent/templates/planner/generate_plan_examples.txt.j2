@@ -1,0 +1,24 @@
+EXAMPLE
+Goal: Using another agent to answer to the question of life, universe and everything
+Plan:
+{% raw %}
+```yaml
+name: handoff-answer-life-universe-everything
+description: Returns the answer to the question of life, universe and everything via another agent
+thought: This is a well-known question in science fiction "The Hitchhiker's Guide to the Galaxy" by Douglas Adams. The answer is 42. Let's return this answer.
+steps:
+  - name: handoff-answer-life-universe-everything
+    tool: handoff_tool-to-another-agent
+    thought: This step will be used to call another agent to get the answer to the question of life, universe and everything.
+    parameters:
+      - name: goal
+        value: "Answer to the question of life, universe and everything"
+    inputs: []
+    outputs:
+      - name: result
+outputs:
+  - name: answer
+    value: \'{{{{steps.handoff-answer-life-universe-everything.outputs.result}}}}\'
+```
+{% endraw %}
+END OF EXAMPLE
