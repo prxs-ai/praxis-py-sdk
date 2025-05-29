@@ -139,7 +139,7 @@ async def setup_libp2p() -> None:
         current_host = libp2p.new_host(key_pair=key_pair_obj)
         logger.info(f"Libp2p host created: peer_id={current_host.get_id()}")
 
-        relay_info = info_from_p2p_addr(Multiaddr("/dns4/relay-service.dev.prxs.ai/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))
+        relay_info = info_from_p2p_addr(Multiaddr("/ip4/54.76.54.7/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))
 
         relay_cfg_for_agent = RelayConfig(
             enable_hop=False,
