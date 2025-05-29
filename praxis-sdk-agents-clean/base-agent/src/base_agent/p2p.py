@@ -117,6 +117,9 @@ async def setup_libp2p() -> None:
         from libp2p.peer.peerinfo import PeerInfo
         from libp2p.relay.circuit_v2.config import RelayConfig
         from libp2p.relay.circuit_v2.protocol import STOP_PROTOCOL_ID, CircuitV2Protocol
+        from libp2p.relay.circuit_v2.transport import CircuitV2Transport
+        from libp2p.tools.utils import info_from_p2p_addr
+        from multiaddr import Multiaddr
 
         config = get_agent_config()
         
@@ -130,6 +133,21 @@ async def setup_libp2p() -> None:
 
         import trio_asyncio
         import trio
+
+        key_pair_obj = libp2p.create_new_key_pair()
+        current_host = libp2p.new_host(key_pair=key_pair_obj)
+        logger.info(f"Libp2p host created: peer_id={current_host.get_id()}")
+
+        relay_cfg_for_agent = RelayConfig(
+            enable_hop=False,
+            enable_stop=True,
+            enable_client=True,
+            bootstrap_relays=[info_from_p2p_addr(Multiaddr("/dns4/relay-service.dev.prxs.ai/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))],
+        )
+        circuit_transport = CircuitV2Transport(current_host, circuit_protocol_handler, config=cfg)
+        circuit_protocol_handler = CircuitV2Protocol(
+            current_host, limits=getattr(relay_cfg_for_agent, "limits", None), allow_hop=False
+        )
         
         async def _setup_libp2p_in_trio():
             from libp2p.relay.circuit_v2.transport import CircuitV2Transport
@@ -137,10 +155,6 @@ async def setup_libp2p() -> None:
             from libp2p.relay.circuit_v2.config import RelayConfig
             from multiaddr import Multiaddr
             from libp2p.tools.utils import info_from_p2p_addr
-            
-            key_pair_obj = libp2p.create_new_key_pair()
-            current_host = libp2p.new_host(key_pair=key_pair_obj)
-            logger.info(f"Libp2p host created: peer_id={current_host.get_id()}")
 
             try:
                 registry_pid = ID.from_base58(config.registry_relay_peer_id)
@@ -152,29 +166,16 @@ async def setup_libp2p() -> None:
             registry_multiaddr_val = multiaddr.Multiaddr(registry_addr_str)
             relay_peer_info = PeerInfo(registry_pid, [registry_multiaddr_val])
 
-            # Временно закомментируем relay config, так как circuit transport не используется
-            relay_cfg_for_agent = RelayConfig(
-                enable_hop=False,
-                enable_stop=True,
-                enable_client=True,
-                bootstrap_relays=[relay_peer_info],
-            )
+            # # Временно закомментируем relay config, так как circuit transport не используется
+            # relay_cfg_for_agent = RelayConfig(
+            #     enable_hop=False,
+            #     enable_stop=True,
+            #     enable_client=True,
+            #     bootstrap_relays=[relay_peer_info],
+            # )
             
 
-            circuit_protocol_handler = CircuitV2Protocol(
-                current_host, limits=getattr(relay_cfg_for_agent, "limits", None), allow_hop=False
-            )
-
-            cfg = RelayConfig(
-                enable_hop=False,
-                enable_stop=True,
-                enable_client=True,
-                bootstrap_relays=[info_from_p2p_addr(Multiaddr("/dns4/relay-service.dev.prxs.ai/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))],
-            )
-
-            circuit_transport = CircuitV2Transport(current_host, circuit_protocol_handler, config=cfg)
             network = current_host.get_network()
-            print(network)
 
             protocol_muxer = current_host.get_mux()
             protocol_muxer.add_handler(STOP_PROTOCOL_ID, circuit_protocol_handler._handle_stop_stream)
@@ -254,6 +255,8 @@ async def setup_libp2p() -> None:
         
         try:
             libp2p_node = result_future.result(timeout=15)  # Уменьшили до 15 секунд
+            libp2p_node.add_transport(circuit_transport)
+
             logger.info("Libp2p successfully initialized via trio thread!")
         except concurrent.futures.TimeoutError:
             logger.error("Libp2p initialization timed out after 15 seconds") 
