@@ -21,11 +21,11 @@ class P2PManager:
     
     def _ensure_libp2p_path(self):
         """Ensure libp2p is in the Python path."""
-        if "/serve_app/py-libp2p" not in sys.path and "***REMOVED***/agents/base-agent/py-libp2p" not in sys.path:
+        if "/serve_app/py-libp2p" not in sys.path and "***REMOVED***" not in sys.path:
             if os.path.exists("/serve_app/py-libp2p"):
                 sys.path.insert(0, "/serve_app/py-libp2p")
             else:
-                sys.path.insert(0, "***REMOVED***/agents/base-agent/py-libp2p")
+                sys.path.insert(0, "***REMOVED***")
     
     async def setup(self):
         """Setup libp2p node."""

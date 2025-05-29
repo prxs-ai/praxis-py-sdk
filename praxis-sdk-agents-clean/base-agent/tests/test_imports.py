@@ -4,7 +4,7 @@ import sys
 import os
 
 # Add local py-libp2p to path for testing
-sys.path.insert(0, '***REMOVED***/agents/base-agent/py-libp2p')
+sys.path.insert(0, '***REMOVED***')
 
 
 def test_imports():
@@ -46,7 +46,7 @@ def test_imports():
 
 if __name__ == "__main__":
     # Change to project root
-    os.chdir('***REMOVED***/agents/base-agent')
+    os.chdir('***REMOVED***')
     
     # Add src to path
     sys.path.insert(0, 'src')
