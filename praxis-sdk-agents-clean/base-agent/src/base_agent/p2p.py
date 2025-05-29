@@ -118,6 +118,7 @@ async def setup_libp2p() -> None:
         from libp2p.relay.circuit_v2.config import RelayConfig
         from libp2p.relay.circuit_v2.protocol import STOP_PROTOCOL_ID, CircuitV2Protocol
         from libp2p.relay.circuit_v2.transport import CircuitV2Transport
+
         from libp2p.tools.utils import info_from_p2p_addr
         from multiaddr import Multiaddr
 
@@ -138,16 +139,20 @@ async def setup_libp2p() -> None:
         current_host = libp2p.new_host(key_pair=key_pair_obj)
         logger.info(f"Libp2p host created: peer_id={current_host.get_id()}")
 
+        relay_info = info_from_p2p_addr(Multiaddr("/dns4/relay-service.dev.prxs.ai/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))
+
         relay_cfg_for_agent = RelayConfig(
             enable_hop=False,
             enable_stop=True,
             enable_client=True,
-            bootstrap_relays=[info_from_p2p_addr(Multiaddr("/dns4/relay-service.dev.prxs.ai/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))],
+            bootstrap_relays=[relay_info],
         )
         circuit_protocol_handler = CircuitV2Protocol(
             current_host, limits=getattr(relay_cfg_for_agent, "limits", None), allow_hop=False
         )
+
         circuit_transport = CircuitV2Transport(current_host, circuit_protocol_handler, config=relay_cfg_for_agent)
+
         
         async def _setup_libp2p_in_trio():
             from libp2p.relay.circuit_v2.transport import CircuitV2Transport
@@ -229,6 +234,10 @@ async def setup_libp2p() -> None:
             else:
                 logger.info("Skipping registry registration since network listening failed")
 
+            
+            await current_host.connect(relay_info)
+            logger.info("Connection to relay service successful.")
+
             return current_host
 
         logger.info("Starting libp2p in trio-asyncio context...")
@@ -255,7 +264,6 @@ async def setup_libp2p() -> None:
         
         try:
             libp2p_node = result_future.result(timeout=15)  # Уменьшили до 15 секунд
-            libp2p_node.add_transport(circuit_transport)
 
             logger.info("Libp2p successfully initialized via trio thread!")
         except concurrent.futures.TimeoutError:
