@@ -144,10 +144,10 @@ async def setup_libp2p() -> None:
             enable_client=True,
             bootstrap_relays=[info_from_p2p_addr(Multiaddr("/dns4/relay-service.dev.prxs.ai/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))],
         )
-        circuit_transport = CircuitV2Transport(current_host, circuit_protocol_handler, config=cfg)
         circuit_protocol_handler = CircuitV2Protocol(
             current_host, limits=getattr(relay_cfg_for_agent, "limits", None), allow_hop=False
         )
+        circuit_transport = CircuitV2Transport(current_host, circuit_protocol_handler, config=relay_cfg_for_agent)
         
         async def _setup_libp2p_in_trio():
             from libp2p.relay.circuit_v2.transport import CircuitV2Transport
