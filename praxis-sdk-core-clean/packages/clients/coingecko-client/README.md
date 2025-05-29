@@ -57,7 +57,7 @@ server = ServerConfig()
 ```python
 import asyncio
 from aiohttp import ClientSession
-from your_module_path import CoinGeckoApiManager
+from coingecko_client import CoinGeckoApiManager
 
 async def main():
     async with ClientSession() as session:

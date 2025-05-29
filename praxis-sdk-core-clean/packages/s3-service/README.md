@@ -62,7 +62,7 @@ def get_settings() -> Settings:
 ```
 import asyncio
 from fastapi import UploadFile
-from your_module_path import S3Service
+from s3_service import S3Service
 
 async def main():
     async with S3Service("my-bucket") as service:
