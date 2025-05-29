@@ -12,10 +12,11 @@ if TYPE_CHECKING:
     import libp2p
     from libp2p.peer.id import ID
     from libp2p.peer.peerinfo import PeerInfo
-    from libp2p.relay.circuit_v2.config import RelayConfig
-    from libp2p.relay.circuit_v2.protocol import STOP_PROTOCOL_ID, CircuitV2Protocol
     from libp2p.abc import INetStream
     from libp2p.custom_types import TProtocol
+    from libp2p.relay.circuit_v2.transport import CircuitV2Transport
+    from libp2p.relay.circuit_v2.protocol import STOP_PROTOCOL_ID, CircuitV2Protocol
+    from libp2p.relay.circuit_v2.config import RelayConfig
 
 from base_agent.config import get_agent_config
 
@@ -26,11 +27,11 @@ PROTOCOL_CARD: Optional['TProtocol'] = None
 
 def _ensure_libp2p_path():
     """Ensure libp2p is in the Python path."""
-    if "/serve_app/py-libp2p" not in sys.path and "/Users/hexavor/Desktop/PantheonAI/agents/base-agent/py-libp2p" not in sys.path:
+    if "/serve_app/py-libp2p" not in sys.path and "/Users/hexavor/Desktop/PraxisAI/agents/base-agent/py-libp2p" not in sys.path:
         if os.path.exists("/serve_app/py-libp2p"):
             sys.path.insert(0, "/serve_app/py-libp2p")
         else:
-            sys.path.insert(0, "/Users/hexavor/Desktop/PantheonAI/agents/base-agent/py-libp2p")
+            sys.path.insert(0, "/Users/hexavor/Desktop/PraxisAI/agents/base-agent/py-libp2p")
 
 
 @retry(
@@ -131,7 +132,12 @@ async def setup_libp2p() -> None:
         import trio
         
         async def _setup_libp2p_in_trio():
-            """Внутренняя функция для инициализации libp2p в trio контексте"""
+            from libp2p.relay.circuit_v2.transport import CircuitV2Transport
+            from libp2p.relay.circuit_v2.protocol import STOP_PROTOCOL_ID, CircuitV2Protocol
+            from libp2p.relay.circuit_v2.config import RelayConfig
+            from multiaddr import Multiaddr
+            from libp2p.tools.utils import info_from_p2p_addr
+            
             key_pair_obj = libp2p.create_new_key_pair()
             current_host = libp2p.new_host(key_pair=key_pair_obj)
             logger.info(f"Libp2p host created: peer_id={current_host.get_id()}")
@@ -146,16 +152,29 @@ async def setup_libp2p() -> None:
             registry_multiaddr_val = multiaddr.Multiaddr(registry_addr_str)
             relay_peer_info = PeerInfo(registry_pid, [registry_multiaddr_val])
 
+            # Временно закомментируем relay config, так как circuit transport не используется
             relay_cfg_for_agent = RelayConfig(
                 enable_hop=False,
                 enable_stop=True,
                 enable_client=True,
                 bootstrap_relays=[relay_peer_info],
             )
+            
 
             circuit_protocol_handler = CircuitV2Protocol(
                 current_host, limits=getattr(relay_cfg_for_agent, "limits", None), allow_hop=False
             )
+
+            cfg = RelayConfig(
+                enable_hop=False,
+                enable_stop=True,
+                enable_client=True,
+                bootstrap_relays=[info_from_p2p_addr(Multiaddr("/dns4/relay-service.dev.prxs.ai/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))],
+            )
+
+            circuit_transport = CircuitV2Transport(current_host, circuit_protocol_handler, config=cfg)
+            network = current_host.get_network()
+            print(network)
 
             protocol_muxer = current_host.get_mux()
             protocol_muxer.add_handler(STOP_PROTOCOL_ID, circuit_protocol_handler._handle_stop_stream)
@@ -310,7 +329,7 @@ def diagnose_libp2p_environment() -> dict:
     # Проверяем доступные пути для py-libp2p
     possible_paths = [
         "/serve_app/py-libp2p",
-        "/Users/hexavor/Desktop/PantheonAI/agents/base-agent/py-libp2p",
+        "/Users/hexavor/Desktop/PraxisAI/agents/base-agent/py-libp2p",
         os.path.join(os.getcwd(), "py-libp2p")
     ]
     
@@ -338,3 +357,44 @@ def diagnose_libp2p_environment() -> dict:
         diagnosis["event_loop"] = None
     
     return diagnosis
+
+
+def get_peer_info_formatted() -> dict | None:
+    global libp2p_node
+    
+    if libp2p_node is None:
+        return None
+    
+    try:
+        _ensure_libp2p_path()
+        from libp2p.peer.peerinfo import PeerInfo
+        
+        peer_id = libp2p_node.get_id()
+        addrs = libp2p_node.get_addrs()
+        
+        peer_info = PeerInfo(peer_id, addrs)
+        
+        return {
+            "peer_id": str(peer_info.peer_id),
+            "addrs": [str(addr) for addr in peer_info.addrs],
+            "peer_info_object": peer_info
+        }
+    except Exception as e:
+        logger.error(f"Failed to get peer info: {e}")
+        return None
+
+
+def print_peer_info() -> None:
+    peer_info_data = get_peer_info_formatted()
+    
+    if peer_info_data:
+        print("\n" + "="*60)
+        print("🌐 LIBP2P AGENT PEER INFO")
+        print("="*60)
+        print(f" Peer ID: {peer_info_data['peer_id']}")
+        print(f" Addresses ({len(peer_info_data['addrs'])}):")
+        for i, addr in enumerate(peer_info_data['addrs'], 1):
+            print(f"   {i}. {addr}")
+        print("="*60 + "\n")
+    else:
+        print("\n⚠️  LibP2P peer info not available\n")

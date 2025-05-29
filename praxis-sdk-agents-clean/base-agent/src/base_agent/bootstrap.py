@@ -55,6 +55,13 @@ def bootstrap_main(agent_cls):
                     await setup_libp2p()
                     libp2p_initialized = True
                     print("[INFO] Libp2p setup completed successfully.")
+                    
+                    # ДОБАВЛЯЕМ ПЕЧАТЬ PEER INFO
+                    try:
+                        from base_agent.p2p import print_peer_info
+                        print_peer_info()
+                    except Exception as e:
+                        print(f"[WARNING] Failed to print peer info: {e}")
                 except RuntimeError as e:
                     print(f"[WARNING] Libp2p setup failed - async context error: {e}")
                 except ImportError as e:
@@ -63,6 +70,9 @@ def bootstrap_main(agent_cls):
                     print(f"[WARNING] Libp2p setup failed: {e}")
                     import traceback
                     traceback.print_exc()
+                
+                if not libp2p_initialized:
+                    print("[WARNING] LibP2P not initialized - peer info not available")
                 
                 # Сохраняем статус libp2p для health checks
                 self._libp2p_initialized = libp2p_initialized
@@ -106,13 +116,28 @@ def bootstrap_main(agent_cls):
                     else:
                         return JSONResponse({"error": "Card not available"})
 
+                elif path == "peer" and method == "GET":
+                    """Endpoint для получения информации о peer"""
+                    try:
+                        from base_agent.p2p import get_peer_info_formatted
+                        
+                        peer_info = get_peer_info_formatted()
+                        if peer_info:
+                            return JSONResponse(peer_info)
+                        else:
+                            return JSONResponse({"error": "Peer info not available", "libp2p_initialized": False})
+                    except Exception as e:
+                        return JSONResponse({"error": f"Failed to get peer info: {e}"})
+
                 elif path == "health" and method == "GET":
                     try:
-                        from base_agent.p2p import get_libp2p_status
+                        from base_agent.p2p import get_libp2p_status, get_peer_info_formatted
 
                         libp2p_status = get_libp2p_status()
+                        peer_info = get_peer_info_formatted()
                     except Exception as e:
                         libp2p_status = {"initialized": False, "error": str(e)}
+                        peer_info = None
 
                     health_data = {
                         "status": "healthy",
@@ -121,6 +146,7 @@ def bootstrap_main(agent_cls):
                         "agent_available": self._agent_instance is not None,
                         "libp2p": libp2p_status,
                         "libp2p_initialized": getattr(self, "_libp2p_initialized", False),
+                        "peer_info": peer_info,
                         "components": {
                             "runner": hasattr(self, "_runner") and self._runner is not None,
                             "card": hasattr(self, "_card") and self._card is not None,
@@ -132,10 +158,11 @@ def bootstrap_main(agent_cls):
                 elif path == "debug" and method == "GET":
                     """Endpoint для расширенной диагностики libp2p"""
                     try:
-                        from base_agent.p2p import diagnose_libp2p_environment, get_libp2p_status
+                        from base_agent.p2p import diagnose_libp2p_environment, get_libp2p_status, get_peer_info_formatted
                         
                         debug_data = {
                             "libp2p_status": get_libp2p_status(),
+                            "peer_info": get_peer_info_formatted(),
                             "environment": diagnose_libp2p_environment(),
                             "initialization_status": {
                                 "completed": self._initialization_complete,
@@ -205,6 +232,7 @@ def bootstrap_main(agent_cls):
                             "method": method,
                             "available_endpoints": [
                                 "GET /card", 
+                                "GET /peer",
                                 "GET /health", 
                                 "GET /debug", 
                                 "GET /workflows", 

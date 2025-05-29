@@ -167,7 +167,7 @@ class AgentModel(BaseModel):
     @property
     def endpoint(self) -> str:
         # TODO: Change this to the most appropriate way via route mapping from ai registry
-        return f"***REMOVED***"
+        return f"http://{self.name}-serve-svc.praxis:8000"
         # return "http://localhost:8000"
 
 

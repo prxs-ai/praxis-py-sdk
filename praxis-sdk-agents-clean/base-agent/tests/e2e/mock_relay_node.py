@@ -14,7 +14,7 @@ from loguru import logger
 if os.path.exists("/serve_app/py-libp2p"):
     sys.path.insert(0, "/serve_app/py-libp2p")
 else:
-    sys.path.insert(0, "/Users/hexavor/Desktop/PantheonAI/agents/base-agent/py-libp2p")
+    sys.path.insert(0, "/Users/hexavor/Desktop/PraxisAI/agents/base-agent/py-libp2p")
 
 import libp2p
 from libp2p.relay.circuit_v2.config import RelayConfig

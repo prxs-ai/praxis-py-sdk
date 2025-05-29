@@ -4,7 +4,7 @@ import sys
 import os
 
 # Add local py-libp2p to path for testing
-sys.path.insert(0, '/Users/hexavor/Desktop/PantheonAI/agents/base-agent/py-libp2p')
+sys.path.insert(0, '/Users/hexavor/Desktop/PraxisAI/agents/base-agent/py-libp2p')
 
 
 def test_imports():
@@ -46,7 +46,7 @@ def test_imports():
 
 if __name__ == "__main__":
     # Change to project root
-    os.chdir('/Users/hexavor/Desktop/PantheonAI/agents/base-agent')
+    os.chdir('/Users/hexavor/Desktop/PraxisAI/agents/base-agent')
     
     # Add src to path
     sys.path.insert(0, 'src')

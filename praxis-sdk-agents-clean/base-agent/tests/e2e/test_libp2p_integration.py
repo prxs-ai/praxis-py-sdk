@@ -18,7 +18,7 @@ from loguru import logger
 if os.path.exists('/serve_app/py-libp2p'):
     sys.path.insert(0, '/serve_app/py-libp2p')
 else:
-    sys.path.insert(0, '/Users/hexavor/Desktop/PantheonAI/agents/base-agent/py-libp2p')
+    sys.path.insert(0, '/Users/hexavor/Desktop/PraxisAI/agents/base-agent/py-libp2p')
 
 # Mock Relay Registry API
 app = FastAPI()
