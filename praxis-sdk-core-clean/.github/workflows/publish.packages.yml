@@ -13,7 +13,9 @@ jobs:
   publish:
     permissions:
       id-token: write
-      contents: write
+      contents: read
     uses: ./.github/workflows/reusable.publish-python.yml
     with:
       path: ./packages/${{ github.event.inputs.package_name }}
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}

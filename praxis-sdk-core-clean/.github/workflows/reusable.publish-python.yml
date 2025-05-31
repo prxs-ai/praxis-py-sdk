@@ -6,6 +6,9 @@ on:
       path:
         required: true
         type: string
+    secrets:
+      REGISTRY_TOKEN:
+        required: true
 
 env:
   POETRY_REPOSITORIES_PRX_URL: https://packages.pypi.prx.ai/simple/

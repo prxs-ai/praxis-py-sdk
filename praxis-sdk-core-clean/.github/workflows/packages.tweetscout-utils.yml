@@ -20,3 +20,5 @@ jobs:
     uses: ./.github/workflows/reusable.publish-python.yml
     with:
       path: ./packages/tweetscout-utils
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
