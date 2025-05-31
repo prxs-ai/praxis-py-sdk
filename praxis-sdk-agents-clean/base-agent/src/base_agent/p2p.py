@@ -1,6 +1,7 @@
 import os
 import sys
 import datetime
+import socket
 from typing import List, Optional, TYPE_CHECKING
 
 import httpx
@@ -25,8 +26,12 @@ libp2p_node: Optional['libp2p.IHost'] = None
 PROTOCOL_CARD: Optional['TProtocol'] = None
 
 
+def check_port_open(host: str, port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex((host, port)) == 0
+
+
 def _ensure_libp2p_path():
-    """Ensure libp2p is in the Python path."""
     if "/serve_app/py-libp2p" not in sys.path and "/Users/hexavor/Desktop/PraxisAI/agents/base-agent/py-libp2p" not in sys.path:
         if os.path.exists("/serve_app/py-libp2p"):
             sys.path.insert(0, "/serve_app/py-libp2p")
@@ -65,10 +70,7 @@ async def register_with_registry(peer_id: 'ID', addrs: List[str], agent_name: st
 
 
 async def handle_card(stream: 'INetStream') -> None:
-    """
-    Обработчик для протокола /ai-agent/card/1.0.0
-    Проксирует запрос к локальному HTTP эндпоинту /card
-    """
+
     peer_id_obj = stream.muxed_conn.peer_id
     peer_id_str = str(peer_id_obj) if peer_id_obj else "UnknownPeer"
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -118,6 +120,7 @@ async def setup_libp2p() -> None:
         from libp2p.relay.circuit_v2.config import RelayConfig
         from libp2p.relay.circuit_v2.protocol import STOP_PROTOCOL_ID, CircuitV2Protocol
         from libp2p.relay.circuit_v2.transport import CircuitV2Transport
+        from libp2p.security.insecure.transport import PLAINTEXT_PROTOCOL_ID, InsecureTransport
 
         from libp2p.tools.utils import info_from_p2p_addr
         from multiaddr import Multiaddr
@@ -136,10 +139,15 @@ async def setup_libp2p() -> None:
         import trio
 
         key_pair_obj = libp2p.create_new_key_pair()
-        current_host = libp2p.new_host(key_pair=key_pair_obj)
+        
+        listen_maddr_val = multiaddr.Multiaddr(config.agent_p2p_listen_addr)
+        
+        current_host = libp2p.new_host(
+            key_pair=key_pair_obj,
+            sec_opt={PLAINTEXT_PROTOCOL_ID: InsecureTransport(key_pair_obj)},
+            listen_addrs=[listen_maddr_val],
+        )
         logger.info(f"Libp2p host created: peer_id={current_host.get_id()}")
-
-        relay_info = info_from_p2p_addr(Multiaddr("/ip4/54.76.54.7/tcp/9000/p2p/12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2"))
 
         relay_cfg_for_agent = RelayConfig(
             enable_hop=False,
@@ -171,7 +179,8 @@ async def setup_libp2p() -> None:
             registry_multiaddr_val = multiaddr.Multiaddr(registry_addr_str)
             relay_peer_info = PeerInfo(registry_pid, [registry_multiaddr_val])
 
-            # # Временно закомментируем relay config, так как circuit transport не используется
+            relay_info = info_from_p2p_addr(registry_multiaddr_val)
+
             # relay_cfg_for_agent = RelayConfig(
             #     enable_hop=False,
             #     enable_stop=True,
@@ -193,50 +202,46 @@ async def setup_libp2p() -> None:
             current_host.set_stream_handler(PROTOCOL_CARD, handle_card)
             logger.info(f"Registered stream handler for {PROTOCOL_CARD}")
 
-            listen_maddr_val = multiaddr.Multiaddr(config.agent_p2p_listen_addr)
             network = current_host.get_network()
 
-            listen_success = False
-            
             try:
-                logger.info(f"Attempting to listen on {listen_maddr_val}")
+                logger.info(f"Starting libp2p host with listen address: {listen_maddr_val}")
                 
-                import trio
-                with trio.move_on_after(10) as cancel_scope:  
-                    await network.listen(listen_maddr_val)
-                
-                if cancel_scope.cancelled_caught:
-                    logger.warning("Network listen operation timed out after 10 seconds")
-                    logger.info("Continuing without network listening - libp2p host is still functional")
-                else:
-                    logger.info("Libp2p network started listening successfully.")
-                    listen_success = True
+                async with current_host.run(listen_addrs=[listen_maddr_val]):
+                    logger.info("Libp2p host started successfully")
+                    
+                    if config.agent_p2p_listen_addr.startswith("/ip4/127.0.0.1") or config.agent_p2p_listen_addr.startswith("/ip4/0.0.0.0"):
+                        port_str = config.agent_p2p_listen_addr.split("/tcp/")[1].split("/")[0]
+                        port = int(port_str)
+                        if check_port_open("127.0.0.1", port):
+                            logger.info(f"Confirmed host is listening on 127.0.0.1:{port}")
+                        else:
+                            logger.warning(f"Port check failed for 127.0.0.1:{port}")
+                    
+                    try:
+                        logger.info(f"Connecting to relay: {registry_addr_str}")
+                        await current_host.connect(relay_info)
+                        logger.success("Connected to relay!")
+                    except Exception as e:
+                        logger.warning(f"Failed to connect to relay (continuing anyway): {e}")
+                    
+                    peer_id = current_host.get_id()
+                    actual_addrs = current_host.get_addrs()
+                    addrs_str_list = [str(addr) for addr in actual_addrs]
+                    
+                    logger.info(f"Libp2p node running: peer_id={peer_id} on addrs={addrs_str_list}")
+                    
+                    try:
+                        await register_with_registry(peer_id, addrs_str_list, config.agent_name, config.registry_http_url)
+                        logger.info("Successfully registered with relay registry")
+                    except Exception as e:
+                        logger.warning(f"Failed to register with registry (continuing anyway): {e}")
+                    
+                    await trio.sleep_forever()
                     
             except Exception as e:
-                logger.warning(f"Failed to listen on {listen_maddr_val}: {e}")
-                logger.info("Continuing without network listening - libp2p host is still functional")
-
-            peer_id = current_host.get_id()
-            actual_addrs = current_host.get_addrs()
-            addrs_str_list = [str(addr) for addr in actual_addrs]
-            
-            if listen_success:
-                logger.info(f"Libp2p node started and listening: peer_id={peer_id} on addrs={addrs_str_list}")
-            else:
-                logger.info(f"Libp2p host created (no listening): peer_id={peer_id}")
-
-            if listen_success:
-                try:
-                    await register_with_registry(peer_id, addrs_str_list, config.agent_name, config.registry_http_url)
-                    logger.info("Successfully registered with relay registry")
-                except Exception as e:
-                    logger.warning(f"Failed to register with registry (continuing anyway): {e}")
-            else:
-                logger.info("Skipping registry registration since network listening failed")
-
-            
-            await current_host.connect(relay_info)
-            logger.info("Connection to relay service successful.")
+                logger.error(f"Failed to start libp2p host: {e}")
+                raise
 
             return current_host
 
@@ -263,7 +268,7 @@ async def setup_libp2p() -> None:
         trio_thread.start()
         
         try:
-            libp2p_node = result_future.result(timeout=15)  # Уменьшили до 15 секунд
+            libp2p_node = result_future.result(timeout=15)  
 
             logger.info("Libp2p successfully initialized via trio thread!")
         except concurrent.futures.TimeoutError:
@@ -337,7 +342,6 @@ def diagnose_libp2p_environment() -> dict:
         "py_libp2p_paths": []
     }
     
-    # Проверяем доступные пути для py-libp2p
     possible_paths = [
         "/serve_app/py-libp2p",
         "/Users/hexavor/Desktop/PraxisAI/agents/base-agent/py-libp2p",
@@ -357,7 +361,6 @@ def diagnose_libp2p_environment() -> dict:
         diagnosis["libp2p_available"] = False
         diagnosis["libp2p_error"] = str(e)
     
-    # Проверяем async контекст
     try:
         import asyncio
         loop = asyncio.get_running_loop()
