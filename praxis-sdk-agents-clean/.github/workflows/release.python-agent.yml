@@ -27,7 +27,7 @@ jobs:
     # Allow the job to fetch a GitHub ID token
     permissions:
       id-token: write
-      contents: read
+      contents: write
     uses: ./.github/workflows/reusable.release.yml
     with:
       working_directory: ./src/${{ github.event.inputs.agent }}
