@@ -44,4 +44,4 @@ jobs:
           git config --global user.email "hyp0cr4t@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}
           bump-my-version bump --tag --commit ${{ inputs.part }}
-          git push --follow-tags --force
+          git push --follow-tags
