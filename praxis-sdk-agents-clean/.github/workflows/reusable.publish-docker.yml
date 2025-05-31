@@ -1,4 +1,4 @@
-name: Reusable - Docker Publish to ECR
+name: Reusable - Docker Publish to OCI Registry
 
 on:
   workflow_call:
@@ -62,7 +62,7 @@ jobs:
             local index=50
             while [ "$index" -gt 0 ]; do
               if [ "${word:index:1}" == "-" ]; then
-                break
+                breakAmazon ECR
               fi
               index=$((index - 1))
             done
