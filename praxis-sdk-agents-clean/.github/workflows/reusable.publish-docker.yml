@@ -103,6 +103,6 @@ jobs:
           -t $OCI_REPOSITORY:${IMAGE_TAG} \
           ${{ inputs.path }}
 
-    - name: Push to Amazon ECR
+    - name: Push to OCI
       run: |
         docker push --all-tags $OCI_REPOSITORY
