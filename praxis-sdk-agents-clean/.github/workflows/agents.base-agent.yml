@@ -19,7 +19,7 @@ jobs:
       contents: read
     uses: ./.github/workflows/reusable.publish-agent.yml
     with:
-      path: ./agents
+      path: ./src
       agent_name: base-agent
     secrets:
       OCI_REGISTRY_TOKEN: ${{ secrets.OCI_REGISTRY_TOKEN }}
