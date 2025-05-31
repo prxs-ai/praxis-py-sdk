@@ -1,0 +1,22 @@
+name: Packages - publish send-openai-request
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+      - "staging"
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - "packages/send-openai-request/**"
+    tags:
+      - "packages/send-openai-request-v*"
+
+jobs:
+  build:
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/reusable.publish-python.yml
+    with:
+      path: ./packages/send-openai-request

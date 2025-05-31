@@ -1,0 +1,22 @@
+name: Packages - publish tool-exception
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+      - "staging"
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - "packages/tool-exception/**"
+    tags:
+      - "packages/tool-exception-v*"
+
+jobs:
+  build:
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/reusable.publish-python.yml
+    with:
+      path: ./packages/tool-exception

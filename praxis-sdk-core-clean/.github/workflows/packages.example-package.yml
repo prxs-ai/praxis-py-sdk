@@ -1,0 +1,22 @@
+name: Packages - publish example-package
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+      - "staging"
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - "packages/example-package/**"
+    tags:
+      - "packages/example-package-v*"
+
+jobs:
+  build:
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/reusable.publish-python.yml
+    with:
+      path: ./packages/example-package

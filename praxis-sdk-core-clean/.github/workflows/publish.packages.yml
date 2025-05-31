@@ -1,0 +1,19 @@
+name: Publish package
+on:
+  workflow_dispatch:
+    inputs:
+      package_name:
+        required: true
+        type: choice
+        description: 'package name'
+        options:
+        - example-package
+
+jobs:
+  publish:
+    permissions:
+      id-token: write
+      contents: write
+    uses: ./.github/workflows/reusable.publish-python.yml
+    with:
+      path: ./packages/${{ github.event.inputs.package_name }}

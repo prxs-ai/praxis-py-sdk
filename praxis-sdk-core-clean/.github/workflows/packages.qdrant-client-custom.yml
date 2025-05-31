@@ -1,0 +1,22 @@
+name: Packages - publish qdrant-client-custom
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+      - "staging"
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - "packages/qdrant-client-custom/**"
+    tags:
+      - "packages/qdrant-client-custom-v*"
+
+jobs:
+  build:
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/reusable.publish-python.yml
+    with:
+      path: ./packages/qdrant-client-custom

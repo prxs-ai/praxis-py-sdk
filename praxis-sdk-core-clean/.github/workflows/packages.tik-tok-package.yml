@@ -1,0 +1,22 @@
+name: Packages - publish tik-tok-package
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+      - "staging"
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - "packages/tik-tok-package/**"
+    tags:
+      - "packages/tik-tok-package-v*"
+
+jobs:
+  build:
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/reusable.publish-python.yml
+    with:
+      path: ./packages/tik-tok-package

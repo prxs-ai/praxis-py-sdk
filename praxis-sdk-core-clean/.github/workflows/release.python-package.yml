@@ -1,0 +1,42 @@
+name: Release python package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        required: true
+        type: choice
+        description: 'python package'
+        options:
+          - example-package
+          - twitter-ambassador-utils
+          - tweetscout-utils
+          - redis-client
+          - send-openai-request
+          - tool-exception
+          - qdrant-client-custom
+          - tik-tok-package
+      part:
+        required: true
+        type: choice
+        description: 'part'
+        default: patch
+        options:
+          - major
+          - minor
+          - patch
+
+concurrency: "release"
+
+jobs:
+  publish:
+    # Allow the job to fetch a GitHub ID token
+    permissions:
+      id-token: write
+      contents: write
+    uses: ./.github/workflows/reusable.release.yml
+    with:
+      working_directory: ./packages/${{ github.event.inputs.package }}
+      part: ${{ github.event.inputs.part }}
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
