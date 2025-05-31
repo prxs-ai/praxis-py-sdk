@@ -11,7 +11,7 @@ on:
         required: true
 
 env:
-  POETRY_REPOSITORIES_PRX_URL: https://packages.pypi.prx.ai/simple/
+  POETRY_REPOSITORIES_PRX_URL: https://packages.pypi.prx.ai
   POETRY_HTTP_BASIC_PRX_USERNAME: prx
 
 jobs:
