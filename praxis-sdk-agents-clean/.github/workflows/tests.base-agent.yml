@@ -1,0 +1,42 @@
+name: Tests - base-agent
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+      - "staging"
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - "src/base-agent/**"
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  test:
+    name: Run Pytest for base agent
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: src/base-agent
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run tests via Makefile    
+        run: poetry run make test

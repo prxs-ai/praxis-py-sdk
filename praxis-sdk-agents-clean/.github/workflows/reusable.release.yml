@@ -1,0 +1,47 @@
+name: Reusable - release new version
+
+on:
+    workflow_call:
+      inputs:
+        working_directory:
+          required: true
+          type: string
+        part:
+          required: true
+          type: string
+      secrets:
+        RELEASE_TOKEN:
+          required: true
+
+
+jobs:
+  release:
+    # allow release only from main branch
+    if: ${{ github.ref_name == 'main' }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install bump-my-version
+
+      - name: Release
+        run: |
+          git config --global user.name hyp0cr4t
+          git config --global user.email "hyp0cr4t@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}
+          bump-my-version bump --tag --commit ${{ inputs.part }}
+          git push --follow-tags

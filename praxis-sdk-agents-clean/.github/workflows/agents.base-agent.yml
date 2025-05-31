@@ -1,0 +1,26 @@
+name: Images - publish base-agent
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+      - "staging"
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - "src/base-agent/**"
+    tags:
+      - "agents/base-agent-v*"
+
+jobs:
+  build:
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/reusable.publish-agent.yml
+    with:
+      path: ./agents
+      agent_name: base-agent
+    secrets:
+      OCI_REGISTRY_TOKEN: ${{ secrets.OCI_REGISTRY_TOKEN }}
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}

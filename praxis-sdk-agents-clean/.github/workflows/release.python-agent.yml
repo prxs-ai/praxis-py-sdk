@@ -1,0 +1,36 @@
+name: Release python agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        required: true
+        type: choice
+        description: "agent name"
+        options:
+          - base-agent
+
+      part:
+        required: true
+        type: choice
+        description: "part"
+        default: patch
+        options:
+          - major
+          - minor
+          - patch
+
+concurrency: "release"
+
+jobs:
+  publish:
+    # Allow the job to fetch a GitHub ID token
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/reusable.release.yml
+    with:
+      working_directory: ./src/${{ github.event.inputs.agent }}
+      part: ${{ github.event.inputs.part }}
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
