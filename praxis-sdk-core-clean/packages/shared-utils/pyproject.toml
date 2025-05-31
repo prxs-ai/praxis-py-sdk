@@ -1,0 +1,31 @@
+[project]
+name = "shared-utils"
+version = "0.0.1"
+description = "Package that consists shared utils"
+authors = [
+    { name = "0xDevZip", email = "noreply@example.com" }
+]
+requires-python = ">=3.10,<4"
+dependencies = [
+    "loguru>=0.7.2,<0.8.0",
+    "aiohttp>=3.11.14,<4.0.0",
+    "send-openai-request (>=0.0.2, <0.1.0)",
+]
+
+readme = "README.md"
+
+[tool.poetry]
+packages = [{ include = "*", from = "src" }]
+
+[[tool.poetry.source]]
+name = "praxis"
+url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple/"
+priority = "primary"
+
+[tool.poetry.dependencies]
+redis-client = {source = "praxis"}
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
