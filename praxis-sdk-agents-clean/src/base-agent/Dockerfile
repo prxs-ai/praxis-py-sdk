@@ -17,20 +17,13 @@ RUN poetry export -f requirements.txt --without-hashes --output requirements.txt
 
 FROM ${BASE_IMAGE}
 
-ARG PIP_EXTRA_INDEX_URL
-ENV PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL}
-
 # Install dependencies with a private registry
 COPY --from=builder /build/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r ./requirements.txt && \
     rm ./requirements.txt
 
-# Install keyring and keyrings.codeartifact
-RUN pip install keyring keyrings.codeartifact
-
-# Clean the environment variables
-ENV PIP_INDEX_URL=https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple/
-ENV PIP_EXTRA_INDEX_URL="https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/agents/simple/ https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/tools/simple/"
+# Set the environment variables
+ENV PIP_EXTRA_INDEX_URL="https://packages.pypi.prxs.ai/simple/ https://tools.pypi.prxs.ai/simple/"
 
 WORKDIR /serve_app
 
