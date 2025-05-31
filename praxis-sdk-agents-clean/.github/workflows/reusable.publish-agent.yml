@@ -1,0 +1,62 @@
+name: Reusable - Agent Publish
+
+on:
+  workflow_call:
+    inputs:
+      path:
+        required: true
+        type: string
+      agent_name:
+        required: true
+        type: string
+    secrets:
+      REGISTRY_TOKEN:
+        required: true
+      OCI_REGISTRY_TOKEN:
+        required: true
+
+jobs:
+  publish-python:
+    uses: ./.github/workflows/reusable.publish-python.yml
+    with:
+      path: ${{ inputs.path }}/${{ inputs.agent_name }}
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+
+  check_dockerfile:
+    runs-on: ubuntu-latest
+    outputs:
+      has_dockerfile: ${{ steps.check_file.outputs.has_dockerfile }}
+      image_tag: ${{ steps.build_tag.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: check_file
+        run: |
+          if [ -f "${{ inputs.path }}/${{ inputs.agent_name }}/Dockerfile" ]; then
+            echo "has_dockerfile=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_dockerfile=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - id: build_tag
+        run: |
+          TAG_NAME=${GITHUB_REF_NAME//\//-}
+          # Assuming version tags formatted as prefix/image-name-v* or similar
+          if [[ "$TAG_NAME" =~ ^.*-${{ inputs.agent_name }}-v(.+) ]]; then
+            VERSION=${{ inputs.agent_name }}-v${BASH_REMATCH[1]}
+          else
+            VERSION=${{ inputs.agent_name }}-$TAG_NAME
+          fi
+          echo "image_tag=$VERSION" >> $GITHUB_OUTPUT
+
+  publish-docker:
+    needs: [check_dockerfile, publish-python]
+    if: needs.check_dockerfile.outputs.has_dockerfile == 'true'
+    uses: ./.github/workflows/reusable.publish-docker.yml 
+    with:
+      path: ${{ inputs.path }}/${{ inputs.agent_name }}
+      image_name: agents
+      dockerfile: ${{ inputs.path }}/${{ inputs.agent_name }}/Dockerfile
+      tag_name: ${{ needs.check_dockerfile.outputs.image_tag }}
+    secrets:
+      OCI_REGISTRY_TOKEN: ${{ secrets.OCI_REGISTRY_TOKEN }}
