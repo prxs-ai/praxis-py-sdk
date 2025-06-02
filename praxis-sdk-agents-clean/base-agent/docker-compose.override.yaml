@@ -53,7 +53,8 @@ services:
         condition: service_started
     environment:
       REGISTRY_HTTP_URL: http://relay-service.dev.prxs.ai:8082
-      REGISTRY_RELAY_PEER_ID: 12D3KooWR2ykSpRSRoqdVmrqrm55sWuLz8jQPrnGoUPsiwTQ7Dd2
-      REGISTRY_RELAY_MULTIADDR_TEMPLATE: /dns4/relay-service.dev.prxs.ai/tcp/9000/p2p/{}
+      REGISTRY_RELAY_PEER_ID: 12D3KooWNVPSC2WyHJaqGSTmpDwumXt6VJRXV1pyJafJobJZYrKu
+      REGISTRY_RELAY_MULTIADDR_TEMPLATE: /ip4/52.215.229.36/tcp/9000/p2p/{}
       AGENT_P2P_LISTEN_ADDR: /ip4/0.0.0.0/tcp/9001
       AGENT_NAME: base-agent-docker
+

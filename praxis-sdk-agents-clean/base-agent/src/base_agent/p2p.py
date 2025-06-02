@@ -229,7 +229,7 @@ async def setup_libp2p() -> None:
                     except Exception as e:
                         logger.warning(f"Failed to register with registry (continuing anyway): {e}")
                     
-                    await trio.sleep_forever()
+                   
                     
             except Exception as e:
                 logger.error(f"Failed to start libp2p host: {e}")
