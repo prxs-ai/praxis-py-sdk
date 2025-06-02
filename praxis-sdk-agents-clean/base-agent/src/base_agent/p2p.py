@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 from base_agent.config import get_agent_config
 
 libp2p_node: Optional['libp2p.IHost'] = None
+saved_peer_info: Optional[dict] = None  # Сохраняем информацию о peer
 
 PROTOCOL_CARD: Optional['TProtocol'] = None
 
@@ -223,6 +224,12 @@ async def setup_libp2p() -> None:
                     
                     logger.info(f"Libp2p node running: peer_id={peer_id} on addrs={addrs_str_list}")
                     
+                    global saved_peer_info
+                    saved_peer_info = {
+                        "peer_id": str(peer_id),
+                        "addrs": addrs_str_list
+                    }
+                    
                     try:
                         await register_with_registry(peer_id, addrs_str_list, config.agent_name, config.registry_http_url)
                         logger.info("Successfully registered with relay registry")
@@ -278,7 +285,7 @@ async def setup_libp2p() -> None:
 
 
 async def shutdown_libp2p() -> None:
-    global libp2p_node
+    global libp2p_node, saved_peer_info
     if libp2p_node:
         logger.info("Shutting down libp2p node...")
         try:
@@ -292,6 +299,7 @@ async def shutdown_libp2p() -> None:
             logger.error(f"Error during libp2p_node.get_network().close(): {e}")
 
         libp2p_node = None
+        saved_peer_info = None  # Очищаем сохраненную информацию
         logger.info("Libp2p node resources cleared.")
     else:
         logger.info("Libp2p node already shut down or not initialized.")
@@ -299,14 +307,18 @@ async def shutdown_libp2p() -> None:
 
 def get_libp2p_status() -> dict:
     """Get the current status of the libp2p node."""
-    global libp2p_node
+    global libp2p_node, saved_peer_info
     
     if libp2p_node is None:
         return {"initialized": False, "peer_id": None, "addrs": []}
     
     try:
-        peer_id = libp2p_node.get_id()
-        addrs = [str(addr) for addr in libp2p_node.get_addrs()]
+        if saved_peer_info:
+            peer_id = saved_peer_info["peer_id"]
+            addrs = saved_peer_info["addrs"]
+        else:
+            peer_id = libp2p_node.get_id()
+            addrs = [str(addr) for addr in libp2p_node.get_addrs()]
         
         network = libp2p_node.get_network()
         network_info = {
@@ -321,6 +333,14 @@ def get_libp2p_status() -> dict:
             "network": network_info
         }
     except Exception as e:
+        # Если не удалось получить сетевую информацию, но есть сохраненные данные
+        if saved_peer_info:
+            return {
+                "initialized": True,
+                "peer_id": saved_peer_info["peer_id"],
+                "addrs": saved_peer_info["addrs"],
+                "network": {"error": str(e)}
+            }
         return {"initialized": False, "error": str(e), "peer_id": None, "addrs": []}
 
 
@@ -366,8 +386,13 @@ def diagnose_libp2p_environment() -> dict:
 
 
 def get_peer_info_formatted() -> dict | None:
-    global libp2p_node
+    global libp2p_node, saved_peer_info
     
+    # Сначала пытаемся вернуть сохраненную информацию
+    if saved_peer_info is not None:
+        return saved_peer_info
+    
+    # Если нет сохраненной информации, пытаемся получить напрямую
     if libp2p_node is None:
         return None
     
