@@ -149,19 +149,6 @@ async def setup_libp2p() -> None:
         )
         logger.info(f"Libp2p host created: peer_id={current_host.get_id()}")
 
-        relay_cfg_for_agent = RelayConfig(
-            enable_hop=False,
-            enable_stop=True,
-            enable_client=True,
-            bootstrap_relays=[relay_info],
-        )
-        circuit_protocol_handler = CircuitV2Protocol(
-            current_host, limits=getattr(relay_cfg_for_agent, "limits", None), allow_hop=False
-        )
-
-        circuit_transport = CircuitV2Transport(current_host, circuit_protocol_handler, config=relay_cfg_for_agent)
-
-        
         async def _setup_libp2p_in_trio():
             from libp2p.relay.circuit_v2.transport import CircuitV2Transport
             from libp2p.relay.circuit_v2.protocol import STOP_PROTOCOL_ID, CircuitV2Protocol
@@ -181,13 +168,18 @@ async def setup_libp2p() -> None:
 
             relay_info = info_from_p2p_addr(registry_multiaddr_val)
 
-            # relay_cfg_for_agent = RelayConfig(
-            #     enable_hop=False,
-            #     enable_stop=True,
-            #     enable_client=True,
-            #     bootstrap_relays=[relay_peer_info],
-            # )
+            # Создаем relay configuration с правильными переменными
+            relay_cfg_for_agent = RelayConfig(
+                enable_hop=False,
+                enable_stop=True,
+                enable_client=True,
+                bootstrap_relays=[relay_peer_info],
+            )
             
+            # Создаем circuit protocol handler
+            circuit_protocol_handler = CircuitV2Protocol(
+                current_host, limits=getattr(relay_cfg_for_agent, "limits", None), allow_hop=False
+            )
 
             network = current_host.get_network()
 

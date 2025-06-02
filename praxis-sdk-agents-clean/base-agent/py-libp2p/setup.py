@@ -58,7 +58,7 @@ install_requires = [
     "multiaddr>=0.0.9",
     "mypy-protobuf>=3.0.0",
     "noiseprotocol>=0.3.0",
-    "protobuf>=5.29.1",
+    "protobuf>=6.30.1",
     "pycryptodome>=3.9.2",
     "pymultihash>=0.8.2",
     "pynacl>=1.3.0",
@@ -73,7 +73,7 @@ install_requires.extend(crypto_requires)
 setup(
     name="libp2p",
     # *IMPORTANT*: Don't manually change the version here. See Contributing docs for the release process.
-    version="0.2.5",
+    version="0.2.7",
     description=description,
     long_description=long_description,
     long_description_content_type="text/markdown",
