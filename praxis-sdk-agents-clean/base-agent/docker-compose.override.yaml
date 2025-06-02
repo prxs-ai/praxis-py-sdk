@@ -52,7 +52,7 @@ services:
       relay-node:
         condition: service_started
     environment:
-      REGISTRY_HTTP_URL: http://relay-service.dev.prxs.ai:8082
+      REGISTRY_HTTP_URL: https://relay-service.dev.prxs.ai
       REGISTRY_RELAY_PEER_ID: 12D3KooWNVPSC2WyHJaqGSTmpDwumXt6VJRXV1pyJafJobJZYrKu
       REGISTRY_RELAY_MULTIADDR_TEMPLATE: /ip4/52.215.229.36/tcp/9000/p2p/{}
       AGENT_P2P_LISTEN_ADDR: /ip4/0.0.0.0/tcp/9001
