@@ -17,14 +17,17 @@ def get_entry_points(group: str) -> list[EntryPoint]:
 
 def get_entrypoint(
     group: EntrypointGroup, target_entrypoint: str = "target", default_entrypoint: str = "basic"
-) -> EntryPoint:
+) -> EntryPoint | None:
     entrypoints = get_entry_points(group.group_name)
-    try:
-        return entrypoints.select(name=target_entrypoint)[0]
-    except (KeyError, IndexError):
-        found = [ep for ep in entrypoints if ep.name == default_entrypoint]
-        if found:
-            return found[0]
+    for ep in entrypoints:
+        if ep.name == target_entrypoint:
+            return ep
+    
+    for ep in entrypoints:
+        if ep.name == default_entrypoint:
+            return ep
+    
+    return None
 
 
 def default_stringify_rule_for_arguments(args):

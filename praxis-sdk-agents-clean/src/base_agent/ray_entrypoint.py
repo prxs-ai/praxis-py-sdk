@@ -1,14 +1,17 @@
 import datetime
 import uuid
 from collections.abc import Sequence
+from logging import getLogger
 from typing import Any
 from urllib.parse import urljoin
 
 import requests
+from ray.serve.deployment import Application
 
 from base_agent import abc, const
 from base_agent.ai_registry import ai_registry_builder
 from base_agent.bootstrap import bootstrap_main
+from base_agent.card.models import AgentCard
 from base_agent.config import BasicAgentConfig, get_agent_config
 from base_agent.domain_knowledge import light_rag_builder
 from base_agent.langchain import executor, executor_builder
@@ -17,19 +20,15 @@ from base_agent.models import (
     AgentModel,
     ChatMessageModel,
     GoalModel,
+    HandoffParamsModel,
     InsightModel,
     MemoryModel,
-    Task,
     ToolModel,
+    Workflow,
 )
 from base_agent.prompt import prompt_builder
-from base_agent.workflows import workflow_builder
 
-
-class BaseAgentInputModel(abc.AbstractAgentInputModel): ...
-
-
-class BaseAgentOutputModel(abc.AbstractAgentOutputModel): ...
+logger = getLogger(__name__)
 
 
 class BaseAgent(abc.AbstractAgent):
@@ -41,7 +40,6 @@ class BaseAgent(abc.AbstractAgent):
 
     def __init__(self, config: BasicAgentConfig, *args, **kwargs):
         self.config = config
-        self.workflow_runner = workflow_builder()
         self.agent_executor = executor_builder()
         self.prompt_builder = prompt_builder()
 
@@ -58,23 +56,23 @@ class BaseAgent(abc.AbstractAgent):
         self,
         goal: str,
         plan: dict | None = None,
-        context: BaseAgentInputModel | None = None,
-    ) -> BaseAgentOutputModel:
+        context: abc.BaseAgentInputModel | None = None,
+    ) -> abc.BaseAgentOutputModel:
         """This is one of the most important endpoints of MAS.
         It handles all requests made by handoff from other agents or by user.
 
         If a predefined plan is provided, it skips plan generation and executes the plan directly.
         Otherwise, it follows the standard logic to generate a plan and execute it.
         """
-        if isinstance(plan, dict) and plan and all(isinstance(v, Task) for v in plan.values()):
-            result = self.run_workflow(plan, context)
+        if plan:
+            result = await self.run_workflow(plan, context)
             self.store_interaction(goal, plan, result, context)
             return result
 
         insights = self.get_relevant_insights(goal)
         past_interactions = self.get_past_interactions(goal)
         agents = self.get_most_relevant_agents(goal)
-        tools = self.get_most_relevant_tools(goal)
+        tools = self.get_most_relevant_tools(goal, agents)
 
         plan = self.generate_plan(
             goal=goal,
@@ -84,7 +82,7 @@ class BaseAgent(abc.AbstractAgent):
             past_interactions=past_interactions,
             plan=None,
         )
-        result = self.run_workflow(plan, context)
+        result = await self.run_workflow(plan, context)
         self.store_interaction(goal, plan, result, context)
         return result
 
@@ -95,8 +93,8 @@ class BaseAgent(abc.AbstractAgent):
         self,
         goal: str,
         plan: dict,
-        result: BaseAgentOutputModel,
-        context: BaseAgentInputModel | None = None,
+        result: abc.BaseAgentOutputModel,
+        context: abc.BaseAgentInputModel | None = None,
     ) -> None:
         interaction = MemoryModel(
             **{
@@ -154,39 +152,58 @@ class BaseAgent(abc.AbstractAgent):
             return []
 
         return [AgentModel(**agent) for agent in response]
+        # return [AgentModel(
+        #     name = 'example-agent',
+        #     description = 'This is an agent to handoff the any goal',
+        #     version = '0.1.0'
+        # )]
 
-    def get_most_relevant_tools(self, goal: str) -> list[ToolModel]:
+    def get_most_relevant_tools(self, goal: str, agents: list[AgentModel]) -> list[ToolModel]:
         """
         This method is used to find the most useful tools for the given goal.
 
-        Example:
+        """
+        response = self.ai_registry_client.post(
+            endpoint=self.ai_registry_client.endpoints.find_tools,
+            json=GoalModel(goal=goal).model_dump(),
+        )
+        tools = [ToolModel(**tool) for tool in response]
 
-        return [
-            ToolModel(
-                name="handoff-tool",
-                version="0.1.0",
-                openai_function_spec={
+        for agent in agents:
+            card_url = urljoin(agent.endpoint, "/card")
+            try:
+                resp = requests.get(card_url)
+                resp.raise_for_status()
+
+                data = resp.json()
+                card = AgentCard(**data)
+            except Exception as e:
+                logger.warning(f"Failed to fetch card from agent {agent} at {card_url}: {e}")
+                continue
+            for skill in card.skills:
+                func_name = f"{agent.name}_{skill.id}".replace("-", "_")
+                spec = {
                     "type": "function",
                     "function": {
-                        "name": "handoff_tool",
-                        "description": "A tool that returns the string passed in as an output.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "agent": {"type": "string", "description": "The name of the agent to use.", "enum": []},
-                                "goal": {"type": "string", "description": "The goal to achieve."},
-                            },
-                            "required": ["agent", "goal"],
-                        },
-                        "output": {
-                            "type": "object",
-                            "properties": {
-                                "result": {"type": "string", "description": "The result returned by the agent."}
-                            },
-                        },
+                        "name": func_name,
+                        "description": skill.description,
+                        "parameters": skill.input_model.model_json_schema(),
+                        "output": skill.output_model.model_json_schema(),
                     },
-                },
-            ),
+                }
+                tools.append(
+                    ToolModel(
+                        name="handoff-tool",
+                        version="0.1.0",
+                        default_parameters=HandoffParamsModel(
+                            endpoint=agent.endpoint, path=skill.path, method=skill.method
+                        ).model_dump(),
+                        parameters_spec=skill.params_model.model_json_schema(),
+                        openai_function_spec=spec,
+                    )
+                )
+
+        return tools + [
             ToolModel(
                 name="return-answer-tool",
                 version="0.1.2",
@@ -219,16 +236,6 @@ class BaseAgent(abc.AbstractAgent):
                 },
             ),
         ]
-        """
-        response = self.ai_registry_client.post(
-            endpoint=self.ai_registry_client.endpoints.find_tools,
-            json=GoalModel(goal=goal).model_dump(),
-        )
-
-        if not response:
-            return []
-
-        return [ToolModel(**tool) for tool in response]
 
     def generate_plan(
         self,
@@ -238,7 +245,7 @@ class BaseAgent(abc.AbstractAgent):
         past_interactions: Sequence[MemoryModel],
         insights: Sequence[InsightModel],
         plan: dict | None = None,
-    ) -> dict[int, Task]:
+    ) -> Workflow:
         """This method is used to generate a plan for the given goal."""
         return self.agent_executor.generate_plan(
             self.prompt_builder.generate_plan_prompt(system_prompt=self.config.system_prompt),
@@ -411,12 +418,12 @@ class BaseAgent(abc.AbstractAgent):
         self.store_chat_context(session_uuid, chat_history)
         return response
 
-    def run_workflow(
+    async def run_workflow(
         self,
-        plan: dict[int, Task],
-        context: BaseAgentInputModel | None = None,
-    ) -> BaseAgentOutputModel:
-        return self.workflow_runner.run(plan, context)
+        plan: Workflow,
+        context: abc.BaseAgentInputModel | None = None,
+    ) -> abc.BaseAgentOutputModel:
+        return await self.workflow_runner.run(plan, context)
 
     def reconfigure(self, config: dict[str, Any]):
         pass
@@ -427,5 +434,5 @@ class BaseAgent(abc.AbstractAgent):
         return requests.post(urljoin(endpoint, goal), json=plan).json()
 
 
-def agent_builder(args: dict):
+def agent_builder(args: dict) -> Application:
     return bootstrap_main(BaseAgent).bind(config=get_agent_config(**args))

@@ -32,8 +32,8 @@ class DAGRunner(abc.AbstractWorkflowRunner):
 
     @classmethod
     def start_daemon(cls: "DAGRunner", include_failed=False) -> None:
-        workflow.init()
-        # workflow.resume_all(include_failed)
+    
+        pass  # Ensure the method is not empty if all lines are commented
 
     @classmethod
     def stop_daemon(cls: "DAGRunner") -> None:
@@ -77,7 +77,7 @@ class DAGRunner(abc.AbstractWorkflowRunner):
 
         return get_tool_entrypoint_wrapper, step.args
 
-    def run(self, dag_spec: Workflow, context: Any = None, async_mode=False) -> Any:
+    async def run(self, dag_spec: Workflow, context: Any = None, async_mode=False) -> Any:
         """Runs the DAG using Ray Workflows"""
         # Create remote functions for each step
         steps = {}
