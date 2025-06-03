@@ -24,7 +24,7 @@ class BaseLLMProviderConfig(BaseSettings):
 
 # OpenAI provider configuration
 class OpenAIConfig(BaseLLMProviderConfig):
-    api_key: SecretStr | None
+    api_key: SecretStr | None = None
     model: str = "gpt-4o"
 
 
@@ -65,7 +65,7 @@ def get_langchain_config() -> BasicLangChainConfig:
 
     # Initialize provider configs if they're None but selected as provider
     if config.provider == ProviderEnum.OPENAI and config.openai is None:
-        config.openai = OpenAIConfig()
+        config.openai = OpenAIConfig(api_key=config.openai_api_key)
     elif config.provider == ProviderEnum.DEEPSEEK and config.deepseek is None:
         config.deepseek = DeepSeekConfig()
     elif config.provider == ProviderEnum.ANTHROPIC and config.anthropic is None:

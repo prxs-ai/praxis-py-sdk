@@ -1,6 +1,6 @@
 import re
 from collections.abc import Sequence
-from enum import StrEnum
+from enum import Enum
 
 import yaml
 from langchain.agents.agent import AgentOutputParser
@@ -9,11 +9,11 @@ from langchain.schema import OutputParserException
 from base_agent.models import InputItem, OutputItem, ToolModel, Workflow, WorkflowStep
 
 
-class RegexPattern(StrEnum):
+class RegexPattern(str, Enum):
     THOUGHT = r"Thought: ([^\n]*)"
     ACTION = r"\n*(\d+)\. (\w+)\((.*)\)(\s*#\w+\n)?"
     ID = r"\$\{?(\d+)\}?"
-    YAML_BLOCK = r"```yaml\s+(.*?)\s+```"
+    YAML_PATTERN = r"```yaml\s+(.*?)\s+```"
     TEMPLATE_EXPR = r"\{\{(.*?)\}\}"
 
 

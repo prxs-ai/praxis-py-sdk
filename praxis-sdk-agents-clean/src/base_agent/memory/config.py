@@ -15,7 +15,7 @@ class Redis(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_prefix="REDIS_CELERY_",
+        env_prefix="REDIS_",
         env_file_encoding="utf-8",
         extra=Extra.ignore,
     )
