@@ -4,6 +4,7 @@ from base_agent.const import EntrypointGroup
 from base_agent.models import ChatRequest
 from base_agent.utils import get_entrypoint
 from ray import serve
+import os
 
 entrypoint = get_entrypoint(EntrypointGroup.AGENT_ENTRYPOINT)
 if entrypoint is None:
@@ -17,7 +18,10 @@ if __name__ == "__main__":
     from ray import serve
 
     # Run Ray Serve in local testing mode
-    handle = serve.run(app({}), route_prefix="/", _local_testing_mode=True)
+    if os.environ["DEBUG"]:
+        handle = serve.run(app({}), route_prefix="/", _local_testing_mode=True)
+    else:
+        handle = serve.run(app({}), route_prefix="/")
 
     app = FastAPI()
 
