@@ -23,7 +23,7 @@ class DAGRunner:
         self.steps = {}
 
     def create_step(self, task: Task):
-        """Creates a remote function for a step"""
+        """Create a remote function for a step."""
 
         @ray.workflow.options(checkpoint=True)
         @ray.remote(
@@ -43,7 +43,7 @@ class DAGRunner:
         return get_tool_entrypoint_wrapper
 
     def run(self, dag_spec: dict[int, Task], context: str | None) -> Any:
-        """Runs the DAG using Ray Workflows"""
+        """Run the DAG using Ray Workflows."""
         # Create remote functions for each step
         for _step_id, task in dag_spec.items():
             self.steps[task.task_id] = self.create_step(task)

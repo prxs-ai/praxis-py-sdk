@@ -1,4 +1,3 @@
-
 from functools import lru_cache
 
 import pydantic
@@ -6,9 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class CardConfig(BaseSettings):
-    name: str = 'base-agent'
-    version: str = '0.1.2'
-    description: str = 'This is a base agent. It provides a base implementation for all other agents.'
+    name: str = "base-agent"
+    version: str = "0.1.2"
+    description: str = "This is a base agent. It provides a base implementation for all other agents."
 
     model_config = SettingsConfigDict(
         env_file=".env",

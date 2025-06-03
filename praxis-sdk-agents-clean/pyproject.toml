@@ -16,13 +16,14 @@ dependencies = [
     "mem0ai==0.1.67",
     "lightrag-hku==1.2.5",
     "redisvl (>=0.6.0,<0.7.0)",
-    "libp2p @ git+https://github.com/hyp0cr4t/py-libp2p.git@feat/circuit-v2#egg=libp2p",
+    "libp2p @ git+https://github.com/Winter-Soren/py-libp2p.git@feat/587-circuit-relay#egg=libp2p",
     "loguru (>=0.7.3,<0.8.0)",
     "trio-asyncio (>=0.15.0,<0.16.0)",
 ]
 
 [tool.poetry]
 packages = [{ include = "*", from = "src" }]
+
 
 [project.entry-points."agent.executor.config"]
 basic = "base_agent.langchain.config:get_langchain_config"
@@ -73,10 +74,133 @@ basic = "base_agent.p2p.manager:get_p2p_manager"
 ray = { extras = ["serve"], version = "2.42.1" }
 pytest = "^8.3.4"
 pyarrow = "^19.0.1"
-factory-boy = "^2.12.0"
-pytest-trio = "^0.8.0"
-pytest-asyncio = "^1.0.0"
+pre-commit = "^4.2.0"
+ruff = "^0.11.12"
+mypy = "^1.16.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "BLE001",
+    "F821",
+    "PERF",
+    "INP001",
+    "A001",
+    "PLW2901",
+    "G",
+    "E501",
+    "PTH",
+    "TRY",
+    "ARG",
+    "C",
+    "ERA",
+    "PLR",
+    "DTZ",
+    "S",
+    "RUF",
+    "PERF203",
+    "ANN",
+    "TRY401",
+    "EM",
+    "FBT",
+    "TRY003",
+    "D1",
+    "D203",
+    "D213",
+    "G004",
+    "FA",
+    "COM812",
+    "ISC001",
+    "RUF001",
+    "B904",
+    "ASYNC110",   # ← Разрешает trio.sleep в while циклах
+    "ASYNC210",   # ← Разрешает блокирующие HTTP в async функциях
+    "ASYNC230",
+    "FIX002",
+    "T",        # ← Разрешает print() и pprint()
+    "T201",     # ← Разрешает print()
+    "T203",     # ← Разрешает pprint()
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+# Максимально мягкие настройки для legacy кода
+warn_return_any = false
+warn_unused_configs = false
+check_untyped_defs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_any_generics = false
+disallow_any_unimported = false
+disallow_subclassing_any = false
+warn_redundant_casts = false
+warn_unused_ignores = false
+strict_optional = false
+strict_equality = false
+ignore_missing_imports = true
+ignore_errors = false
+show_error_codes = true
+follow_imports = "silent"
+
+# Исключаем директории с тестами и legacy код
+exclude = [
+    "tests/",
+    "build/",
+    "dist/",
+    "src/base_agent/ray_entrypoint.py",  # Много ошибок override
+]
+
+# Отключаем самые проблемные коды ошибок
+disable_error_code = [
+    "no-untyped-def",
+    "no-untyped-call",
+    "no-any-return",
+    "misc",
+    "type-arg",
+    "unused-ignore",
+    "override",
+    "assignment",
+    "arg-type",
+    "call-overload",
+    "return-value",
+    "attr-defined",
+    "name-defined",
+    "call-arg",
+    "var-annotated",
+    "valid-type",
+    "comparison-overlap",
+    "unused-coroutine",
+]
+
+# Игнорируем распространенные ошибки для pydantic и других библиотек
+[[tool.mypy.overrides]]
+module = [
+    "pydantic.*",
+    "pydantic_settings.*",
+    "ray.*",
+    "libp2p.*",
+    "multiaddr.*",
+    "langchain.*",
+    "langfuse.*",
+]
+ignore_errors = true
+
+# Игнорируем ошибки в проблемных файлах
+[[tool.mypy.overrides]]
+module = [
+    "base_agent.ray_entrypoint",
+    "ray_entrypoint",
+]
+ignore_errors = true

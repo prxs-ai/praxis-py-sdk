@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class StrEnumMixIn(str, Enum):
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
@@ -15,7 +15,6 @@ class Intents(StrEnumMixIn):
     CHANGE_SETTINGS = "change_settings"
     ADD_KNOWLEDGE = "add_knowledge"
     CHIT_CHAT = "chit_chat"
-
 
     @property
     def all(self) -> set[str]:
@@ -49,5 +48,5 @@ class EntrypointGroup(StrEnumMixIn):
     P2P_ENTRYPOINT = "p2p.entrypoint"
 
     @property
-    def group_name(self):
+    def group_name(self) -> str:
         return str(self)

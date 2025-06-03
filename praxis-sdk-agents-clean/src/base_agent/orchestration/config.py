@@ -1,8 +1,8 @@
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings
-from base_agent.orchestration.models import WorkflowSettings
 
+from base_agent.orchestration.models import WorkflowSettings
 
 
 class BasicWorkflowConfig(BaseSettings):

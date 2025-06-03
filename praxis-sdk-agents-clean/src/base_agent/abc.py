@@ -10,31 +10,21 @@ from base_agent.models import AgentModel, ToolModel, Workflow
 class AbstractAgentCard(pydantic.BaseModel):
     """Abstract interface for agent cards."""
 
-    ...
-
 
 class AbstractAgentSkill(pydantic.BaseModel):
     """Abstract interface for agent skills."""
-
-    ...
 
 
 class AbstractAgentParamsModel(pydantic.BaseModel):
     """Abstract interface for agent params model."""
 
-    ...
-
 
 class AbstractAgentInputModel(pydantic.BaseModel):
-    """Abstract interface for agent intput model"""
-
-    ...
+    """Abstract interface for agent input model."""
 
 
 class AbstractAgentOutputModel(pydantic.BaseModel):
-    """Abstract interface for agennt output model"""
-
-    ...
+    """Abstract interface for agent output model."""
 
 
 class AbstractChatResponse(pydantic.BaseModel):
@@ -61,8 +51,8 @@ class AbstractExecutor(ABC):
 
         Returns:
             A dictionary mapping step IDs to Task objects representing the plan
+
         """
-        pass
 
     @abstractmethod
     def chat(self, prompt: Any, **kwargs) -> str:
@@ -74,8 +64,8 @@ class AbstractExecutor(ABC):
 
         Returns:
             An str with response
+
         """
-        pass
 
     @abstractmethod
     def classify_intent(self, prompt: Any, **kwargs) -> str:
@@ -87,12 +77,12 @@ class AbstractExecutor(ABC):
 
         Returns:
             An str with intent
+
         """
-        pass
 
     @abstractmethod
     def reconfigure(self, prompt: Any, **kwargs) -> dict:
-        """Create new config bases on the currenct config and the user reuqest
+        """Create new config based on the current config and the user request.
 
         Args:
             prompt: The prompt to use for updating config
@@ -100,8 +90,8 @@ class AbstractExecutor(ABC):
 
         Returns:
             A dict with the updated config
+
         """
-        pass
 
 
 class AbstractPromptBuilder(ABC):
@@ -117,8 +107,8 @@ class AbstractPromptBuilder(ABC):
 
         Returns:
             A prompt object that can be used by an executor
+
         """
-        pass
 
     @abstractmethod
     def generate_chat_prompt(self, *args, **kwargs) -> Any:
@@ -130,29 +120,33 @@ class AbstractPromptBuilder(ABC):
 
         Returns:
             A prompt object that can be used by an executor
+
         """
-        pass
 
     @abstractmethod
     def generate_intent_classifier_prompt(self, *args, **kwargs) -> Any:
-        """Generat a prompt for intent classification
+        """Generate a prompt for intent classification.
+
         Args:
             *args: Positional arguments for prompt generation
             **kwargs: Keyword arguments for prompt generation
 
         Returns:
             A prompt object that can be used by an executor
+
         """
 
     @abstractmethod
     def generate_reconfigure_prompt(self, *args, **kwargs) -> Any:
-        """Generat a prompt for reconfiguration
+        """Generate a prompt for reconfiguration.
+
         Args:
             *args: Positional arguments for prompt generation
             **kwargs: Keyword arguments for prompt generation
 
         Returns:
             A prompt object that can be used by an executor
+
         """
 
 
@@ -169,41 +163,40 @@ class AbstractWorkflowRunner(ABC):
 
         Args:
             plan: A dictionary mapping step IDs to Task objects
+            context: Optional context data for execution
 
         Returns:
             The result of executing the plan
+
         """
-        pass
 
     @classmethod
     @abstractmethod
     def start_daemon(cls) -> None:
         """Start the workflow runner engine."""
-        pass
 
     @classmethod
     @abstractmethod
     def stop_daemon(cls) -> None:
         """Stop the workflow runner engine."""
-        pass
 
     @abstractmethod
     def run_background_workflows(self, *args, **kwargs) -> None:
         """Run static workflows in the workflow runner engine."""
-        pass
 
     @abstractmethod
     async def list_workflows(self, *args, **kwargs) -> None:
-         """List all workflows in the workflow runner engine."""
-         pass
+        """List all workflows in the workflow runner engine."""
 
     @abstractmethod
     def reconfigure(self, config: dict[str, Any]) -> None:
         """Reconfigure the agent with new settings.
+
         Args:
             config: New configuration settings
+
         """
-        pass
+
 
 class AbstractAgent(ABC):
     """Abstract base class for agent implementations."""
@@ -224,8 +217,8 @@ class AbstractAgent(ABC):
 
         Returns:
             The result of achieving the goal
+
         """
-        pass
 
     @abstractmethod
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
@@ -236,8 +229,8 @@ class AbstractAgent(ABC):
 
         Returns:
             A list of the most relevant agents for the goal
+
         """
-        pass
 
     @abstractmethod
     def get_most_relevant_tools(self, goal: str) -> list[ToolModel]:
@@ -248,8 +241,8 @@ class AbstractAgent(ABC):
 
         Returns:
             A list of the most relevant tools for the goal
+
         """
-        pass
 
     @abstractmethod
     def generate_plan(
@@ -265,9 +258,8 @@ class AbstractAgent(ABC):
 
         Returns:
             A dictionary mapping step IDs to Task objects representing the plan
-        """
-        pass
 
+        """
 
     @abstractmethod
     def chat(
@@ -286,8 +278,8 @@ class AbstractAgent(ABC):
 
         Returns:
             The result of executing the plan
+
         """
-        pass
 
     @abstractmethod
     def reconfigure(self, config: dict[str, Any]) -> None:
@@ -295,8 +287,8 @@ class AbstractAgent(ABC):
 
         Args:
             config: New configuration settings
+
         """
-        pass
 
     @abstractmethod
     async def handoff(self, endpoint: str, goal: str, plan: dict) -> Any:
@@ -309,20 +301,19 @@ class AbstractAgent(ABC):
 
         Returns:
             The result from the agent that was handed off to
-        """
-        pass
 
+        """
 
 
 class AbstractAgentP2PManager(ABC):
     """A manager for P2P communication between agents."""
-    
+
     @property
     @abstractmethod
     def node(self) -> Any: ...
 
     @abstractmethod
     async def start(self) -> None: ...
-    
+
     @abstractmethod
     async def shutdown(self) -> None: ...

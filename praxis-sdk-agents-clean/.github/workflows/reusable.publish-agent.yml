@@ -37,7 +37,7 @@ jobs:
           else
             echo "has_dockerfile=false" >> $GITHUB_OUTPUT
           fi
-      
+
       - id: build_tag
         run: |
           TAG_NAME=${GITHUB_REF_NAME//\//-}
@@ -52,7 +52,7 @@ jobs:
   publish-docker:
     needs: [check_dockerfile, publish-python]
     if: needs.check_dockerfile.outputs.has_dockerfile == 'true'
-    uses: ./.github/workflows/reusable.publish-docker.yml 
+    uses: ./.github/workflows/reusable.publish-docker.yml
     with:
       path: ${{ inputs.path }}/${{ inputs.agent_name }}
       image_name: agents
