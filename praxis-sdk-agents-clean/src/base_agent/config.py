@@ -1,8 +1,8 @@
 import json
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 import pydantic
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class BasicAgentConfig(BaseSettings):
@@ -16,16 +16,10 @@ class BasicAgentConfig(BaseSettings):
     agent_p2p_listen_addr: str = pydantic.Field("/ip4/0.0.0.0/tcp/0")
     agent_name: str = pydantic.Field("base-agent")
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
 
     def __str__(self) -> str:
-        """
-        Serialize the config to a pretty JSON string for prompt usage.
-        """
+        """Serialize the config to a pretty JSON string for prompt usage."""
         return json.dumps(self.model_dump(), indent=2, ensure_ascii=False)
 
 

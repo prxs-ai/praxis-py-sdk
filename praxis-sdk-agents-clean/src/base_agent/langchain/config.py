@@ -73,12 +73,11 @@ def get_langchain_config() -> BasicLangChainConfig:
 
     if BasicLangChainConfig().langfuse_enabled:
         # Transfer the provider settings to the Langfuse config
-        langfuse_config = LangChainConfigWithLangfuse(
+        return LangChainConfigWithLangfuse(
             provider=config.provider,
             openai=config.openai,
             deepseek=config.deepseek,
             anthropic=config.anthropic,
         )
-        return langfuse_config
 
     return config

@@ -6,7 +6,7 @@ import yaml
 from langchain.agents.agent import AgentOutputParser
 from langchain.schema import OutputParserException
 
-from base_agent.models import InputItem, OutputItem, ToolModel, Workflow, WorkflowStep
+from base_agent.models import InputItem, OutputItem, ParameterItem, ToolModel, Workflow, WorkflowStep
 
 
 class RegexPattern(str, Enum):
@@ -61,16 +61,16 @@ class AgentOutputPlanParser(AgentOutputParser, extra="allow"):
                         if placeholder in obj:
                             obj = obj.replace(placeholder, template)
                     return obj
-                elif isinstance(obj, list):
+                if isinstance(obj, list):
                     return [restore_templates(item) for item in obj]
-                elif isinstance(obj, dict):
+                if isinstance(obj, dict):
                     return {k: restore_templates(v) for k, v in obj.items()}
                 return obj
 
             workflow_data = restore_templates(workflow_data)
 
             # Convert to Workflow model
-            workflow = Workflow(
+            return Workflow(
                 name=workflow_data.get("name", "unnamed_workflow"),
                 description=workflow_data.get("description", ""),
                 thought=workflow_data.get("thought", ""),
@@ -80,10 +80,8 @@ class AgentOutputPlanParser(AgentOutputParser, extra="allow"):
                         # should pick only the defined tools
                         tool=_find_tool(step.get("tool", ""), self.tools),
                         thought=step.get("thought", ""),
-                        inputs=[
-                            InputItem(name=input_item.get("name", ""), value=input_item.get("value", ""))
-                            for input_item in step.get("inputs", [])
-                        ],
+                        parameters=self._parse_parameters(step.get("parameters", [])),
+                        inputs=self._parse_inputs(step.get("inputs", [])),
                         outputs=[
                             OutputItem(name=output_item.get("name", ""), value=output_item.get("value", None))
                             for output_item in step.get("outputs", [])
@@ -96,10 +94,20 @@ class AgentOutputPlanParser(AgentOutputParser, extra="allow"):
                     for output_item in workflow_data.get("outputs", [])
                 ],
             )
-            return workflow
-
         except yaml.YAMLError as e:
             raise OutputParserException(f"Failed to parse YAML content: {e}") from e
+
+    def _parse_parameters(self, params: list | dict) -> list:
+        if isinstance(params, dict):
+            return [ParameterItem(name=name, value=value) for name, value in params.items()]
+        return [
+            ParameterItem(name=input_item.get("name", ""), value=input_item.get("value", "")) for input_item in params
+        ]
+
+    def _parse_inputs(self, inputs: list | dict) -> list:
+        if isinstance(inputs, dict):
+            return [InputItem(name=name, value=value) for name, value in inputs.items()]
+        return [InputItem(name=input_item.get("name", ""), value=input_item.get("value", "")) for input_item in inputs]
 
 
 ### Helper functions
@@ -110,9 +118,11 @@ def _find_tool(tool_name: str, tools: Sequence[ToolModel]) -> ToolModel:
 
     Args:
         tool_name: Name of the tool to find.
+        tools: Sequence of available tools to search in.
 
     Returns:
         Tool or StructuredTool.
+
     """
     for tool in tools:
         if tool.package_name == tool_name or tool.function_name == tool_name:

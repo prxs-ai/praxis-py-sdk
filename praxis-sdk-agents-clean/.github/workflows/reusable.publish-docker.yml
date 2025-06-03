@@ -93,7 +93,7 @@ jobs:
           TAG_NAME=${GITHUB_REF_NAME//\//-}
           VERSION=$(slugify $TAG_NAME)
         fi
-        
+
         echo "IMAGE_TAG=$VERSION" >> $GITHUB_ENV
 
     - name: Build Docker image

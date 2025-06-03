@@ -38,6 +38,56 @@ The agent is intended to be deployed as part of a Ray Serve application and can 
 - Redis
 - LightRAG and AI Registry services
 
+## Development Setup
+
+### Installing & Running Pre-commit
+
+This repository uses pre-commit hooks to ensure code quality and consistency. Pre-commit automatically runs formatting, linting, and type checking before each commit.
+
+#### Installation
+
+1. **Install dependencies** (includes pre-commit, ruff, and mypy):
+   ```bash
+   poetry install --with dev
+   ```
+
+2. **Install pre-commit hooks**:
+   ```bash
+   poetry run pre-commit install
+   ```
+
+3. **Optional: Install pre-push hooks** (recommended):
+   ```bash
+   poetry run pre-commit install --hook-type pre-push
+   ```
+
+#### Usage
+
+- **Automatic**: Pre-commit runs automatically on `git commit`
+- **Manual**: Run on all files with:
+  ```bash
+  poetry run pre-commit run --all-files
+  ```
+- **Skip hooks** (not recommended):
+  ```bash
+  git commit --no-verify
+  ```
+
+#### What it checks
+
+- **YAML syntax** and file formatting
+- **Trailing whitespace** and end-of-file fixes
+- **Merge conflict** markers
+- **Large files** prevention
+- **Ruff linting & formatting** (replaces black, flake8, isort)
+- **MyPy type checking** with strict mode
+
+#### Configuration
+
+Pre-commit configuration is in `.pre-commit-config.yaml`. Ruff and MyPy settings are in `pyproject.toml`.
+
+The configuration allows `print()` and `pprint()` statements and is tuned to work well with this project's style.
+
 ## License
 
 Proprietary / Internal Use Only (modify as appropriate)

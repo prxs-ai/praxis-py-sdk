@@ -24,4 +24,4 @@ class AiRegistryConfig(BaseSettings):
 
 @lru_cache
 def get_ai_registry_config() -> AiRegistryConfig:
-    return AiRegistryConfig() # type: ignore
+    return AiRegistryConfig()  # type: ignore[misc]

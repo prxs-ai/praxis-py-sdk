@@ -58,7 +58,8 @@ class BaseAgent(abc.AbstractAgent):
         plan: dict | None = None,
         context: abc.BaseAgentInputModel | None = None,
     ) -> abc.BaseAgentOutputModel:
-        """This is one of the most important endpoints of MAS.
+        """Handle the most important endpoint of MAS.
+
         It handles all requests made by handoff from other agents or by user.
 
         If a predefined plan is provided, it skips plan generation and executes the plan directly.
@@ -97,12 +98,7 @@ class BaseAgent(abc.AbstractAgent):
         context: abc.BaseAgentInputModel | None = None,
     ) -> None:
         interaction = MemoryModel(
-            **{
-                "goal": goal,
-                "plan": plan,
-                "result": result.model_dump(),
-                "context": context.model_dump() if context else None,
-            }
+            goal=goal, plan=plan, result=result.model_dump(), context=context.model_dump() if context else None
         )
         self.memory_client.store(key=goal, interaction=interaction.model_dump())
 
@@ -142,7 +138,7 @@ class BaseAgent(abc.AbstractAgent):
         )
 
     def get_most_relevant_agents(self, goal: str) -> list[AgentModel]:
-        """This method is used to find the most useful agents for the given goal."""
+        """Find the most useful agents for the given goal."""
         response = self.ai_registry_client.post(
             endpoint=self.ai_registry_client.endpoints.find_agents,
             json=GoalModel(goal=goal).model_dump(),
@@ -159,10 +155,7 @@ class BaseAgent(abc.AbstractAgent):
         # )]
 
     def get_most_relevant_tools(self, goal: str, agents: list[AgentModel]) -> list[ToolModel]:
-        """
-        This method is used to find the most useful tools for the given goal.
-
-        """
+        """Find the most useful tools for the given goal."""
         response = self.ai_registry_client.post(
             endpoint=self.ai_registry_client.endpoints.find_tools,
             json=GoalModel(goal=goal).model_dump(),
@@ -246,7 +239,7 @@ class BaseAgent(abc.AbstractAgent):
         insights: Sequence[InsightModel],
         plan: dict | None = None,
     ) -> Workflow:
-        """This method is used to generate a plan for the given goal."""
+        """Generate a plan for the given goal."""
         return self.agent_executor.generate_plan(
             self.prompt_builder.generate_plan_prompt(system_prompt=self.config.system_prompt),
             available_functions=tools,
@@ -429,8 +422,10 @@ class BaseAgent(abc.AbstractAgent):
         pass
 
     async def handoff(self, endpoint: str, goal: str, plan: dict):
-        """This method means that agent can't find a solution (wrong route/wrong plan/etc)
-        and decide to handoff the task to another agent."""
+        """Handle case when agent can't find a solution (wrong route/wrong plan/etc).
+
+        Agent decides to handoff the task to another agent.
+        """
         return requests.post(urljoin(endpoint, goal), json=plan).json()
 
 

@@ -1,4 +1,4 @@
-# Note: You can use any Debian/Ubuntu based image you want. 
+# Note: You can use any Debian/Ubuntu based image you want.
 FROM mcr.microsoft.com/devcontainers/base:bookworm
 
 # [Optional] Uncomment this section to install additional OS packages.

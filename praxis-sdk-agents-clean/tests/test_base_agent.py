@@ -1,8 +1,9 @@
 import datetime
 from unittest.mock import MagicMock, patch
 
-import base_agent.ray_entrypoint as ray_entrypoint
 import pytest
+
+import base_agent.ray_entrypoint as ray_entrypoint
 from base_agent.config import BasicAgentConfig
 from base_agent.const import ExtraQuestions, Intents
 from base_agent.models import AgentModel, InsightModel
