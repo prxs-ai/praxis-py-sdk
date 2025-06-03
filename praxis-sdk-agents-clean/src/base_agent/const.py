@@ -46,6 +46,7 @@ class EntrypointGroup(StrEnumMixIn):
 
     CARD_ENTRYPOINT = "card.entrypoint"
 
+    P2P_ENTRYPOINT = "p2p.entrypoint"
 
     @property
     def group_name(self):

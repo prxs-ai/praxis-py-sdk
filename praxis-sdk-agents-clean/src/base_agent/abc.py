@@ -311,3 +311,18 @@ class AbstractAgent(ABC):
             The result from the agent that was handed off to
         """
         pass
+
+
+
+class AbstractAgentP2PManager(ABC):
+    """A manager for P2P communication between agents."""
+    
+    @property
+    @abstractmethod
+    def node(self) -> Any: ...
+
+    @abstractmethod
+    async def start(self) -> None: ...
+    
+    @abstractmethod
+    async def shutdown(self) -> None: ...

@@ -10,14 +10,9 @@ class AiRegistryEndpoints(BaseSettings):
 
 
 class AiRegistryConfig(BaseSettings):
-    ai_registry_service_url: str = pydantic.Field("localhost")
-    ai_registry_port: int = pydantic.Field(8000)
+    url: str = pydantic.Field("localhost")
     timeout: int = pydantic.Field(10)
     endpoints: AiRegistryEndpoints = AiRegistryEndpoints()
-
-    @property
-    def url(self) -> str:
-        return f"http://{self.ai_registry_service_url}:{self.ai_registry_port}"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -29,4 +24,4 @@ class AiRegistryConfig(BaseSettings):
 
 @lru_cache
 def get_ai_registry_config() -> AiRegistryConfig:
-    return AiRegistryConfig()
+    return AiRegistryConfig() # type: ignore

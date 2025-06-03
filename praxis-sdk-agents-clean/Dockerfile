@@ -4,6 +4,10 @@ FROM ${BASE_IMAGE} as builder
 
 USER root
 
+RUN apt update && \
+    apt -y --no-install-recommends install libgmp3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install poetry and dependencies
 RUN pip install poetry poetry-plugin-export && \
     poetry config virtualenvs.create false

@@ -17,14 +17,9 @@ class Retries(BaseSettings):
 
 
 class LightRagConfig(BaseSettings):
-    host: str = pydantic.Field("localhost")
-    port: int = pydantic.Field(8000)
+    url: str = pydantic.Field("localhost")
     timeout: int = pydantic.Field(10)
     endpoints: KnowledgeBaseEndpoints = KnowledgeBaseEndpoints()
-
-    @property
-    def url(self) -> str:
-        return f"http://{self.host}:{self.port}"
 
     model_config = SettingsConfigDict(
         env_file=".env",
