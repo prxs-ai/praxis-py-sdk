@@ -1053,6 +1053,26 @@ docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1)"]
 testing = ["coverage (>=6.2)", "hypothesis (>=5.7.1)"]
 
 [[package]]
+name = "send-openai-request"
+version = "0.1.2"
+description = "Package that send openai request"
+optional = false
+python-versions = ">=3.10,<4"
+groups = ["main"]
+files = [
+    {file = "send_openai_request-0.1.2-py3-none-any.whl", hash = "sha256:d553b1b4295f2f042799a0155c0824e06f4320ae6ff969b7117fac18329b0fa3"},
+    {file = "send_openai_request-0.1.2.tar.gz", hash = "sha256:c6731b1f01cb7c38674c26d7d134e6a918ee27253fc5a32ed727124d3e3462e1"},
+]
+
+[package.dependencies]
+openai = ">=1.63.2,<2.0.0"
+
+[package.source]
+type = "legacy"
+url = "https://packages.pypi.prx.ai/simple"
+reference = "praxis"
+
+[[package]]
 name = "sniffio"
 version = "1.3.1"
 description = "Sniff out which async library your code is running under"
@@ -1310,4 +1330,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "32cf082eb06f42af86773322508c500b8570527ed058217b60eb7843610f22f3"
+content-hash = "6cbf26010c48f26ef64e60e2246d69f4c9fe47e635c6a6dffa0ca6cbcf7e42d6"
