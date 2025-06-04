@@ -1,4 +1,5 @@
 name: Python CI - Package Tests
+
 on:
   push:
     branches-ignore:
@@ -59,12 +60,14 @@ jobs:
           else
             echo "Installing basic testing dependencies"
             pip install pytest pytest-cov
+          fi
 
       - name: Run tests for ${{ matrix.package }}
         working-directory: packages/${{ matrix.package }}
         run: |
           if [ -f "pyproject.toml" ]; then
             if [ -d "tests" ]; then
+              echo "Running tests from tests/ directory"
               poetry run pytest tests/ \
                 --cov=. \
                 --cov-report=term-missing \
@@ -72,8 +75,10 @@ jobs:
                 --cov-fail-under=80 \
                 -v
             elif [ -f "Makefile" ]; then
+              echo "Running tests via Makefile"
               poetry run make test
             else
+              echo "Running all test files"
               poetry run pytest . \
                 --cov=. \
                 --cov-report=term-missing \
@@ -84,6 +89,7 @@ jobs:
             fi
           else
             if [ -d "tests" ]; then
+              echo "Running tests from tests/ directory"
               pytest tests/ \
                 --cov=. \
                 --cov-report=term-missing \
@@ -91,6 +97,7 @@ jobs:
                 --cov-fail-under=80 \
                 -v
             else
+              echo "Running all test files"
               pytest . \
                 --cov=. \
                 --cov-report=term-missing \
@@ -99,6 +106,13 @@ jobs:
                 -v \
                 --ignore=build --ignore=dist
             fi
+          fi
+
+      - name: Debug — check files
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          echo "=== Listing all files after test run ==="
+          ls -R .
 
       - name: Check coverage file exists
         working-directory: packages/${{ matrix.package }}
@@ -109,20 +123,7 @@ jobs:
           else
             echo "Coverage file not found, creating empty one"
             echo '<?xml version="1.0"?><coverage version="0.0" timestamp="0" lines-valid="0" lines-covered="0" line-rate="0.0"></coverage>' > coverage.xml
-
-      - name: Generate coverage summary
-        working-directory: packages/${{ matrix.package }}
-        run: |
-          pip install coverage
-          coverage xml -i
-          coverage report > coverage-summary.txt
-
-      - name: Upload coverage summary to job summary
-        run: |
-          echo "## 🧪 Coverage Report for \`${{ matrix.package }}\`" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat packages/${{ matrix.package }}/coverage-summary.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
