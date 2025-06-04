@@ -29,6 +29,7 @@ jobs:
           "dexcreener-wrapper",
           "dextools-wrapper",
           "hyperliquid-client",
+          "qdrant-client-custom",
         ]
     steps:
       - name: Checkout repository
