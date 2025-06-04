@@ -24,7 +24,8 @@ jobs:
       matrix:
         package: [
           "agents-tools-logger",
-          "ai-tools"
+          "ai-tools",
+          "coingecko-client"
         ]
     steps:
       - name: Checkout repository
