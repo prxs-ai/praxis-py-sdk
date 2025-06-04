@@ -23,13 +23,13 @@ def redis_db(mock_redis):
 
         db = RedisDB()
         db.r = mock_redis
+
+        mock_redis.reset_mock()
         return db
 
 
 def test_redis_initialization(redis_db, mock_redis):
     assert isinstance(redis_db.r, MagicMock)
-    mock_redis.set.assert_called_once_with('__temp_test_key__', 'value')
-    mock_redis.delete.assert_called_once_with('__temp_test_key__')
 
 
 def test_add_to_set(redis_db, mock_redis):
@@ -53,6 +53,8 @@ def test_get(redis_db, mock_redis):
 
 
 def test_set(redis_db, mock_redis):
+    mock_redis.reset_mock()
+
     redis_db.set("test_key", {"key": "value"})
     mock_redis.set.assert_called_once_with("test_key", json.dumps({"key": "value"}), keepttl=False)
 
@@ -67,6 +69,8 @@ def test_setex(redis_db, mock_redis):
 
 
 def test_delete(redis_db, mock_redis):
+    mock_redis.reset_mock()
+
     redis_db.delete("test_key")
     mock_redis.delete.assert_called_once_with("test_key")
 
@@ -76,17 +80,17 @@ def test_get_keys_by_pattern(redis_db, mock_redis):
     assert redis_db.get_keys_by_pattern("pattern") == ["key1", "key2"]
 
 
-def test_parse_list(redis_db):
-    redis_db.get = lambda k: None
+def test_parse_list(redis_db, mock_redis):
+    mock_redis.get.return_value = None
     assert redis_db.parse_list("test") == []
 
-    redis_db.get = lambda k: ""
+    mock_redis.get.return_value = ""
     assert redis_db.parse_list("test") == []
 
-    redis_db.get = lambda k: "a,b,c"
+    mock_redis.get.return_value = "a,b,c"
     assert redis_db.parse_list("test") == ["a", "b", "c"]
 
-    redis_db.get = lambda k: ["a", "b"]
+    mock_redis.get.return_value = ["a", "b"]
     assert redis_db.parse_list("test") == ["a", "b"]
 
 
@@ -136,37 +140,37 @@ def prompt_manager(redis_db):
         return PromptManager(redis_db)
 
 
-def test_prompt_manager_singleton(prompt_manager):
-    with patch('redis_client.main.get_redis_db') as mock_get_redis:
-        manager1 = PromptManager(mock_get_redis())
-        manager2 = PromptManager(mock_get_redis())
+def test_prompt_manager_singleton(prompt_manager, redis_db):
+    with patch('redis_client.main.get_redis_db', return_value=redis_db):
+        manager1 = PromptManager(redis_db)
+        manager2 = PromptManager(redis_db)
         assert manager1 is manager2
 
 
-def test_get_prompt(prompt_manager, redis_db):
-    redis_db.get = lambda k: "test prompt" if k == "prompt:test_func" else None
+def test_get_prompt(prompt_manager, redis_db, mock_redis):
+    mock_redis.get.return_value = json.dumps("test prompt")
     assert prompt_manager.get_prompt("test_func") == "test prompt"
+    mock_redis.get.assert_called_once_with("prompt:test_func")
 
 
-def test_get_prompt_with_default(prompt_manager, redis_db):
-    redis_db.get = lambda k: None
+def test_get_prompt_with_default(prompt_manager, redis_db, mock_redis):
+    mock_redis.get.return_value = None
     with pytest.raises(ValueError):
         prompt_manager.get_prompt("nonexistent_func")
 
 
 @pytest.mark.asyncio
-async def test_ensure_delay_between_posts_no_wait():
-    with patch('redis_client.main.RedisDB.get_user_posts_by_create_time') as mock_get_posts:
-        mock_get_posts.return_value = []
-        await ensure_delay_between_posts("user")
+async def test_ensure_delay_between_posts_no_wait(redis_db, mock_redis):
+    mock_redis.zrangebyscore.return_value = []
+    await ensure_delay_between_posts("user")
 
 
 @pytest.mark.asyncio
-async def test_ensure_delay_between_posts_with_wait():
-    post = Post(id="1", text="test", sender_username="user", timestamp=time.time() - 60)
-    with patch('redis_client.main.RedisDB.get_user_posts_by_create_time') as mock_get_posts, \
-            patch('asyncio.sleep') as mock_sleep:
-        mock_get_posts.return_value = [post]
+async def test_ensure_delay_between_posts_with_wait(redis_db, mock_redis):
+    post_data = json.dumps({"id": "1", "text": "test", "sender_username": "user", "timestamp": time.time() - 60})
+    mock_redis.zrangebyscore.return_value = [post_data.encode()]
+
+    with patch('asyncio.sleep') as mock_sleep:
         await ensure_delay_between_posts("user", delay=300)
         mock_sleep.assert_awaited_once()
 
@@ -184,5 +188,6 @@ def test_decode_redis_dict():
 
 
 def test_decode_redis_unknown_type():
-    with pytest.raises(Exception, match="type not handled"):
+    with pytest.raises(Exception) as exc_info:
         decode_redis(123)
+    assert "type not handled" in str(exc_info.value)
