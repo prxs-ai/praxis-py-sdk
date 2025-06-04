@@ -30,6 +30,7 @@ jobs:
           "dextools-wrapper",
           "hyperliquid-client",
           "qdrant-client-custom",
+          "redis-client",
         ]
     steps:
       - name: Checkout repository
