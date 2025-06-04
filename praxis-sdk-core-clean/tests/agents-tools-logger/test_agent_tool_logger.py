@@ -1,71 +1,68 @@
+import os
+import re
+from io import StringIO
+import sys
+from unittest.mock import patch
 import pytest
 from loguru import logger
-import sys
-from unittest.mock import MagicMock
-from io import StringIO
 
 
 @pytest.fixture
-def setup_logger(mocker):
+def clean_logs():
     logger.remove()
-    mock_stdout = StringIO()
-    mocker.patch.object(sys, "stdout", mock_stdout)
-    mock_file_handler = mocker.patch("loguru.logger.add")
-    logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} - {message}", level="INFO")
-    logger.add("app.log", rotation="10 MB", compression="zip", level="ERROR")
-    return mock_stdout, mock_file_handler
-
-
-def test_info_logging(setup_logger):
-    mock_stdout, _ = setup_logger
-    logger.info("Test info message")
-    log_output = mock_stdout.getvalue()
-    assert "Test info message" in log_output
-    assert "| INFO |" in log_output
-    assert log_output.count("\n") == 1
-    assert "test_loguru.py" in log_output
-
-
-def test_error_logging(setup_logger, mocker):
-    mock_stdout, mock_file_handler = setup_logger
-    try:
-        1 / 0
-    except ZeroDivisionError:
-        logger.exception("Test error message")
-    log_output = mock_stdout.getvalue()
-    assert "Test error message" in log_output
-    assert "| ERROR |" in log_output
-    assert "ZeroDivisionError: division by zero" in log_output
-    mock_file_handler.assert_called_with(
-        "app.log", rotation="10 MB", compression="zip", level="ERROR"
-    )
-
-
-def test_log_format(setup_logger):
-    mock_stdout, _ = setup_logger
-    logger.info("Formatted log test")
-    log_output = mock_stdout.getvalue()
-    import re
-    pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \| INFO \| \S+:\d+ - Formatted log test"
-    assert re.match(pattern, log_output.strip())
-
-
-def test_remove_default_handler(mocker):
-    mock_remove = mocker.patch("loguru.logger.remove")
+    yield
     logger.remove()
-    mock_remove.assert_called_once()
+    if os.path.exists("app.log"):
+        os.remove("app.log")
 
 
-def test_main_block(setup_logger, mocker):
-    mock_stdout, _ = setup_logger
-    logger.info("This is an info message.")
-    try:
-        1 / 0
-    except ZeroDivisionError:
-        logger.exception("An error occurred!")
-    log_output = mock_stdout.getvalue()
-    assert "This is an info message" in log_output
-    assert "An error occurred!" in log_output
-    assert "| INFO |" in log_output
-    assert "| ERROR |" in log_output
-    assert "ZeroDivisionError: division by zero" in log_output
+def test_logger_stdout_output(clean_logs):
+    with patch('sys.stdout', new=StringIO()) as fake_out:
+        logger.add(sys.stdout, format="{message}", level="INFO")
+        logger.info("Test message")
+        output = fake_out.getvalue().strip()
+        assert "Test message" in output
+
+
+def test_logger_file_output(clean_logs):
+    logger.add("app.log", format="{message}", level="ERROR")
+    logger.error("Test error message")
+    assert os.path.exists("app.log")
+    with open("app.log", "r") as f:
+        content = f.read()
+        assert "Test error message" in content
+
+
+def test_logger_exception_handling(clean_logs):
+    with patch('sys.stderr', new=StringIO()) as fake_err:
+        logger.add(sys.stderr, format="{message}", level="ERROR")
+        try:
+            1 / 0
+        except ZeroDivisionError:
+            logger.exception("Division error")
+        error_output = fake_err.getvalue().strip()
+        assert "Division error" in error_output
+        assert "ZeroDivisionError" in error_output
+
+
+def test_logger_format(clean_logs):
+    with patch('sys.stdout', new=StringIO()) as fake_out:
+        logger.add(sys.stdout, format="{time} | {level} | {message}", level="INFO")
+        logger.info("Formatted message")
+        output = fake_out.getvalue().strip()
+        assert "| INFO | Formatted message" in output
+        assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", output.split(" | ")[0])
+
+
+def test_logger_level_filtering(clean_logs):
+    with patch('sys.stdout', new=StringIO()) as fake_out:
+        logger.add(sys.stdout, format="{message}", level="WARNING")
+        logger.info("This should not appear")
+        logger.warning("This should appear")
+        output = fake_out.getvalue().strip()
+        assert "This should not appear" not in output
+        assert "This should appear" in output
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", "--cov=.", "--cov-report=term-missing"])
