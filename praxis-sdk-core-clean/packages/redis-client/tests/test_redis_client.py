@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import MagicMock, patch, call, AsyncMock
 import json
 import time
-from datetime import datetime
 import redis
 from redis_client.main import RedisDB, Post, PromptManager, use_dynamic_prompt, ensure_delay_between_posts, decode_redis
 
