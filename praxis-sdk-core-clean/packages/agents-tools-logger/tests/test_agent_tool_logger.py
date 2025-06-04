@@ -63,6 +63,3 @@ def test_logger_level_filtering(clean_logs):
         assert "This should not appear" not in output
         assert "This should appear" in output
 
-
-if __name__ == "__main__":
-    pytest.main(["-v", "--cov=.", "--cov-report=term-missing"])

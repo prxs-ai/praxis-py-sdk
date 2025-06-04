@@ -24,6 +24,7 @@ jobs:
       matrix:
         package: [
           "agents-tools-logger",
+          "ai-tools"
         ]
     steps:
       - name: Checkout repository
