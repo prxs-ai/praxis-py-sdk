@@ -28,7 +28,7 @@ jobs:
           "coingecko-client",
           "dexscreener-wrapper",
           "dextools-wrapper",
-          "hyperliquid-client"
+          "hyperliquid-client",
         ]
     steps:
       - name: Checkout repository
