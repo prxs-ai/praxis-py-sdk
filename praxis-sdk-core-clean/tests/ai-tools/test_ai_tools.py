@@ -15,8 +15,8 @@ def set_env_vars(monkeypatch):
     monkeypatch.setenv("OPENAI_EMBEDDING_MODEL", "test-embedding-model")
 
 
-sys.path.append(os.path.abspath("../../send-openai-request/src"))
-sys.path.append(os.path.abspath("../src"))
+sys.path.append(os.path.abspath("../../packages/send-openai-request/src"))
+sys.path.append(os.path.abspath("../../packages/ai-tools/src"))
 
 
 @pytest.fixture(autouse=True)
