@@ -24,6 +24,10 @@ def redis_db(mock_redis):
         db = RedisDB()
         db.r = mock_redis
 
+        mock_redis.set.return_value = True
+        mock_redis.delete.return_value = 1
+        mock_redis.get.return_value = None
+
         mock_redis.reset_mock()
         return db
 
@@ -54,10 +58,11 @@ def test_get(redis_db, mock_redis):
 
 def test_set(redis_db, mock_redis):
     mock_redis.reset_mock()
-
     redis_db.set("test_key", {"key": "value"})
     mock_redis.set.assert_called_once_with("test_key", json.dumps({"key": "value"}), keepttl=False)
 
+
+def test_set_with_none(redis_db, mock_redis):
     mock_redis.reset_mock()
     redis_db.set("test_key", None)
     mock_redis.delete.assert_called_once_with("test_key")
@@ -70,7 +75,6 @@ def test_setex(redis_db, mock_redis):
 
 def test_delete(redis_db, mock_redis):
     mock_redis.reset_mock()
-
     redis_db.delete("test_key")
     mock_redis.delete.assert_called_once_with("test_key")
 
@@ -80,18 +84,24 @@ def test_get_keys_by_pattern(redis_db, mock_redis):
     assert redis_db.get_keys_by_pattern("pattern") == ["key1", "key2"]
 
 
-def test_parse_list(redis_db, mock_redis):
-    mock_redis.get.return_value = None
-    assert redis_db.parse_list("test") == []
+def test_parse_list_with_list(redis_db, mock_redis):
+    mock_redis.get.return_value = ["a", "b"]
+    assert redis_db.parse_list("test") == ["a", "b"]
 
-    mock_redis.get.return_value = ""
-    assert redis_db.parse_list("test") == []
 
+def test_parse_list_with_string(redis_db, mock_redis):
     mock_redis.get.return_value = "a,b,c"
     assert redis_db.parse_list("test") == ["a", "b", "c"]
 
-    mock_redis.get.return_value = ["a", "b"]
-    assert redis_db.parse_list("test") == ["a", "b"]
+
+def test_parse_list_with_empty_string(redis_db, mock_redis):
+    mock_redis.get.return_value = ""
+    assert redis_db.parse_list("test") == []
+
+
+def test_parse_list_with_none(redis_db, mock_redis):
+    mock_redis.get.return_value = None
+    assert redis_db.parse_list("test") == []
 
 
 def test_add_user_post(redis_db, mock_redis):
@@ -109,6 +119,14 @@ def test_get_user_posts(redis_db, mock_redis):
     post_data = json.dumps({"id": "1", "text": "test", "sender_username": "user", "timestamp": 123})
     mock_redis.zrange.return_value = [post_data.encode()]
     posts = redis_db.get_user_posts("user")
+    assert len(posts) == 1
+    assert posts[0].id == "1"
+
+
+def test_get_user_posts_by_create_time(redis_db, mock_redis):
+    post_data = json.dumps({"id": "1", "text": "test", "sender_username": "user", "timestamp": 123})
+    mock_redis.zrangebyscore.return_value = [post_data.encode()]
+    posts = redis_db.get_user_posts_by_create_time("user", 3600)
     assert len(posts) == 1
     assert posts[0].id == "1"
 
@@ -132,6 +150,42 @@ def test_remove_account(redis_db, mock_redis):
         call("gorilla_marketing_answered:user")
     ]
     mock_redis.delete.assert_has_calls(calls, any_order=True)
+
+
+def test_add_send_partnership(redis_db, mock_redis):
+    redis_db.add_send_partnership("user", "partner")
+    mock_redis.zadd.assert_called_once_with(
+        'send_partnership:user',
+        {'partner': pytest.approx(time.time(), rel=1)}
+    )
+
+
+def test_get_send_partnership(redis_db, mock_redis):
+    mock_redis.zrange.return_value = [b"partner1", b"partner2"]
+    assert redis_db.get_send_partnership("user") == ["partner1", "partner2"]
+
+
+def test_get_account_last_action_time(redis_db, mock_redis):
+    mock_redis.get.return_value = "123.45"
+    assert redis_db.get_account_last_action_time("user", "action") == 123.45
+
+
+def test_update_account_last_action_time(redis_db, mock_redis):
+    redis_db.update_account_last_action_time("user", "action", 123.45)
+    mock_redis.set.assert_called_once_with("action:user", 123.45)
+
+
+def test_is_account_active(redis_db, mock_redis):
+    mock_redis.exists.return_value = True
+    assert redis_db.is_account_active("user") is True
+
+
+def test_save_tweet_link(redis_db, mock_redis):
+    redis_db.save_tweet_link("function", "123")
+    mock_redis.rpush.assert_called_once_with(
+        "created_tweet:function",
+        "https://twitter.com/i/web/status/123"
+    )
 
 
 @pytest.fixture
@@ -159,6 +213,11 @@ def test_get_prompt_with_default(prompt_manager, redis_db, mock_redis):
         prompt_manager.get_prompt("nonexistent_func")
 
 
+def test_extract_fstring_vars(prompt_manager):
+    template = "Hello {name}, welcome to {project}"
+    assert prompt_manager._extract_fstring_vars(template) == {"name", "project"}
+
+
 @pytest.mark.asyncio
 async def test_ensure_delay_between_posts_no_wait(redis_db, mock_redis):
     mock_redis.zrangebyscore.return_value = []
@@ -170,7 +229,7 @@ async def test_ensure_delay_between_posts_with_wait(redis_db, mock_redis):
     post_data = json.dumps({"id": "1", "text": "test", "sender_username": "user", "timestamp": time.time() - 60})
     mock_redis.zrangebyscore.return_value = [post_data.encode()]
 
-    with patch('asyncio.sleep') as mock_sleep:
+    with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
         await ensure_delay_between_posts("user", delay=300)
         mock_sleep.assert_awaited_once()
 
@@ -190,4 +249,4 @@ def test_decode_redis_dict():
 def test_decode_redis_unknown_type():
     with pytest.raises(Exception) as exc_info:
         decode_redis(123)
-    assert "type not handled" in str(exc_info.value)
+    assert "type not handled" in str(exc_info.value).lower()
