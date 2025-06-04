@@ -605,14 +605,14 @@ all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2
 
 [[package]]
 name = "infra-configs"
-version = "0.0.2"
+version = "0.0.3"
 description = "Package that consists infrastructure configs"
 optional = false
 python-versions = ">=3.10,<4"
 groups = ["main"]
 files = [
-    {file = "infra_configs-0.0.2-py3-none-any.whl", hash = "sha256:93e5ba48ab4c16222e72d49fa2ef822d6694c01e66a5e8aee531ee035c5cdc5c"},
-    {file = "infra_configs-0.0.2.tar.gz", hash = "sha256:f994d1668013d7616dc29335462e3807380672362d79ec37148c0440fcdd8291"},
+    {file = "infra_configs-0.0.3-py3-none-any.whl", hash = "sha256:9f5b077da1030640a94d95d65fa5af9deca827738a632d9b797645b19d546d28"},
+    {file = "infra_configs-0.0.3.tar.gz", hash = "sha256:63e4a94c788aaca699f5e553b42deab869db572c95781b6b6dadc0f91aa2e782"},
 ]
 
 [package.dependencies]
@@ -1562,4 +1562,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "a99ec6373dac4331ebdddc2e67ef84893d70078c67b54f17b4f1e7aa5a509dd0"
+content-hash = "a99b209325a97cf820922bfe8e3d7a235ad68ef59c03c9227880a0ce8350ffaa"
