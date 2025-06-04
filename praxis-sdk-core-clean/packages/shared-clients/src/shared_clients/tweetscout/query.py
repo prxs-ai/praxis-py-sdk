@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from typing import Final, cast
+from typing import Final, Generic, TypeVar, Union, cast
 
 from msgspec import Struct
 
@@ -13,22 +13,24 @@ def camel_case_to_snake_case(s: str) -> str:
     return CAMEL_CASE_TO_SNAKE_CASE.sub("_", s).lower()
 
 
-type Operand = (
-    Word
-    | Hashtag
-    | FromUser
-    | And
-    | Negate
-    | MinRetweets
-    | MentionUser
-    | Phrase
-    | MinFavorites
-    | MinReplies
-    | SinceId
-    | UntilId
-    | SinceTime
-    | UntilTime
-)
+Operand = Union[
+    "Word",
+    "Hashtag",
+    "FromUser",
+    "And",
+    "Negate",
+    "MinRetweets",
+    "MentionUser",
+    "Phrase",
+    "MinFavorites",
+    "MinReplies",
+    "SinceId",
+    "UntilId",
+    "SinceTime",
+    "UntilTime",
+]
+
+R = TypeVar("R")
 
 
 class QueryNode(Struct): ...
@@ -95,7 +97,7 @@ class UntilTime(QueryNode):
     timestamp: int
 
 
-class Walker[R](ABC):
+class Walker(ABC, Generic[R]):
     __slots__ = ()
 
     def walk(self, node: QueryNode) -> R:
@@ -104,7 +106,7 @@ class Walker[R](ABC):
         if method is None:
             raise RuntimeError(f"No implementation found for node: {node}")
 
-        return cast(R, method(node))
+        return cast("R", method(node))
 
     @abstractmethod
     def visit_word(self, node: Word) -> R:
@@ -202,7 +204,7 @@ class QueryBuilder(Walker[str]):
         return "@" + node.mention.value
 
     def visit_phrase(self, node: Phrase) -> str:
-        return f'{node.value}'
+        return f"{node.value}"
 
     def visit_since_id(self, node: SinceId) -> str:
         return f"since_id:{node.tweet_id}"
@@ -215,6 +217,7 @@ class QueryBuilder(Walker[str]):
 
     def visit_until_time(self, node: UntilTime) -> str:
         return f"until_time:{node.timestamp}"
+
 
 def build_query(ast: QueryNode) -> str:
     return QueryBuilder().walk(ast)

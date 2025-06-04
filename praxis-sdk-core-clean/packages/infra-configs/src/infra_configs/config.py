@@ -6,6 +6,8 @@ from pydantic import Field, RedisDsn, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
+
+
 class InfrastructureConfig(BaseSettings):
     postgres_user: str = "rag"
     postgres_password: str = "rag"
@@ -44,7 +46,7 @@ class InfrastructureConfig(BaseSettings):
     def qdrant_url(self) -> str:
         return f"http://{self.QDRANT_HOST}:{self.QDRANT_PORT}"
 
-    @field_validator('postgres_dsn', mode='before')
+    @field_validator("postgres_dsn", mode="before")
     @classmethod
     def get_postgres_dsn(cls, _, info: ValidationInfo):
         return f"postgresql+asyncpg://{info.data['postgres_user']}:{info.data['postgres_password']}@{info.data['postgres_host']}:{info.data['postgres_port']}/{info.data['postgres_db']}"
@@ -57,14 +59,14 @@ class InfrastructureConfig(BaseSettings):
         #     path=info.data['postgres_db'],
         # )
 
-    @field_validator('redis_dsn', mode='before')
+    @field_validator("redis_dsn", mode="before")
     @classmethod
     def get_redis_dsn(cls, _, info: ValidationInfo):
         return RedisDsn.build(
-            scheme='redis',
-            host=info.data['redis_host'],
-            port=info.data['redis_port'],
-            path=info.data['redis_db'],
+            scheme="redis",
+            host=info.data["redis_host"],
+            port=info.data["redis_port"],
+            path=info.data["redis_db"],
         )
 
     @property
@@ -82,8 +84,9 @@ class TelegramAppSetupServiceConfig(BaseSettings):
     class Config:
         env_prefix = "TELEGRAM_"
 
+
 class DeployService(BaseSettings):
-    host: str =  Field(default="deploy-service.praxis.svc.cluster.local") 
+    host: str = Field(default="deploy-service.praxis.svc.cluster.local")
     port: int = Field(default=80)
     connect_timeout: int = Field(default=10)
     timeout: int = Field(default=300)
@@ -106,16 +109,16 @@ class Settings(BaseSettings):
     LIKES_INTERVAL: int = 6 * 60 * 60
     PARTNERSHIP_INTERVAL: int = 12 * 60 * 60
     INVEST_TWEET_INTERVAL: int = 15 * 60
-    TWITTER_CLIENT_ID: str = 'eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ'
-    TWITTER_CLIENT_SECRET: str = '8noXqU32HCtbW-0VIB2bw42Q_ZRdAliBYTq3BAV0nQvwhOTCux'
-    TWITTER_BASIC_BEARER_TOKEN: str = 'AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj'
+    TWITTER_CLIENT_ID: str = "eG8wX3VEcVdtcnZyNnhEQ3ZUbTU6MTpjaQ"
+    TWITTER_CLIENT_SECRET: str = "8noXqU32HCtbW-0VIB2bw42Q_ZRdAliBYTq3BAV0nQvwhOTCux"
+    TWITTER_BASIC_BEARER_TOKEN: str = "AAAAAAAAAAAAAAAAAAAAAALFxQEAAAAAteK66aMgMrX%2BoWlqS1nuVBbo834%3DKvDbzJWyE0X6hea56JtvXGPvu58wP31Tym00sFi68RKJ9OqLfj"
 
-    TWITTER_REDIRECT_URI: str = '***REMOVED***'
-    OPENAI_API_KEY: str = '***REMOVED***'
+    TWITTER_REDIRECT_URI: str = "***REMOVED***"
+    OPENAI_API_KEY: str = "***REMOVED***"
     OPEN_AI_MODEL: str = "gpt-4o-2024-08-06"
     LOGS_DIR: str = "../logs"
     TWEETSCOUT_API_KEY: str = "***REMOVED***"
-    ANTHROPIC_API_KEY: str = '***REMOVED***'
+    ANTHROPIC_API_KEY: str = "***REMOVED***"
 
     HEYGEN_API_KEY: str = "***REMOVED***"
 
@@ -147,40 +150,45 @@ class Settings(BaseSettings):
     # confluent_api_secret: str = '1'
     # confluent_bootstrap_server: str = '1'
     # confluent_rest_endpoint: str = '1'
-    
-    AI_REGISTRY_HOST: str = Field(default="praxis-dev-ai-registry.praxis.svc.cluster.local")
+
+    AI_REGISTRY_HOST: str = Field(
+        default="praxis-dev-ai-registry.praxis.svc.cluster.local"
+    )
     AI_REGISTRY_PORT: int = Field(default=8080)
 
     deploy_service: DeployService = DeployService()
-    
+
     @property
     def ai_registry_url(self) -> str:
         return f"http://{self.AI_REGISTRY_HOST}:{self.AI_REGISTRY_PORT}"
-        
-    
+
+
 class InterfaceSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra='ignore')
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
 
 class CoingeckoSettings(InterfaceSettings):
     api_key: str = Field(validation_alias="COINGECKO_API_KEY")
     base_url: str = Field(validation_alias="COINGECKO_API_URL")
+
 
 class RedisSettings(InterfaceSettings):
     redis_host: str = Field(validation_alias="REDIS_HOST")
     redis_port: int = Field(validation_alias="REDIS_PORT")
     redis_db: int = Field(validation_alias="REDIS_DB")
 
+
 class HyperLiquidSettings(InterfaceSettings):
     base_url: str = Field(validation_alias="HYPERLIQUD_API_URL")
+
 
 class ServerSettings(InterfaceSettings):
     coingecko: CoingeckoSettings = CoingeckoSettings()
     redis: RedisSettings = RedisSettings()
     hyperliquid: HyperLiquidSettings = HyperLiquidSettings()
 
-
-
     REDIS_PERSONA_KEY: str = "available_personas"
+
 
 @lru_cache
 def get_settings() -> Settings:

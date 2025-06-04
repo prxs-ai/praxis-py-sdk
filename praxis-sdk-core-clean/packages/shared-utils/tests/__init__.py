@@ -1,6 +1,7 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
 import aiohttp
+import pytest
 from shared_utils.http_client import HttpClient
 
 
@@ -13,7 +14,9 @@ def http_client():
 async def test_post_success(http_client, mocker):
     mock_response = AsyncMock(spec=aiohttp.ClientResponse)
     mock_response.status = 200
-    mock_session_post = mocker.patch("aiohttp.ClientSession.post", return_value=mock_response)
+    mock_session_post = mocker.patch(
+        "aiohttp.ClientSession.post", return_value=mock_response
+    )
 
     data = {"key": "value"}
     headers = {"Authorization": "Bearer token"}
@@ -21,9 +24,7 @@ async def test_post_success(http_client, mocker):
 
     assert response == mock_response
     mock_session_post.assert_called_once_with(
-        "https://api.example.com/test",
-        data=data,
-        headers=headers
+        "https://api.example.com/test", data=data, headers=headers
     )
 
 
@@ -45,15 +46,16 @@ async def test_post_failure(http_client, mocker):
 async def test_get_success(http_client, mocker):
     mock_response = AsyncMock(spec=aiohttp.ClientResponse)
     mock_response.status = 200
-    mock_session_get = mocker.patch("aiohttp.ClientSession.get", return_value=mock_response)
+    mock_session_get = mocker.patch(
+        "aiohttp.ClientSession.get", return_value=mock_response
+    )
 
     headers = {"Authorization": "Bearer token"}
     response = await http_client.get("/test", headers=headers)
 
     assert response == mock_response
     mock_session_get.assert_called_once_with(
-        "https://api.example.com/test",
-        headers=headers
+        "https://api.example.com/test", headers=headers
     )
 
 

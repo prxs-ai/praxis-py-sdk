@@ -1,10 +1,7 @@
+from unittest.mock import AsyncMock
+
 import pytest
-import aiohttp
-import asyncio
-from unittest.mock import AsyncMock, patch
-from collections import defaultdict
 from dexscreener_api import DexScreenerAPI
-import time
 
 
 @pytest.fixture
@@ -18,7 +15,9 @@ async def dex_screener_api():
 async def test_check_rate_limit_within_limit(dex_screener_api, mocker):
     endpoint = "GET /token-profiles/latest/v1"
     mocker.patch("time.time", return_value=1000.0)
-    dex_screener_api.request_timestamps[endpoint] = [1000.0 - 30] * 59  # 59 requests within window
+    dex_screener_api.request_timestamps[endpoint] = [
+        1000.0 - 30
+    ] * 59  # 59 requests within window
 
     await dex_screener_api._check_rate_limit(endpoint)
     assert len(dex_screener_api.request_timestamps[endpoint]) == 60
@@ -78,7 +77,9 @@ async def test_request_failure(dex_screener_api, mocker):
 @pytest.mark.asyncio
 async def test_get_latest_token_profiles(dex_screener_api, mocker):
     mock_response = {"profiles": ["profile1", "profile2"]}
-    mocker.patch.object(dex_screener_api, "_request", AsyncMock(return_value=mock_response))
+    mocker.patch.object(
+        dex_screener_api, "_request", AsyncMock(return_value=mock_response)
+    )
 
     result = await dex_screener_api.get_latest_token_profiles()
     assert result == mock_response
@@ -88,10 +89,13 @@ async def test_get_latest_token_profiles(dex_screener_api, mocker):
 @pytest.mark.asyncio
 async def test_get_pairs_data_by_pool_address(dex_screener_api, mocker):
     mock_response = {"pair": "data"}
-    mocker.patch.object(dex_screener_api, "_request", AsyncMock(return_value=mock_response))
+    mocker.patch.object(
+        dex_screener_api, "_request", AsyncMock(return_value=mock_response)
+    )
 
-    result = await dex_screener_api.get_pairs_data_by_pool_address("solana",
-                                                                   "6xzcGi7rMd12UPD5PJSMnkTgquBZFYhhMz9D5iHgzB1w")
+    result = await dex_screener_api.get_pairs_data_by_pool_address(
+        "solana", "6xzcGi7rMd12UPD5PJSMnkTgquBZFYhhMz9D5iHgzB1w"
+    )
     assert result == mock_response
     dex_screener_api._request.assert_called_once_with(
         "/latest/dex/pairs/solana/6xzcGi7rMd12UPD5PJSMnkTgquBZFYhhMz9D5iHgzB1w"
@@ -101,9 +105,13 @@ async def test_get_pairs_data_by_pool_address(dex_screener_api, mocker):
 @pytest.mark.asyncio
 async def test_get_token_data_by_address(dex_screener_api, mocker):
     mock_response = {"token": "data"}
-    mocker.patch.object(dex_screener_api, "_request", AsyncMock(return_value=mock_response))
+    mocker.patch.object(
+        dex_screener_api, "_request", AsyncMock(return_value=mock_response)
+    )
 
-    result = await dex_screener_api.get_token_data_by_address("ether", "6xzcGi7rMd12UPD5PJSMnkTgquBZFYhhMz9D5iHgzB1w")
+    result = await dex_screener_api.get_token_data_by_address(
+        "ether", "6xzcGi7rMd12UPD5PJSMnkTgquBZFYhhMz9D5iHgzB1w"
+    )
     assert result == mock_response
     dex_screener_api._request.assert_called_once_with(
         "/tokens/v1/ether/6xzcGi7rMd12UPD5PJSMnkTgquBZFYhhMz9D5iHgzB1w"

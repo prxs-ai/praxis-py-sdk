@@ -1,8 +1,11 @@
 from abc import abstractmethod
-from typing import Protocol
+from typing import Generic, Protocol, TypeVar
+
+I = TypeVar("I")
+O = TypeVar("O")
 
 
-class Service[I, O](Protocol):
+class Service(Protocol, Generic[I, O]):
     __slots__ = ()
 
     @abstractmethod

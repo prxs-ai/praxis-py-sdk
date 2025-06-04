@@ -1,9 +1,10 @@
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import AsyncMock, patch, Mock
-from fastapi import UploadFile
 from botocore.exceptions import ClientError
+from fastapi import UploadFile
 from loguru import logger
-from s3_service import S3Service, get_s3_service, s3_service_dependency
+from s3_service import S3Service
 
 
 @pytest.fixture
@@ -49,37 +50,51 @@ async def test_ensure_bucket_exists(mock_settings, mocker, bucket_name):
 
     async with S3Service(bucket_name) as service:
         await service._ensure_bucket_exists()
-        mock_s3_client.head_bucket.assert_called_once_with(Bucket="test-prefix-valid-bucket")
+        mock_s3_client.head_bucket.assert_called_once_with(
+            Bucket="test-prefix-valid-bucket"
+        )
 
 
 @pytest.mark.asyncio
 async def test_ensure_bucket_create_new(mock_settings, mocker, bucket_name):
     mocker.patch("s3_service.get_settings", return_value=mock_settings)
     mock_s3_client = AsyncMock()
-    mock_s3_client.head_bucket.side_effect = ClientError({"Error": {"Code": "404"}}, "head_bucket")
+    mock_s3_client.head_bucket.side_effect = ClientError(
+        {"Error": {"Code": "404"}}, "head_bucket"
+    )
     mock_s3_client.create_bucket.return_value = {}
     mocker.patch("aioboto3.Session.client", AsyncMock(return_value=mock_s3_client))
     mocker.patch.object(logger, "info")
 
     async with S3Service(bucket_name) as service:
         await service._ensure_bucket_exists()
-        mock_s3_client.create_bucket.assert_called_once_with(Bucket="test-prefix-valid-bucket")
-        logger.info.assert_called_once_with("Bucket 'test-prefix-valid-bucket' does not exist. Creating bucket.")
+        mock_s3_client.create_bucket.assert_called_once_with(
+            Bucket="test-prefix-valid-bucket"
+        )
+        logger.info.assert_called_once_with(
+            "Bucket 'test-prefix-valid-bucket' does not exist. Creating bucket."
+        )
 
 
 @pytest.mark.asyncio
 async def test_ensure_bucket_create_failure(mock_settings, mocker, bucket_name):
     mocker.patch("s3_service.get_settings", return_value=mock_settings)
     mock_s3_client = AsyncMock()
-    mock_s3_client.head_bucket.side_effect = ClientError({"Error": {"Code": "404"}}, "head_bucket")
-    mock_s3_client.create_bucket.side_effect = ClientError({"Error": {"Code": "500"}}, "create_bucket")
+    mock_s3_client.head_bucket.side_effect = ClientError(
+        {"Error": {"Code": "404"}}, "head_bucket"
+    )
+    mock_s3_client.create_bucket.side_effect = ClientError(
+        {"Error": {"Code": "500"}}, "create_bucket"
+    )
     mocker.patch("aioboto3.Session.client", AsyncMock(return_value=mock_s3_client))
     mocker.patch.object(logger, "exception")
 
     async with S3Service(bucket_name) as service:
         with pytest.raises(Exception, match="Creation bucket error:"):
             await service._ensure_bucket_exists()
-        logger.exception.assert_called_once_with("Failed to create bucket 'test-prefix-valid-bucket'.")
+        logger.exception.assert_called_once_with(
+            "Failed to create bucket 'test-prefix-valid-bucket'."
+        )
 
 
 @pytest.mark.asyncio
@@ -98,7 +113,7 @@ async def test_upload_file_success(mock_settings, mocker, bucket_name):
             mock_file.file,
             "test-prefix-valid-bucket",
             "test.txt",
-            ExtraArgs={"ACL": "public-read"}
+            ExtraArgs={"ACL": "public-read"},
         )
 
 
@@ -106,7 +121,9 @@ async def test_upload_file_success(mock_settings, mocker, bucket_name):
 async def test_upload_file_failure(mock_settings, mocker, bucket_name):
     mocker.patch("s3_service.get_settings", return_value=mock_settings)
     mock_s3_client = AsyncMock()
-    mock_s3_client.upload_fileobj.side_effect = ClientError({"Error": {"Code": "500"}}, "upload_fileobj")
+    mock_s3_client.upload_fileobj.side_effect = ClientError(
+        {"Error": {"Code": "500"}}, "upload_fileobj"
+    )
     mocker.patch("aioboto3.Session.client", AsyncMock(return_value=mock_s3_client))
     mock_file = Mock(spec=UploadFile)
     mock_file.file = Mock()
@@ -127,14 +144,18 @@ async def test_delete_file_success(mock_settings, mocker, bucket_name):
 
     async with S3Service(bucket_name) as service:
         await service.delete_file("test.txt")
-        mock_s3_client.delete_object.assert_called_once_with(Bucket="test-prefix-valid-bucket", Key="test.txt")
+        mock_s3_client.delete_object.assert_called_once_with(
+            Bucket="test-prefix-valid-bucket", Key="test.txt"
+        )
 
 
 @pytest.mark.asyncio
 async def test_delete_file_failure(mock_settings, mocker, bucket_name):
     mocker.patch("s3_service.get_settings", return_value=mock_settings)
     mock_s3_client = AsyncMock()
-    mock_s3_client.delete_object.side_effect = ClientError({"Error": {"Code": "500"}}, "delete_object")
+    mock_s3_client.delete_object.side_effect = ClientError(
+        {"Error": {"Code": "500"}}, "delete_object"
+    )
     mocker.patch("aioboto3.Session.client", AsyncMock(return_value=mock_s3_client))
     mocker.patch.object(logger, "exception")
 

@@ -1,6 +1,6 @@
+from unittest.mock import AsyncMock
+
 import pytest
-import aiohttp
-from unittest.mock import AsyncMock, patch
 from rugcheck_api import RugCheckAPI
 
 

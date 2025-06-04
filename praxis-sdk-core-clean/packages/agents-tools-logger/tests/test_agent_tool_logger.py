@@ -1,8 +1,8 @@
+import sys
+from io import StringIO
+
 import pytest
 from loguru import logger
-import sys
-from unittest.mock import MagicMock
-from io import StringIO
 
 
 @pytest.fixture
@@ -11,7 +11,11 @@ def setup_logger(mocker):
     mock_stdout = StringIO()
     mocker.patch.object(sys, "stdout", mock_stdout)
     mock_file_handler = mocker.patch("loguru.logger.add")
-    logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} - {message}", level="INFO")
+    logger.add(
+        sys.stdout,
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} - {message}",
+        level="INFO",
+    )
     logger.add("app.log", rotation="10 MB", compression="zip", level="ERROR")
     return mock_stdout, mock_file_handler
 
@@ -46,7 +50,10 @@ def test_log_format(setup_logger):
     logger.info("Formatted log test")
     log_output = mock_stdout.getvalue()
     import re
-    pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \| INFO \| \S+:\d+ - Formatted log test"
+
+    pattern = (
+        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \| INFO \| \S+:\d+ - Formatted log test"
+    )
     assert re.match(pattern, log_output.strip())
 
 

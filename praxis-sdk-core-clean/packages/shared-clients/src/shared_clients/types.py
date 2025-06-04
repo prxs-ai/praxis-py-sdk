@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from types import TracebackType
-from typing import Protocol
+from typing import TYPE_CHECKING, Generic, Protocol, TypeVar
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+R = TypeVar("R")
 
 
-class API[R](Protocol):
+class API(Protocol, Generic[R]):
     __slots__ = ()
 
     @abstractmethod

@@ -1,6 +1,7 @@
-import pytest
+from unittest.mock import AsyncMock
+
 import aiohttp
-from unittest.mock import AsyncMock, patch
+import pytest
 from dexscreener_api import DextoolsAPIWrapper
 
 
@@ -19,7 +20,7 @@ async def test_set_plan_valid(dextools_api):
     assert dextools_api._headers == {
         "X-API-Key": "test_key",
         "Accept": "application/json",
-        "User-Agent": "API-Wrapper/0.3"
+        "User-Agent": "API-Wrapper/0.3",
     }
 
 
@@ -57,7 +58,7 @@ async def test_request_success(dextools_api, mocker):
     dextools_api._session.get.assert_called_once_with(
         "https://public-api.dextools.io/free/v2/test",
         headers=dextools_api._headers,
-        params={"key": "value"}
+        params={"key": "value"},
     )
 
 
@@ -71,7 +72,9 @@ async def test_request_403_error(dextools_api, mocker):
     mocker.patch.object(dextools_api._session, "get", return_value=mock_response)
     mocker.patch("aiolimiter.AsyncLimiter.__aenter__", new=AsyncMock())
 
-    with pytest.raises(Exception, match="Access denied \(403\). Check your API key or request limits."):
+    with pytest.raises(
+        Exception, match=r"Access denied \(403\). Check your API key or request limits."
+    ):
         await dextools_api._request("/test")
 
 
@@ -90,11 +93,12 @@ async def test_get_blockchains(dextools_api, mocker):
     mock_response = {"blockchains": ["solana", "ether"]}
     mocker.patch.object(dextools_api, "_request", AsyncMock(return_value=mock_response))
 
-    result = await dextools_api.get_blockchains(order="desc", sort="id", page=1, pageSize=10)
+    result = await dextools_api.get_blockchains(
+        order="desc", sort="id", page=1, pageSize=10
+    )
     assert result == mock_response
     dextools_api._request.assert_called_once_with(
-        "/blockchain",
-        params={"order": "desc", "sort": "id", "page": 1, "pageSize": 10}
+        "/blockchain", params={"order": "desc", "sort": "id", "page": 1, "pageSize": 10}
     )
 
 
@@ -103,7 +107,9 @@ async def test_get_pool_by_address(dextools_api, mocker):
     mock_response = {"pool": "data"}
     mocker.patch.object(dextools_api, "_request", AsyncMock(return_value=mock_response))
 
-    result = await dextools_api.get_pool_by_address("solana", "8f94e3kYk9ZPuEPT5Zgo9tiVJvwaj8zUzbPFPqt2MKK2")
+    result = await dextools_api.get_pool_by_address(
+        "solana", "8f94e3kYk9ZPuEPT5Zgo9tiVJvwaj8zUzbPFPqt2MKK2"
+    )
     assert result == mock_response
     dextools_api._request.assert_called_once_with(
         "/pool/solana/8f94e3kYk9ZPuEPT5Zgo9tiVJvwaj8zUzbPFPqt2MKK2"
@@ -116,12 +122,25 @@ async def test_get_pools(dextools_api, mocker):
     mocker.patch.object(dextools_api, "_request", AsyncMock(return_value=mock_response))
 
     result = await dextools_api.get_pools(
-        chain="solana", from_="2023-11-14", to="2023-11-15", order="desc", sort="volume", page=1, pageSize=10
+        chain="solana",
+        from_="2023-11-14",
+        to="2023-11-15",
+        order="desc",
+        sort="volume",
+        page=1,
+        pageSize=10,
     )
     assert result == mock_response
     dextools_api._request.assert_called_once_with(
         "/pool/solana",
-        params={"from": "2023-11-14", "to": "2023-11-15", "order": "desc", "sort": "volume", "page": 1, "pageSize": 10}
+        params={
+            "from": "2023-11-14",
+            "to": "2023-11-15",
+            "order": "desc",
+            "sort": "volume",
+            "page": 1,
+            "pageSize": 10,
+        },
     )
 
 
@@ -130,9 +149,16 @@ async def test_get_pools_partial_params(dextools_api, mocker):
     mock_response = {"pools": ["pool1"]}
     mocker.patch.object(dextools_api, "_request", AsyncMock(return_value=mock_response))
 
-    result = await dextools_api.get_pools(chain="solana", from_="2023-11-14", to="2023-11-15")
+    result = await dextools_api.get_pools(
+        chain="solana", from_="2023-11-14", to="2023-11-15"
+    )
     assert result == mock_response
     dextools_api._request.assert_called_once_with(
         "/pool/solana",
-        params={"from": "2023-11-14", "to": "2023-11-15", "order": "asc", "sort": "creationTime"}
+        params={
+            "from": "2023-11-14",
+            "to": "2023-11-15",
+            "order": "asc",
+            "sort": "creationTime",
+        },
     )

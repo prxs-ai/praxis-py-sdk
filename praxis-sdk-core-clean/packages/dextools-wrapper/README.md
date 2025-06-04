@@ -1,7 +1,7 @@
 # DexTools API Wrapper
 
-This package is an asynchronous wrapper for the DexTools API. 
-It simplifies interaction with the API, automatically manages rate limits, 
+This package is an asynchronous wrapper for the DexTools API.
+It simplifies interaction with the API, automatically manages rate limits,
 and provides a convenient interface for retrieving data.
 
 ## Technologies Used

@@ -1,8 +1,7 @@
-import pytest
-from unittest.mock import Mock, patch, mock_open
-import os
 import pickle
-import subprocess
+from unittest.mock import mock_open
+
+import pytest
 from tik_tok_package.bot import TikTokBot
 from tik_tok_package.log import log
 
@@ -37,7 +36,9 @@ async def test_ensure_chrome_installed_linux(tiktok_bot, mock_subprocess, mocker
     mock_subprocess.return_value.stdout = "/usr/bin/google-chrome\n"
     result = tiktok_bot._ensure_chrome_installed()
     assert result == "/usr/bin/google-chrome"
-    mock_subprocess.assert_any_call("which google-chrome", capture_output=True, shell=True, text=True)
+    mock_subprocess.assert_any_call(
+        "which google-chrome", capture_output=True, shell=True, text=True
+    )
 
 
 @pytest.mark.asyncio
@@ -60,7 +61,9 @@ async def test_load_cookies_exists(tiktok_bot, mocker):
     mock_cookies = [{"name": "test", "value": "value"}]
     mocker.patch("builtins.open", mock_open(read_data=pickle.dumps(mock_cookies)))
     tiktok_bot._load_cookies()
-    tiktok_bot.driver.add_cookie.assert_called_once_with({"name": "test", "value": "value"})
+    tiktok_bot.driver.add_cookie.assert_called_once_with(
+        {"name": "test", "value": "value"}
+    )
 
 
 @pytest.mark.asyncio
@@ -146,7 +149,9 @@ async def test_like_video_with_url(tiktok_bot, mocker):
     mocker.patch.object(tiktok_bot.user_video_page, "verify_captcha")
 
     tiktok_bot.like_video(video_url="https://www.tiktok.com/@user/video/123")
-    tiktok_bot.user_video_page.open_page.assert_called_once_with("https://www.tiktok.com/@user/video/123")
+    tiktok_bot.user_video_page.open_page.assert_called_once_with(
+        "https://www.tiktok.com/@user/video/123"
+    )
     tiktok_bot.user_video_page.like_video.assert_called_once()
     tiktok_bot.user_video_page.verify_captcha.assert_called_once()
 
@@ -159,17 +164,23 @@ async def test_like_video_with_username_and_id(tiktok_bot, mocker):
     mocker.patch.object(log, "info")
 
     tiktok_bot.like_video(username="user", video_id="123")
-    tiktok_bot.user_video_page.open_page.assert_called_once_with("https://www.tiktok.com/@user/video/123")
+    tiktok_bot.user_video_page.open_page.assert_called_once_with(
+        "https://www.tiktok.com/@user/video/123"
+    )
     tiktok_bot.user_video_page.like_video.assert_called_once()
     tiktok_bot.user_video_page.verify_captcha.assert_called_once()
-    log.info.assert_called_once_with("[!] Username should start with '@'. Adding '@' to user")
+    log.info.assert_called_once_with(
+        "[!] Username should start with '@'. Adding '@' to user"
+    )
 
 
 @pytest.mark.asyncio
 async def test_like_video_missing_params(tiktok_bot, mocker):
     mocker.patch.object(log, "info")
-    with pytest.raises(ValueError,
-                       match="If 'video_url' is not provided, both 'username' and 'video_id' must be provided."):
+    with pytest.raises(
+        ValueError,
+        match="If 'video_url' is not provided, both 'username' and 'video_id' must be provided.",
+    ):
         tiktok_bot.like_video()
     log.info.assert_called_once()
 
@@ -180,7 +191,9 @@ async def test_follow_user_with_url(tiktok_bot, mocker):
     mocker.patch.object(tiktok_bot.user_profile_page, "follow_user")
 
     tiktok_bot.follow_user(user_url="https://www.tiktok.com/@user")
-    tiktok_bot.user_profile_page.open_page.assert_called_once_with("https://www.tiktok.com/@user")
+    tiktok_bot.user_profile_page.open_page.assert_called_once_with(
+        "https://www.tiktok.com/@user"
+    )
     tiktok_bot.user_profile_page.follow_user.assert_called_once_with(follow=True)
 
 
@@ -191,15 +204,21 @@ async def test_follow_user_with_username(tiktok_bot, mocker):
     mocker.patch.object(log, "info")
 
     tiktok_bot.follow_user(username="user")
-    tiktok_bot.user_profile_page.open_page.assert_called_once_with("https://www.tiktok.com/@user")
+    tiktok_bot.user_profile_page.open_page.assert_called_once_with(
+        "https://www.tiktok.com/@user"
+    )
     tiktok_bot.user_profile_page.follow_user.assert_called_once_with(follow=True)
-    log.info.assert_called_once_with("[!] Username should start with '@'. Adding '@' to user")
+    log.info.assert_called_once_with(
+        "[!] Username should start with '@'. Adding '@' to user"
+    )
 
 
 @pytest.mark.asyncio
 async def test_follow_user_missing_params(tiktok_bot, mocker):
     mocker.patch.object(log, "info")
-    with pytest.raises(ValueError, match="If 'user_url' is not provided, 'username' must be provided."):
+    with pytest.raises(
+        ValueError, match="If 'user_url' is not provided, 'username' must be provided."
+    ):
         tiktok_bot.follow_user()
     log.info.assert_called_once()
 
@@ -210,7 +229,9 @@ async def test_unfollow_user(tiktok_bot, mocker):
     mocker.patch.object(tiktok_bot.user_profile_page, "follow_user")
 
     tiktok_bot.unfollow_user(username="user")
-    tiktok_bot.user_profile_page.open_page.assert_called_once_with("https://www.tiktok.com/@user")
+    tiktok_bot.user_profile_page.open_page.assert_called_once_with(
+        "https://www.tiktok.com/@user"
+    )
     tiktok_bot.user_profile_page.follow_user.assert_called_once_with(follow=False)
 
 
@@ -220,8 +241,12 @@ async def test_comment_on_video(tiktok_bot, mocker):
     mocker.patch.object(tiktok_bot.user_video_page, "left_comment")
     mocker.patch.object(tiktok_bot.user_video_page, "publish_comment")
 
-    tiktok_bot.comment_on_video("https://www.tiktok.com/@user/video/123", "test comment")
-    tiktok_bot.user_video_page.open_page.assert_called_once_with("https://www.tiktok.com/@user/video/123")
+    tiktok_bot.comment_on_video(
+        "https://www.tiktok.com/@user/video/123", "test comment"
+    )
+    tiktok_bot.user_video_page.open_page.assert_called_once_with(
+        "https://www.tiktok.com/@user/video/123"
+    )
     tiktok_bot.user_video_page.left_comment.assert_called_once_with("test comment")
     tiktok_bot.user_video_page.publish_comment.assert_called_once()
 

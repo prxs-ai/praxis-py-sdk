@@ -1,8 +1,8 @@
+import pickle
+import time
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-import time
-import pickle
-
 from tiktok_captcha_solver import SeleniumSolver
 
 from tik_tok_package.log import log
@@ -14,32 +14,40 @@ class LoginPage:
         self.sadcaptcha = sadcaptcha
 
     def open_page(self):
-        """Method to open the login page"""
+        """Method to open the login page."""
         # try:
         self.driver.get("https://www.tiktok.com/login/phone-or-email/email")
         # except Exception as e:
         #     log.error(f"Error while open login page: {e}")
 
     def accept_cookies(self):
-        """Method for accepting cookies"""
+        """Method for accepting cookies."""
         try:
             log.info("Waiting for the cookie banner to load...")
             time.sleep(2)
-            shadow_host = self.driver.find_element(By.CSS_SELECTOR, "body > tiktok-cookie-banner")
+            shadow_host = self.driver.find_element(
+                By.CSS_SELECTOR, "body > tiktok-cookie-banner"
+            )
             shadow_root = shadow_host.shadow_root
-            button = shadow_root.find_element(By.CSS_SELECTOR, "div > div.button-wrapper > button:nth-child(2)")
+            button = shadow_root.find_element(
+                By.CSS_SELECTOR, "div > div.button-wrapper > button:nth-child(2)"
+            )
             button.click()
             log.info("Cookies accepted")
         except Exception as e:
             log.error(f"error while accepting cookies: {e}")
 
     def login(self, username: str, password: str):
-        """Login method"""
+        """Login method."""
         # try:
         log.info("Waiting for the login page to load...")
-        username_field = self.driver.find_element(By.NAME, 'username')
-        password_field = self.driver.find_element(By.CSS_SELECTOR, 'input.tiktok-wv3bkt-InputContainer')
-        login_button = self.driver.find_element(By.CSS_SELECTOR, 'button[data-e2e="login-button"]')
+        username_field = self.driver.find_element(By.NAME, "username")
+        password_field = self.driver.find_element(
+            By.CSS_SELECTOR, "input.tiktok-wv3bkt-InputContainer"
+        )
+        login_button = self.driver.find_element(
+            By.CSS_SELECTOR, 'button[data-e2e="login-button"]'
+        )
 
         username_field.send_keys(username)
         password_field.send_keys(password)
@@ -51,15 +59,14 @@ class LoginPage:
         #     log.error(f"Error while login: {e}")
 
     def go_to_upload_page(self):
-        """Method to go to the upload page after login"""
+        """Method to go to the upload page after login."""
         # try:
         self.driver.get("https://www.tiktok.com/upload")
         # except Exception as e:
         #     log.error(f"Error while go to upload page: {e}")
 
-
     def save_cookies(self):
-        filename= "cookies.pkl"
+        filename = "cookies.pkl"
         log.info(f"Saving cookies into {filename}")
         with open(filename, "wb") as f:
             pickle.dump(self.driver.get_cookies(), f)
