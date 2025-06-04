@@ -9,6 +9,9 @@ requires-python = ">=3.10,<4"
 readme = "README.md"
 dependencies = [
     "qdrant-client (>=1.13.0,<2.0.0)",
+    "pytest-asyncio (==0.26.0)",
+    "pydantic_settings>=2.7.1",
+
 ]
 
 [tool.poetry]
