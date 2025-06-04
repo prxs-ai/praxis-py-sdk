@@ -16,6 +16,7 @@ on:
           - tool-exception
           - qdrant-client-custom
           - tik-tok-package
+          - infra-configs
       part:
         required: true
         type: choice
