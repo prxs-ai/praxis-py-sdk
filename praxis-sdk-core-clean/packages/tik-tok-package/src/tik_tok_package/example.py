@@ -1,3 +1,4 @@
+import contextlib
 
 from tik_tok_package.main import TikTokBot
 
@@ -12,10 +13,8 @@ def run_bot(username: str, password: str, api_key: str):
     #     video_url="https://www.tiktok.com/@mini_lolik/video/7491613049669897527",
     #     comment="Hello world!"
     # )
-    try:
+    with contextlib.suppress(Exception):
         bot.quit()
-    except Exception:
-        pass
 
 
 if __name__ == "__main__":
@@ -23,4 +22,4 @@ if __name__ == "__main__":
     username = ""
     password = ""
     api_key = "***REMOVED***"
-    run_bot(username, password, api_key )
+    run_bot(username, password, api_key)

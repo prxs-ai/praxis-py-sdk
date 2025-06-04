@@ -1,4 +1,4 @@
-from typing import Optional, overload
+from typing import overload
 
 from msgspec import json
 
@@ -10,12 +10,18 @@ from .session import TweetScoutSession
 
 class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
     @overload
-    async def follows(self, *, link: str, user_id: None = None) -> list[dto.HandlerLookupRes]: ...
+    async def follows(
+        self, *, link: str, user_id: None = None
+    ) -> list[dto.HandlerLookupRes]: ...
 
     @overload
-    async def follows(self, *, link: None = None, user_id: str) -> list[dto.HandlerLookupRes]: ...
+    async def follows(
+        self, *, link: None = None, user_id: str
+    ) -> list[dto.HandlerLookupRes]: ...
 
-    async def follows(self, *, link: Optional[str] = None, user_id: Optional[str] = None) -> list[dto.HandlerLookupRes]:
+    async def follows(
+        self, *, link: str | None = None, user_id: str | None = None
+    ) -> list[dto.HandlerLookupRes]:
         params: dict[str, str] = {}
         if link is not None:
             params["link"] = link
@@ -39,23 +45,35 @@ class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
         async with self._session.get(url="list-members", params=params) as resp:
             return json.decode(await resp.read(), type=list[dto.HandlerListMember])
 
-    async def list_tweets(self, list_id: str, cursor: Optional[str] = None) -> dto.HandlerListTweetsRes:
+    async def list_tweets(
+        self, list_id: str, cursor: str | None = None
+    ) -> dto.HandlerListTweetsRes:
         params = {"list_id": list_id}
         if cursor:
             params["cursor"] = cursor
         async with self._session.get(url="list-tweets", params=params) as resp:
             return json.decode(await resp.read(), type=dto.HandlerListTweetsRes)
 
-    async def search_tweets(self, payload: dto.HandlerSearchTweetsReq) -> dto.HandlerSearchTweetsRes:
-        async with self._session.post(url="search-tweets", json=payload.to_dict()) as resp:
+    async def search_tweets(
+        self, payload: dto.HandlerSearchTweetsReq
+    ) -> dto.HandlerSearchTweetsRes:
+        async with self._session.post(
+            url="search-tweets", json=payload.to_dict()
+        ) as resp:
             return json.decode(await resp.read(), type=dto.HandlerSearchTweetsRes)
 
-    async def tweet_info(self, payload: dto.HandlerTweetInfoReq) -> dto.HandlerTweetInfoResp:
+    async def tweet_info(
+        self, payload: dto.HandlerTweetInfoReq
+    ) -> dto.HandlerTweetInfoResp:
         async with self._session.post(url="tweet-info", json=payload.to_dict()) as resp:
             return json.decode(await resp.read(), type=dto.HandlerTweetInfoResp)
 
-    async def user_tweets(self, payload: dto.HandlerUserTweetsReq) -> dto.HandlerUserTweetsRes:
-        async with self._session.post(url="user-tweets", json=payload.to_dict()) as resp:
+    async def user_tweets(
+        self, payload: dto.HandlerUserTweetsReq
+    ) -> dto.HandlerUserTweetsRes:
+        async with self._session.post(
+            url="user-tweets", json=payload.to_dict()
+        ) as resp:
             return json.decode(await resp.read(), type=dto.HandlerUserTweetsRes)
 
     async def handle_to_id(self, user_handle: str) -> dto.HandlerIDRes:
@@ -69,13 +87,17 @@ class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
             return json.decode(await resp.read(), type=dto.HandlerHandleRes)
 
     @overload
-    async def handle_history(self, *, link: str, user_id: None = None) -> dto.HandlerHandleHistoriesResp: ...
+    async def handle_history(
+        self, *, link: str, user_id: None = None
+    ) -> dto.HandlerHandleHistoriesResp: ...
 
     @overload
-    async def handle_history(self, *, link: None = None, user_id: str) -> dto.HandlerHandleHistoriesResp: ...
+    async def handle_history(
+        self, *, link: None = None, user_id: str
+    ) -> dto.HandlerHandleHistoriesResp: ...
 
     async def handle_history(
-        self, *, link: Optional[str] = None, user_id: Optional[str] = None
+        self, *, link: str | None = None, user_id: str | None = None
     ) -> dto.HandlerHandleHistoriesResp:
         params: dict[str, str] = {}
         if link is not None:
@@ -86,13 +108,17 @@ class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
             return json.decode(await resp.read(), type=dto.HandlerHandleHistoriesResp)
 
     @overload
-    async def followers_stats(self, *, user_handle: str, user_id: None = None) -> dto.HandlerFollowersStatsResp: ...
+    async def followers_stats(
+        self, *, user_handle: str, user_id: None = None
+    ) -> dto.HandlerFollowersStatsResp: ...
 
     @overload
-    async def followers_stats(self, *, user_handle: None = None, user_id: str) -> dto.HandlerFollowersStatsResp: ...
+    async def followers_stats(
+        self, *, user_handle: None = None, user_id: str
+    ) -> dto.HandlerFollowersStatsResp: ...
 
     async def followers_stats(
-        self, *, user_handle: Optional[str] = None, user_id: Optional[str] = None
+        self, *, user_handle: str | None = None, user_id: str | None = None
     ) -> dto.HandlerFollowersStatsResp:
         params: dict[str, str] = {}
         if user_handle is not None:
@@ -103,13 +129,17 @@ class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
             return json.decode(await resp.read(), type=dto.HandlerFollowersStatsResp)
 
     @overload
-    async def new_following_7d(self, *, user_handle: str, user_id: None = None) -> list[dto.TypesFollower]: ...
+    async def new_following_7d(
+        self, *, user_handle: str, user_id: None = None
+    ) -> list[dto.TypesFollower]: ...
 
     @overload
-    async def new_following_7d(self, *, user_handle: None = None, user_id: str) -> list[dto.TypesFollower]: ...
+    async def new_following_7d(
+        self, *, user_handle: None = None, user_id: str
+    ) -> list[dto.TypesFollower]: ...
 
     async def new_following_7d(
-        self, *, user_handle: Optional[str] = None, user_id: Optional[str] = None
+        self, *, user_handle: str | None = None, user_id: str | None = None
     ) -> list[dto.TypesFollower]:
         params: dict[str, str] = {}
         if user_handle is not None:
@@ -120,13 +150,17 @@ class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
             return json.decode(await resp.read(), type=list[dto.TypesFollower])
 
     @overload
-    async def score_changes(self, *, user_handle: str, user_id: None = None) -> dto.HandlerScoreChangesResp: ...
+    async def score_changes(
+        self, *, user_handle: str, user_id: None = None
+    ) -> dto.HandlerScoreChangesResp: ...
 
     @overload
-    async def score_changes(self, *, user_handle: None = None, user_id: str) -> dto.HandlerScoreChangesResp: ...
+    async def score_changes(
+        self, *, user_handle: None = None, user_id: str
+    ) -> dto.HandlerScoreChangesResp: ...
 
     async def score_changes(
-        self, *, user_handle: Optional[str] = None, user_id: Optional[str] = None
+        self, *, user_handle: str | None = None, user_id: str | None = None
     ) -> dto.HandlerScoreChangesResp:
         params: dict[str, str] = {}
         if user_handle is not None:
@@ -146,7 +180,9 @@ class TweetScoutAPI(AiohttpAPI[TweetScoutSession]):
         async with self._session.get(url=url) as resp:
             return json.decode(await resp.read(), type=dto.HandlerScoreResp)
 
-    async def top_followers(self, user_handle: str, from_db: Optional[str] = None) -> list[dto.TypesAccount]:
+    async def top_followers(
+        self, user_handle: str, from_db: str | None = None
+    ) -> list[dto.TypesAccount]:
         url = f"top-followers/{user_handle}"
         params: dict[str, str] = {}
         if from_db is not None:

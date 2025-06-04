@@ -1,9 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock
-from typing import Type
-from types import TracebackType
-from shared_clients.aiohttp_.session import AiohttpSession
+
+import pytest
 from shared_clients.aiohhtp_.api import AiohttpAPI
+from shared_clients.aiohttp_.session import AiohttpSession
 
 
 @pytest.fixture
@@ -28,7 +27,7 @@ async def test_aiohttp_api_enter(mock_session):
 @pytest.mark.asyncio
 async def test_aiohttp_api_exit(mock_session):
     api = AiohttpAPI(mock_session)
-    exc_type = Type[Exception]
+    exc_type = type[Exception]
     exc_val = Exception("Test exception")
     exc_tb = None
 

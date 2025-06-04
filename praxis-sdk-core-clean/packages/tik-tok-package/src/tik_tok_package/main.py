@@ -1,9 +1,9 @@
 import os
-import time
 import pickle
-import subprocess
 import platform
-from typing import Optional
+import subprocess
+import time
+
 import undetected_chromedriver as uc
 from tiktok_captcha_solver import SeleniumSolver
 
@@ -16,21 +16,28 @@ from tik_tok_package.pages.user_video_page import UserVideoPage
 
 
 class TikTokBot:
-    def __init__(self, api_key: str, session_name: str = "tiktok_session", headless: bool = True,
-                 browser_executable_path: Optional[str] = None):
+    def __init__(
+        self,
+        api_key: str,
+        session_name: str = "tiktok_session",
+        headless: bool = True,
+        browser_executable_path: str | None = None,
+    ):
         self.session_name = session_name
         self.cookies_path = f"sessions/{session_name}_cookies.pkl"
-        self.browser_executable_path = browser_executable_path or self._ensure_chrome_installed()
-        self.driver = uc.Chrome(headless=False, use_subprocess=False, version_main=135,
-                                browser_executable_path=browser_executable_path,
-                                options=self._get_settings()  # type: ignore
-                                )
+        self.browser_executable_path = (
+            browser_executable_path or self._ensure_chrome_installed()
+        )
+        self.driver = uc.Chrome(
+            headless=False,
+            use_subprocess=False,
+            version_main=135,
+            browser_executable_path=browser_executable_path,
+            options=self._get_settings(),  # type: ignore
+        )
         self.start_time = time.time()
         self.sadcaptcha = SeleniumSolver(
-            self.driver,
-            api_key,
-            mouse_step_size=1,
-            mouse_step_delay_ms=10
+            self.driver, api_key, mouse_step_size=1, mouse_step_delay_ms=10
         )
 
         self.login_page = LoginPage(self.driver, self.sadcaptcha)
@@ -48,20 +55,32 @@ class TikTokBot:
         os_type = platform.system().lower()
         if os_type == "linux":
             print("Attempting to install Chrome on Linux...")
-            subprocess.run("wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -",
-                           shell=True)
+            subprocess.run(
+                "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -",
+                shell=True,
+                check=False,
+            )
             subprocess.run(
                 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list',
-                shell=True)
-            subprocess.run(["sudo", "apt", "update"])
-            subprocess.run(["sudo", "apt", "install", "-y", "google-chrome-stable"])
+                shell=True,
+                check=False,
+            )
+            subprocess.run(["sudo", "apt", "update"], check=False)
+            subprocess.run(
+                ["sudo", "apt", "install", "-y", "google-chrome-stable"], check=False
+            )
 
             # Получим путь до chrome как строку
-            result = subprocess.run("which google-chrome", capture_output=True, shell=True, text=True)
+            result = subprocess.run(
+                "which google-chrome",
+                capture_output=True,
+                shell=True,
+                text=True,
+                check=False,
+            )
             return result.stdout.strip()
-        else:
-            print("Unsupported OS")
-            return None
+        print("Unsupported OS")
+        return None
 
     def _get_settings(self):
         options = uc.ChromeOptions()
@@ -72,6 +91,7 @@ class TikTokBot:
         options.add_argument("--disable-setuid-sandbox")
         options.add_argument("--disable-extensions")
         return options
+
     def _load_cookies(self):
         if os.path.exists(self.cookies_path):
             with open(self.cookies_path, "rb") as f:
@@ -89,16 +109,12 @@ class TikTokBot:
             pickle.dump(cookies, f)
 
     def is_logged_in(self) -> bool:
-        """
-        Check if the user is logged in by checking the current URL.
-        """
+        """Check if the user is logged in by checking the current URL."""
         self.driver.get("https://www.tiktok.com/upload")
         return "login" not in self.driver.current_url.lower()
 
     def login(self, username: str, password: str):
-        """
-        Login to TikTok using the provided username and password.
-        """
+        """Login to TikTok using the provided username and password."""
         if not self.is_logged_in():
             self.login_page.open_page()
             self.login_page.accept_cookies()
@@ -108,9 +124,7 @@ class TikTokBot:
             time.sleep(1)
 
     def upload_video(self, description: str, video_path: str):
-        """
-        Upload a video to TikTok with the provided description and video path.
-        """
+        """Upload a video to TikTok with the provided description and video path."""
         self.upload_page.open_page()
         self.scroll_page.accept_policy()
         self.upload_page.open_page()
@@ -120,52 +134,68 @@ class TikTokBot:
         self.upload_page.click_post_button()
         time.sleep(10)
 
-    def like_video(self, video_url: Optional[str] = None, video_id: Optional[str] = None,
-                   username: Optional[str] = None):
-        """
-        Like a video on TikTok using the provided video URL or video ID.
+    def like_video(
+        self,
+        video_url: str | None = None,
+        video_id: str | None = None,
+        username: str | None = None,
+    ):
+        """Like a video on TikTok using the provided video URL or video ID.
 
         If 'video_url' is not provided, both 'username' and 'video_id' must be provided.
         """
         if video_url is None:
             if username is None or video_id is None:
-                log.info(f"[!] If 'video_url' is not provided, both 'username' and 'video_id' must be provided. ")
-                raise ValueError("If 'video_url' is not provided, both 'username' and 'video_id' must be provided.")
+                log.info(
+                    "[!] If 'video_url' is not provided, both 'username' and 'video_id' must be provided. "
+                )
+                raise ValueError(
+                    "If 'video_url' is not provided, both 'username' and 'video_id' must be provided."
+                )
             if username[0] != "@":
-                log.info(f"[!] Username should start with '@'. Adding '@' to {username}")
+                log.info(
+                    f"[!] Username should start with '@'. Adding '@' to {username}"
+                )
                 username = "@" + username
             video_url = f"https://www.tiktok.com/{username}/video/{video_id}"
         self.user_video_page.open_page(video_url)
         self.user_video_page.like_video()
         self.user_video_page.verify_captcha()
 
-    def follow_user(self, user_url: Optional[str] = None, username: Optional[str] = None, follow_user: bool = True):
-        """
-        Follow a user on TikTok using the provided user URL or username.
+    def follow_user(
+        self,
+        user_url: str | None = None,
+        username: str | None = None,
+        follow_user: bool = True,
+    ):
+        """Follow a user on TikTok using the provided user URL or username.
 
         If 'user_url' is not provided, 'username' must be provided.
         """
         if user_url is None:
             if username is None:
-                log.info(f"[!] If 'user_url' is not provided, 'username' must be provided. ")
-                raise ValueError("If 'user_url' is not provided, 'username' must be provided.")
+                log.info(
+                    "[!] If 'user_url' is not provided, 'username' must be provided. "
+                )
+                raise ValueError(
+                    "If 'user_url' is not provided, 'username' must be provided."
+                )
             if username[0] != "@":
-                log.info(f"[!] Username should start with '@'. Adding '@' to {username}")
+                log.info(
+                    f"[!] Username should start with '@'. Adding '@' to {username}"
+                )
                 username = "@" + username
             user_url = f"https://www.tiktok.com/{username}"
 
         self.user_profile_page.open_page(user_url)
         self.user_profile_page.follow_user(follow=follow_user)
 
-    def unfollow_user(self, user_url: Optional[str] = None, username: Optional[str] = None):
-        """
-        Unfollow a user on TikTok using the provided user URL or username.
-        """
+    def unfollow_user(self, user_url: str | None = None, username: str | None = None):
+        """Unfollow a user on TikTok using the provided user URL or username."""
         self.follow_user(user_url=user_url, username=username, follow_user=False)
 
     def comment_on_video(self, video_url: str, comment: str):
-        """
-        Leave a comment on a TikTok video using the provided video URL and comment text.
+        """Leave a comment on a TikTok video using the provided video URL and comment text.
 
         WARNING: This method works only when session live more than 5 minutes.
         """
@@ -178,7 +208,5 @@ class TikTokBot:
         self.user_video_page.publish_comment()
 
     def quit(self):
-        """
-        Quit the TikTok bot and close the browser.
-        """
+        """Quit the TikTok bot and close the browser."""
         self.driver.close()

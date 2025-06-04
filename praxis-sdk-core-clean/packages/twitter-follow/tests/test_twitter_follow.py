@@ -1,6 +1,7 @@
-import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
+
 import aiohttp
+import pytest
 from twitter_follow.main import follow
 
 
@@ -15,8 +16,11 @@ async def test_follow_success(mocker):
     assert result == {"data": {"following": True}}
     aiohttp.ClientSession.post.assert_called_once_with(
         "https://api.x.com/2/users/user123/following",
-        headers={"Authorization": "Bearer token123", "Content-Type": "application/json"},
-        json={"target_user_id": "target456"}
+        headers={
+            "Authorization": "Bearer token123",
+            "Content-Type": "application/json",
+        },
+        json={"target_user_id": "target456"},
     )
 
 
@@ -32,6 +36,9 @@ async def test_follow_failure(mocker):
     assert result == {"error": "Bad Request", "status": 400}
     aiohttp.ClientSession.post.assert_called_once_with(
         "https://api.x.com/2/users/user123/following",
-        headers={"Authorization": "Bearer token123", "Content-Type": "application/json"},
-        json={"target_user_id": "target456"}
+        headers={
+            "Authorization": "Bearer token123",
+            "Content-Type": "application/json",
+        },
+        json={"target_user_id": "target456"},
     )

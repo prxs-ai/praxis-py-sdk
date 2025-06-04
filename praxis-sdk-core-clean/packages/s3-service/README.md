@@ -50,7 +50,7 @@ class Settings:
         s3_access_key: str = "your_access_key"
         s3_secret_key: str = "your_secret_key"
         s3_bucket_prefix: str = "your-prefix"
-    
+
     infrastructure: Infrastructure = Infrastructure()
 
 def get_settings() -> Settings:

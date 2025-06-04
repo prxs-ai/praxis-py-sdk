@@ -1,5 +1,4 @@
 import aiohttp
-
 from agents_tools_logger.main import log
 
 
@@ -15,7 +14,7 @@ async def get_likes_on_post(access_token: str, tweet_id: str):
     ):
         if response.status == 200:
             result = await response.json()
-            log.info(f'Notifications received: {result}')
+            log.info(f"Notifications received: {result}")
             return result
-        else:
-            log.info(f'Notifications not received: {await response.text()}')
+        log.info(f"Notifications not received: {await response.text()}")
+        return None

@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Final, TypeVar
 
 from services.shared.events import models
 
@@ -11,8 +11,10 @@ _Model2Message: Final[dict[type[models.Model], type[schemas.Message]]] = {
     models.Source: schemas.Source,
 }
 
+C = TypeVar("C", bound=models.Message)
 
-def get_message_type[C: models.Message](cls: type[C]) -> type[schemas.Message]:
+
+def get_message_type(cls: type[C]) -> type[schemas.Message]:
     try:
         return _Model2Message[cls]
     except KeyError as exc:

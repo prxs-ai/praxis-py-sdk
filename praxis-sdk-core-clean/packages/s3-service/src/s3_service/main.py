@@ -1,4 +1,5 @@
 import re
+
 import aioboto3
 from botocore.exceptions import ClientError
 from fastapi import UploadFile
@@ -39,8 +40,10 @@ class S3Service:
         try:
             await self.s3_client.head_bucket(Bucket=self.bucket_name)
         except ClientError as e:
-            if e.response['Error']['Code'] == '404':
-                logger.info(f"Bucket '{self.bucket_name}' does not exist. Creating bucket.")
+            if e.response["Error"]["Code"] == "404":
+                logger.info(
+                    f"Bucket '{self.bucket_name}' does not exist. Creating bucket."
+                )
                 try:
                     await self.s3_client.create_bucket(Bucket=self.bucket_name)
                 except ClientError as create_err:
@@ -98,7 +101,9 @@ class S3Service:
 
     async def list_files(self, prefix: str = "") -> list[str]:
         try:
-            response = await self.s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix)
+            response = await self.s3_client.list_objects_v2(
+                Bucket=self.bucket_name, Prefix=prefix
+            )
             return [item["Key"] for item in response.get("Contents", [])]
         except ClientError as e:
             logger.exception("Failed to list files in S3 bucket.")
@@ -108,7 +113,9 @@ class S3Service:
 
     async def get_file_bytes(self, file_key: str) -> bytes:
         try:
-            response = await self.s3_client.get_object(Bucket=self.bucket_name, Key=file_key)
+            response = await self.s3_client.get_object(
+                Bucket=self.bucket_name, Key=file_key
+            )
             return await response["Body"].read()
         except ClientError as e:
             logger.exception(f"Failed to get file bytes from S3 for key {file_key}.")

@@ -1,18 +1,23 @@
 from __future__ import annotations
 
-from collections.abc import Coroutine
 from functools import partialmethod
-from types import TracebackType
-from typing import Any, Callable, Self, Unpack
+from typing import TYPE_CHECKING, Any, Generic, ParamSpec, Self, TypeVar, Unpack
 from urllib.parse import urlparse
 
 from aiohttp import ClientResponse, ClientSession
-from aiohttp.client import _BaseRequestContextManager, _RequestOptions
-
 from services.shared.clients.exceptions import APIError
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+    from types import TracebackType
 
-def _factory[**P, R](verb: str, _: Callable[P, R]) -> Callable[P, R]:
+    from aiohttp.client import _BaseRequestContextManager, _RequestOptions
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def _factory(verb: str, _: Callable[P, R]) -> Callable[P, R]:
     @partialmethod
     def method(*args: P.args, **kwargs: P.kwargs) -> R:
         return args[0].request(verb, *args[1:], **kwargs)  # type: ignore
@@ -20,10 +25,13 @@ def _factory[**P, R](verb: str, _: Callable[P, R]) -> Callable[P, R]:
     return method  # type: ignore
 
 
-class ResponseWrapper[R: ClientResponse]:
+ResponseType = TypeVar("ResponseType", bound=ClientResponse)
+
+
+class ResponseWrapper(Generic[ResponseType]):
     __slots__ = "_coro", "_resp"
 
-    def __init__(self, coro: Coroutine[Any, None, R]) -> None:
+    def __init__(self, coro: Coroutine[Any, None, ResponseType]) -> None:
         self._coro = coro
 
     async def __aenter__(
@@ -79,7 +87,9 @@ class AiohttpSession:
     def _handle_kwargs(self, **kwargs: Unpack[_RequestOptions]) -> _RequestOptions:
         return kwargs
 
-    def get(self, url: str, **kwargs: Unpack[_RequestOptions]) -> ResponseWrapper[ClientResponse]:
+    def get(
+        self, url: str, **kwargs: Unpack[_RequestOptions]
+    ) -> ResponseWrapper[ClientResponse]:
         return ResponseWrapper(self.request("GET", url, **kwargs)._coro)
 
     post = _factory("post", get)

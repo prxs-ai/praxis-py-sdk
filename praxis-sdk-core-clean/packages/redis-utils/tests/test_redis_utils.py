@@ -1,10 +1,9 @@
-import pytest
-from unittest.mock import AsyncMock, patch
-import time
 from datetime import datetime
-from redis_client.main import Post
-from redis_utils.main import ensure_delay_between_posts, decode_redis
+from unittest.mock import AsyncMock
+
+import pytest
 from loguru import logger
+from redis_utils.main import decode_redis, ensure_delay_between_posts
 
 
 @pytest.fixture
@@ -21,13 +20,17 @@ def username():
 async def test_ensure_delay_between_posts_no_delay(mocker, username):
     mocker.patch("redis_client.get_redis_db")  # Mock Redis to avoid actual calls
     mocker.patch("random.randint", return_value=300)  # 5 minutes
-    mocker.patch("time.time", return_value=1672574400 + 1000)  # Some time after past_date
+    mocker.patch(
+        "time.time", return_value=1672574400 + 1000
+    )  # Some time after past_date
     mocker.patch("asyncio.sleep", new=AsyncMock())
     mocker.patch.object(logger, "info")
 
     await ensure_delay_between_posts(username)
     logger.info.assert_any_call(f"ensure_delay_between_posts {username=} len(posts)=2")
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} time_since_last_post=1000.0")
+    logger.info.assert_any_call(
+        f"ensure_delay_between_posts {username=} time_since_last_post=1000.0"
+    )
     asyncio.sleep.assert_not_called()
 
 
@@ -42,7 +45,9 @@ async def test_ensure_delay_between_posts_with_delay(mocker, username):
 
     await ensure_delay_between_posts(username)
     logger.info.assert_any_call(f"ensure_delay_between_posts {username=} len(posts)=2")
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} time_since_last_post=100.0")
+    logger.info.assert_any_call(
+        f"ensure_delay_between_posts {username=} time_since_last_post=100.0"
+    )
     logger.info.assert_any_call(f"Waiting: {username=} wait_time=200.0")
     mock_sleep.assert_called_once_with(200.0)
 
@@ -57,7 +62,9 @@ async def test_ensure_delay_between_posts_custom_delay(mocker, username):
 
     await ensure_delay_between_posts(username, delay=100)
     logger.info.assert_any_call(f"ensure_delay_between_posts {username=} len(posts)=2")
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} time_since_last_post=50.0")
+    logger.info.assert_any_call(
+        f"ensure_delay_between_posts {username=} time_since_last_post=50.0"
+    )
     logger.info.assert_any_call(f"Waiting: {username=} wait_time=50.0")
     mock_sleep.assert_called_once_with(50.0)
 

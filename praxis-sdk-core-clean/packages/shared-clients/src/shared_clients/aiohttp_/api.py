@@ -1,12 +1,13 @@
 from types import TracebackType
-from typing import Self
-
-from shared_clients.types import API
+from typing import Generic, Self, TypeVar
 
 from shared_clients.aiohttp_.session import AiohttpSession
+from shared_clients.types import API
+
+S = TypeVar("S", bound=AiohttpSession)
 
 
-class AiohttpAPI[S: AiohttpSession](API[S]):
+class AiohttpAPI(API[S], Generic[S]):
     __slots__ = ("_session",)
 
     def __init__(self, session: S) -> None:

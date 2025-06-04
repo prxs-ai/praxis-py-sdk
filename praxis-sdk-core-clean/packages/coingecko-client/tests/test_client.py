@@ -1,9 +1,10 @@
-import pytest
-import pandas as pd
-from aiohttp import ClientSession
-from fastapi import HTTPException
 from unittest.mock import AsyncMock
+
+import pandas as pd
+import pytest
+from aiohttp import ClientSession
 from coingecko_client.manager import CoinGeckoApiManager, prepare_historical_prices
+from fastapi import HTTPException
 
 
 @pytest.fixture
@@ -12,7 +13,7 @@ async def coingecko_manager(mocker):
         manager = CoinGeckoApiManager(
             api_key="test_api_key",
             session=session,
-            base_url="https://api.coingecko.com/api/v3"
+            base_url="https://api.coingecko.com/api/v3",
         )
         yield manager
 
@@ -24,9 +25,7 @@ async def test_send_request_success(coingecko_manager, mocker):
     coingecko_manager.session.request = AsyncMock(return_value=mock_response)
 
     result = await coingecko_manager._send_request(
-        endpoint="/test",
-        params={"key": "value"},
-        method="GET"
+        endpoint="/test", params={"key": "value"}, method="GET"
     )
 
     assert result == {"data": "test"}
@@ -34,7 +33,7 @@ async def test_send_request_success(coingecko_manager, mocker):
         method="GET",
         url="https://api.coingecko.com/api/v3/test",
         headers={"x-cg-demo-api-key": "test_api_key"},
-        params={"key": "value"}
+        params={"key": "value"},
     )
 
 
@@ -42,7 +41,7 @@ async def test_send_request_success(coingecko_manager, mocker):
 async def test_get_tokens_without_name(coingecko_manager, mocker):
     mock_data = [
         {"id": "bitcoin", "symbol": "btc", "name": "Bitcoin"},
-        {"id": "ethereum", "symbol": "eth", "name": "Ethereum"}
+        {"id": "ethereum", "symbol": "eth", "name": "Ethereum"},
     ]
     coingecko_manager._send_request = AsyncMock(return_value=mock_data)
 
@@ -51,14 +50,16 @@ async def test_get_tokens_without_name(coingecko_manager, mocker):
     assert isinstance(result, pd.DataFrame)
     assert len(result) == 2
     assert list(result["id"]) == ["bitcoin", "ethereum"]
-    coingecko_manager._send_request.assert_called_with(method="GET", endpoint="/coins/list")
+    coingecko_manager._send_request.assert_called_with(
+        method="GET", endpoint="/coins/list"
+    )
 
 
 @pytest.mark.asyncio
 async def test_get_tokens_with_name(coingecko_manager, mocker):
     mock_data = [
         {"id": "bitcoin", "symbol": "btc", "name": "Bitcoin"},
-        {"id": "ethereum", "symbol": "eth", "name": "Ethereum"}
+        {"id": "ethereum", "symbol": "eth", "name": "Ethereum"},
     ]
     coingecko_manager._send_request = AsyncMock(return_value=mock_data)
 
@@ -72,16 +73,20 @@ async def test_get_tokens_with_name(coingecko_manager, mocker):
 @pytest.mark.asyncio
 async def test_get_historical_prices_success(coingecko_manager, mocker):
     mock_tokens = pd.DataFrame([{"id": "bitcoin", "symbol": "btc", "name": "Bitcoin"}])
-    mocker.patch.object(coingecko_manager, "get_tokens", AsyncMock(return_value=mock_tokens))
+    mocker.patch.object(
+        coingecko_manager, "get_tokens", AsyncMock(return_value=mock_tokens)
+    )
 
     mock_historical = {
         "prices": [[1000000, 50000.0]],
         "market_caps": [[1000000, 1000000000.0]],
-        "total_volumes": [[1000000, 50000000.0]]
+        "total_volumes": [[1000000, 50000000.0]],
     }
     coingecko_manager._send_request = AsyncMock(return_value=mock_historical)
 
-    result = await coingecko_manager.get_historical_prices(token_name="bitcoin", days=10, vs_currency="usd")
+    result = await coingecko_manager.get_historical_prices(
+        token_name="bitcoin", days=10, vs_currency="usd"
+    )
 
     assert isinstance(result, pd.DataFrame)
     assert list(result.columns) == ["timestamp", "price", "market_cap", "total_volume"]
@@ -92,7 +97,9 @@ async def test_get_historical_prices_success(coingecko_manager, mocker):
 @pytest.mark.asyncio
 async def test_get_historical_prices_no_token(coingecko_manager, mocker):
     mock_tokens = pd.DataFrame()
-    mocker.patch.object(coingecko_manager, "get_tokens", AsyncMock(return_value=mock_tokens))
+    mocker.patch.object(
+        coingecko_manager, "get_tokens", AsyncMock(return_value=mock_tokens)
+    )
 
     with pytest.raises(HTTPException) as exc:
         await coingecko_manager.get_historical_prices(token_name="unknown")
@@ -106,7 +113,7 @@ async def test_prepare_historical_prices():
     mock_data = {
         "prices": [[1000000000, 50000.0], [1000001000, 51000.0]],
         "market_caps": [[1000000000, 1000000000.0], [1000001000, 1100000000.0]],
-        "total_volumes": [[1000000000, 50000000.0], [1000001000, 51000000.0]]
+        "total_volumes": [[1000000000, 50000000.0], [1000001000, 51000000.0]],
     }
 
     result = await prepare_historical_prices(mock_data)

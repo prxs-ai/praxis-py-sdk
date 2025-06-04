@@ -1,12 +1,19 @@
-import pytest
-import json
-from unittest.mock import Mock, patch, AsyncMock
-import time
-import redis
 import asyncio
+import json
+import time
 from datetime import datetime
 from typing import Set
-from redis_client.client import RedisDB, Post, PromptManager, ensure_delay_between_posts, decode_redis
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+import redis
+from redis_client.client import (
+    Post,
+    PromptManager,
+    RedisDB,
+    decode_redis,
+    ensure_delay_between_posts,
+)
 
 
 @pytest.fixture
@@ -18,8 +25,10 @@ def mock_redis():
 
 @pytest.fixture
 def redis_db(mock_redis, mocker):
-    mocker.patch("redis_client.client.get_settings",
-                 return_value=Mock(REDIS_HOST="localhost", REDIS_PORT=6379, REDIS_DB=0))
+    mocker.patch(
+        "redis_client.client.get_settings",
+        return_value=Mock(REDIS_HOST="localhost", REDIS_PORT=6379, REDIS_DB=0),
+    )
     mocker.patch("redis.Redis", return_value=mock_redis)
     mocker.patch.object(RedisDB, "wait_for_redis", return_value=True)
     return RedisDB()
@@ -35,8 +44,8 @@ def prompt_manager(redis_db, mocker):
 async def test_redis_init_success(redis_db, mocker):
     mocker.patch.object(RedisDB, "wait_for_redis", return_value=True)
     assert redis_db.r is not None
-    redis_db.r.set.assert_called_with('__temp_test_key__', 'value')
-    redis_db.r.delete.assert_called_with('__temp_test_key__')
+    redis_db.r.set.assert_called_with("__temp_test_key__", "value")
+    redis_db.r.delete.assert_called_with("__temp_test_key__")
 
 
 @pytest.mark.asyncio
@@ -78,13 +87,17 @@ async def test_get_default(redis_db, mocker):
 @pytest.mark.asyncio
 async def test_set(redis_db, mocker):
     redis_db.set("test_key", {"key": "value"})
-    redis_db.r.set.assert_called_once_with("test_key", json.dumps({"key": "value"}), keepttl=False)
+    redis_db.r.set.assert_called_once_with(
+        "test_key", json.dumps({"key": "value"}), keepttl=False
+    )
 
 
 @pytest.mark.asyncio
 async def test_setex(redis_db, mocker):
     redis_db.setex("test_key", {"key": "value"}, 60)
-    redis_db.r.setex.assert_called_once_with("test_key", 60, json.dumps({"key": "value"}))
+    redis_db.r.setex.assert_called_once_with(
+        "test_key", 60, json.dumps({"key": "value"})
+    )
 
 
 @pytest.mark.asyncio
@@ -134,7 +147,9 @@ async def test_get_twitter_data_keys(redis_db, mocker):
 async def test_add_user_post(redis_db, mocker):
     post = Post(id="1", text="test", sender_username="user1", timestamp=1234567890)
     redis_db.add_user_post("user1", post)
-    redis_db.r.zadd.assert_called_once_with("posted_tweets:user1", {json.dumps(asdict(post)): 1234567890})
+    redis_db.r.zadd.assert_called_once_with(
+        "posted_tweets:user1", {json.dumps(asdict(post)): 1234567890}
+    )
 
 
 @pytest.mark.asyncio
@@ -161,7 +176,9 @@ async def test_get_user_posts_by_create_time(redis_db, mocker):
 @pytest.mark.asyncio
 async def test_add_send_partnership(redis_db):
     redis_db.add_send_partnership("user1", "partner1")
-    redis_db.r.zadd.assert_called_once_with("send_partnership:user1", {"partner1": int(time.time())})
+    redis_db.r.zadd.assert_called_once_with(
+        "send_partnership:user1", {"partner1": int(time.time())}
+    )
 
 
 @pytest.mark.asyncio
@@ -210,16 +227,22 @@ async def test_remove_account(redis_db):
 
 @pytest.mark.asyncio
 async def test_get_function_variables(redis_db, mocker):
-    mocker.patch("redis_client.client.FUNCTION_VARIABLES", {"test_func": {"var1", "var2"}})
+    mocker.patch(
+        "redis_client.client.FUNCTION_VARIABLES", {"test_func": {"var1", "var2"}}
+    )
     result = redis_db.get_function_variables()
     assert result == {"test_func": ["var1", "var2"]}
-    redis_db.set.assert_called_once_with("function_variables", {"test_func": ["var1", "var2"]})
+    redis_db.set.assert_called_once_with(
+        "function_variables", {"test_func": ["var1", "var2"]}
+    )
 
 
 @pytest.mark.asyncio
 async def test_save_tweet_link(redis_db):
     redis_db.save_tweet_link("test_func", "12345")
-    redis_db.r.rpush.assert_called_once_with("created_tweet:test_func", "https://twitter.com/i/web/status/12345")
+    redis_db.r.rpush.assert_called_once_with(
+        "created_tweet:test_func", "https://twitter.com/i/web/status/12345"
+    )
 
 
 @pytest.mark.asyncio
@@ -247,16 +270,22 @@ async def test_get_prompt_from_redis(prompt_manager, mocker):
 @pytest.mark.asyncio
 async def test_get_prompt_default(prompt_manager, mocker):
     mocker.patch.object(prompt_manager.redis, "get", return_value=None)
-    mocker.patch("redis_client.client.DEFAULT_PROMPTS", {"test_func": "default prompt {var1}"})
+    mocker.patch(
+        "redis_client.client.DEFAULT_PROMPTS", {"test_func": "default prompt {var1}"}
+    )
     mocker.patch("redis_client.client.FUNCTION_VARIABLES", {"test_func": {"var1"}})
     result = prompt_manager.get_prompt("test_func")
     assert result == "default prompt {var1}"
-    prompt_manager.redis.set.assert_called_once_with("prompt:test_func", "default prompt {var1}")
+    prompt_manager.redis.set.assert_called_once_with(
+        "prompt:test_func", "default prompt {var1}"
+    )
 
 
 @pytest.mark.asyncio
 async def test_get_prompt_invalid_vars(prompt_manager, mocker):
-    mocker.patch.object(prompt_manager.redis, "get", return_value="prompt {invalid_var}")
+    mocker.patch.object(
+        prompt_manager.redis, "get", return_value="prompt {invalid_var}"
+    )
     mocker.patch("redis_client.client.FUNCTION_VARIABLES", {"test_func": {"var1"}})
     with pytest.raises(ValueError, match="недопустимые переменные: {'invalid_var'}"):
         prompt_manager.get_prompt("test_func")
@@ -273,8 +302,13 @@ async def test_extract_fstring_vars(prompt_manager):
 async def test_use_dynamic_prompt_success(mocker):
     redis_db = Mock(spec=RedisDB)
     prompt_manager = PromptManager(redis_db)
-    mocker.patch.object(prompt_manager, "get_prompt", return_value="test {twitter_post}")
-    mocker.patch("redis_client.client.FUNCTION_VARIABLES", {"create_comment_to_post": {"twitter_post"}})
+    mocker.patch.object(
+        prompt_manager, "get_prompt", return_value="test {twitter_post}"
+    )
+    mocker.patch(
+        "redis_client.client.FUNCTION_VARIABLES",
+        {"create_comment_to_post": {"twitter_post"}},
+    )
 
     @use_dynamic_prompt("create_comment_to_post")
     async def dummy_func(twitter_post, prompt=None):
@@ -289,7 +323,10 @@ async def test_use_dynamic_prompt_invalid_vars(mocker):
     redis_db = Mock(spec=RedisDB)
     prompt_manager = PromptManager(redis_db)
     mocker.patch.object(prompt_manager, "get_prompt", return_value="test {invalid_var}")
-    mocker.patch("redis_client.client.FUNCTION_VARIABLES", {"create_comment_to_post": {"twitter_post"}})
+    mocker.patch(
+        "redis_client.client.FUNCTION_VARIABLES",
+        {"create_comment_to_post": {"twitter_post"}},
+    )
 
     @use_dynamic_prompt("create_comment_to_post")
     async def dummy_func(twitter_post):
@@ -303,9 +340,13 @@ async def test_use_dynamic_prompt_invalid_vars(mocker):
 async def test_use_dynamic_prompt_marketing_comment(mocker):
     redis_db = Mock(spec=RedisDB)
     prompt_manager = PromptManager(redis_db)
-    mocker.patch.object(prompt_manager, "get_prompt", return_value="test {tweet_text} {question_prompt}")
-    mocker.patch("redis_client.client.FUNCTION_VARIABLES",
-                 {"create_marketing_comment": {"tweet_text", "question_prompt"}})
+    mocker.patch.object(
+        prompt_manager, "get_prompt", return_value="test {tweet_text} {question_prompt}"
+    )
+    mocker.patch(
+        "redis_client.client.FUNCTION_VARIABLES",
+        {"create_marketing_comment": {"tweet_text", "question_prompt"}},
+    )
     mocker.patch("random.random", return_value=0.4)
 
     @use_dynamic_prompt("create_marketing_comment")
@@ -313,7 +354,10 @@ async def test_use_dynamic_prompt_marketing_comment(mocker):
         return prompt
 
     result = await dummy_func(tweet_text="test tweet")
-    assert result == "test test tweet or sometimes combine your thoughts with a relevant question."
+    assert (
+        result
+        == "test test tweet or sometimes combine your thoughts with a relevant question."
+    )
 
 
 @pytest.mark.asyncio
@@ -328,7 +372,12 @@ async def test_ensure_delay_between_posts_no_delay(mocker):
 @pytest.mark.asyncio
 async def test_ensure_delay_between_posts_with_delay(mocker):
     past_date = datetime(2023, 1, 1, 12, 0)
-    post = Post(id="1", text="Mock tweet", sender_username="user1", timestamp=int(past_date.timestamp()))
+    post = Post(
+        id="1",
+        text="Mock tweet",
+        sender_username="user1",
+        timestamp=int(past_date.timestamp()),
+    )
     mocker.patch.object(RedisDB, "get_user_posts_by_create_time", return_value=[post])
     mocker.patch("time.time", return_value=past_date.timestamp() + 100)
     mocker.patch("random.randint", return_value=300)

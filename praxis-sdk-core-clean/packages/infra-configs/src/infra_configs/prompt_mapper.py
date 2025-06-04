@@ -1,7 +1,6 @@
 from enum import Enum
-from infrastructure.prompts.tokens import (
-    HISTORICAL_PRICE_ANALYZE, COMPLEX_ANALYZE
-)
+
+from infrastructure.prompts.tokens import COMPLEX_ANALYZE, HISTORICAL_PRICE_ANALYZE
 
 
 class PromptMapper(Enum):

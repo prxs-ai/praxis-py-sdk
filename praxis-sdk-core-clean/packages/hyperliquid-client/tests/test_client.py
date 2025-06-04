@@ -1,8 +1,9 @@
-import pytest
+from unittest.mock import AsyncMock
+
 import pandas as pd
+import pytest
 from aiohttp import ClientSession
 from fastapi import HTTPException
-from unittest.mock import AsyncMock
 from hyperliquid_client.manager import HyperLiquidManager
 
 
@@ -10,8 +11,7 @@ from hyperliquid_client.manager import HyperLiquidManager
 async def hyperliquid_manager(mocker):
     async with ClientSession() as session:
         manager = HyperLiquidManager(
-            session=session,
-            base_url="https://api.hyperliquid.xyz"
+            session=session, base_url="https://api.hyperliquid.xyz"
         )
         yield manager
 
@@ -27,7 +27,7 @@ async def test_send_request_success(hyperliquid_manager, mocker):
         headers={"Content-Type": "application/json"},
         body={"type": "test"},
         params={"key": "value"},
-        method="POST"
+        method="POST",
     )
 
     assert result == {"data": "test_data"}
@@ -36,7 +36,7 @@ async def test_send_request_success(hyperliquid_manager, mocker):
         url="https://api.hyperliquid.xyz",
         json={"type": "test"},
         params={"key": "value"},
-        headers={"Content-Type": "application/json"}
+        headers={"Content-Type": "application/json"},
     )
 
 
@@ -48,8 +48,7 @@ async def test_send_request_failure(hyperliquid_manager, mocker):
 
     with pytest.raises(HTTPException) as exc:
         await hyperliquid_manager._send_request(
-            headers={"Content-Type": "application/json"},
-            body={"type": "test"}
+            headers={"Content-Type": "application/json"}, body={"type": "test"}
         )
 
     assert exc.value.status_code == 400
@@ -61,7 +60,7 @@ async def test_get_pool_liquidity(hyperliquid_manager, mocker):
     mock_data = {
         "levels": [
             [{"px": "100", "sz": "10"}, {"px": "101", "sz": "20"}],
-            [{"px": "102", "sz": "30"}, {"px": "103", "sz": "40"}]
+            [{"px": "102", "sz": "30"}, {"px": "103", "sz": "40"}],
         ]
     }
     hyperliquid_manager._send_request = AsyncMock(return_value=mock_data)
@@ -75,7 +74,7 @@ async def test_get_pool_liquidity(hyperliquid_manager, mocker):
     assert result["sz"].tolist() == [70, 30, 100]
     hyperliquid_manager._send_request.assert_called_with(
         body={"type": "l2Book", "coin": "BTC"},
-        headers={"Content-Type": "application/json"}
+        headers={"Content-Type": "application/json"},
     )
 
 
@@ -91,5 +90,5 @@ async def test_make_headers_custom(hyperliquid_manager):
     headers = hyperliquid_manager._make_headers(custom_headers)
     assert headers == {
         "Content-Type": "application/json",
-        "Authorization": "Bearer token"
+        "Authorization": "Bearer token",
     }

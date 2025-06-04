@@ -1,7 +1,8 @@
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance
+from qdrant_client.models import Distance, VectorParams
 from qdrant_client_custom.client import QdrantClientPackage, get_qdrant_client
 
 
@@ -50,6 +51,6 @@ async def test_create_new_collection_not_exists(qdrant_client, mocker):
         collection_name="test_collection",
         vectors_config=VectorParams(
             size=qdrant_client._client._settings.VECTOR_DIMENSION,
-            distance=Distance.COSINE
-        )
+            distance=Distance.COSINE,
+        ),
     )
