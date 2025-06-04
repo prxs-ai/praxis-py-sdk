@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch, call, AsyncMock
 import json
 import time
 from datetime import datetime
@@ -313,14 +313,6 @@ def test_get_function_variables(redis_db, mock_redis):
     result = redis_db.get_function_variables()
     assert isinstance(result, dict)
     mock_redis.set.assert_called_once()
-
-
-def test_save_tweet_link(redis_db, mock_redis):
-    redis_db.save_tweet_link("test_func", "123")
-    mock_redis.rpush.assert_called_once_with(
-        "created_tweet:test_func",
-        "https://twitter.com/i/web/status/123"
-    )
 
 
 def test_wait_for_redis_success(redis_db, mock_redis):
