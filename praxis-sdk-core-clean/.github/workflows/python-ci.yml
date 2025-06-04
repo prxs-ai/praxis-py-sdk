@@ -25,7 +25,9 @@ jobs:
         package: [
           "agents-tools-logger",
           "ai-tools",
-          "coingecko-client"
+          "coingecko-client",
+          "dexscreener-wrapper",
+          "dextools-wrapper"
         ]
     steps:
       - name: Checkout repository
