@@ -10,7 +10,6 @@ on:
         - example-package
         - send-openai-request
         - infra-configs
-        - redis-client
 
 jobs:
   publish:
