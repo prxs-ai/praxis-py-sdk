@@ -257,52 +257,63 @@ def test_set_default_when_key_exists(redis_db, mock_redis):
     redis_db.set_default("test_key", "default_value")
     mock_redis.set.assert_not_called()
 
+
 def test_set_default_when_key_empty(redis_db, mock_redis):
     mock_redis.get.return_value = ""
     redis_db.set_default("test_key", "default_value")
     mock_redis.set.assert_called_once_with("test_key", json.dumps("default_value"), keepttl=False)
+
 
 def test_set_default_when_key_none(redis_db, mock_redis):
     mock_redis.get.return_value = None
     redis_db.set_default("test_key", "default_value")
     mock_redis.set.assert_called_once_with("test_key", json.dumps("default_value"), keepttl=False)
 
+
 def test_get_item_dunder(redis_db, mock_redis):
     mock_redis.get.return_value = b'{"key": "value"}'
     result = redis_db["test_key"]
     assert result == {"key": "value"}
 
+
 def test_set_item_dunder(redis_db, mock_redis):
     redis_db["test_key"] = {"key": "value"}
     mock_redis.set.assert_called_once_with("test_key", json.dumps({"key": "value"}), keepttl=False)
 
+
 def test_del_item_dunder(redis_db, mock_redis):
     del redis_db["test_key"]
     mock_redis.delete.assert_called_once_with("test_key")
+
 
 def test_get_keys_by_pattern_blocking(redis_db, mock_redis):
     mock_redis.keys.return_value = [b"key1", b"key2"]
     result = redis_db.get_keys_by_pattern_blocking("pattern")
     assert result == ["key1", "key2"]
 
+
 def test_get_twitter_data_keys(redis_db, mock_redis):
     mock_redis.scan_iter.return_value = [b"twitter_data:user1", b"twitter_data:user2"]
     result = redis_db.get_twitter_data_keys()
     assert result == ["twitter_data:user1", "twitter_data:user2"]
 
+
 def test_add_to_sorted_set(redis_db, mock_redis):
     redis_db.add_to_sorted_set("test_key", 100, "value")
     mock_redis.zadd.assert_called_once_with("test_key", {"value": 100})
+
 
 def test_get_sorted_set(redis_db, mock_redis):
     mock_redis.zrange.return_value = [b"value1", b"value2"]
     result = redis_db.get_sorted_set("test_key")
     assert result == ["value1", "value2"]
 
+
 def test_get_function_variables(redis_db, mock_redis):
     result = redis_db.get_function_variables()
     assert isinstance(result, dict)
     mock_redis.set.assert_called_once()
+
 
 def test_save_tweet_link(redis_db, mock_redis):
     redis_db.save_tweet_link("test_func", "123")
@@ -311,14 +322,17 @@ def test_save_tweet_link(redis_db, mock_redis):
         "https://twitter.com/i/web/status/123"
     )
 
+
 def test_wait_for_redis_success(redis_db, mock_redis):
     mock_redis.set.return_value = True
     mock_redis.delete.return_value = 1
     assert redis_db.wait_for_redis(1) is True
 
+
 def test_wait_for_redis_failure(redis_db, mock_redis):
     mock_redis.set.side_effect = redis.exceptions.ConnectionError()
     assert redis_db.wait_for_redis(1) is False
+
 
 def test_wait_for_redis_busy_loading(redis_db, mock_redis):
     mock_redis.set.side_effect = redis.exceptions.BusyLoadingError()
