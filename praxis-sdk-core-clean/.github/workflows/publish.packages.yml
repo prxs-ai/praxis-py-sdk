@@ -9,6 +9,7 @@ on:
         options:
         - example-package
         - send-openai-request
+        - infra-configs
 
 jobs:
   publish:
