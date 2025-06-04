@@ -8,6 +8,7 @@ on:
         description: 'package name'
         options:
         - example-package
+        - send-openai-request
 
 jobs:
   publish:
