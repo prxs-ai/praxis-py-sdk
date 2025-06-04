@@ -13,7 +13,8 @@ dependencies = [
     "tenacity (>=8.1.0,!=8.4.0,<10)",
     "asyncio (>=3.4.3)",
     "pytest-asyncio (==0.26.0)",
-    "send-openai-request (==0.1.2)"
+    "send-openai-request (==0.1.2)",
+    "pydantic_settings>=2.7.1",
 ]
 
 readme = "README.md"
