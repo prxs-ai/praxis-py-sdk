@@ -42,6 +42,7 @@ jobs:
           "tweetscout-utils",
           "twitter-ambassador-utils",
           "twitter-follow",
+          "twitter-follow-unfollow-get-likes-on-post",
         ]
     steps:
       - name: Checkout repository

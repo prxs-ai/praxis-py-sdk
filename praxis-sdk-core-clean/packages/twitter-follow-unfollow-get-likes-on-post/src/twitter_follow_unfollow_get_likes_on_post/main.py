@@ -4,7 +4,7 @@ from loguru import logger
 
 
 async def get_likes_on_post(access_token: str, tweet_id: str):
-    log.info("Getting user notifications")
+    logger.info("Getting user notifications")
     url = f"https://api.x.com/2/tweets/{tweet_id}/liking_users"
     headers = {"Authorization": f"Bearer {access_token}"}
 
