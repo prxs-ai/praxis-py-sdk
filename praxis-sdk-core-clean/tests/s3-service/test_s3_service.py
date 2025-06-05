@@ -2,7 +2,19 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from botocore.exceptions import ClientError
 from fastapi import UploadFile
-from s3_service.main import S3Service
+
+with patch("s3_service.config.Settings") as mock_settings:
+    mock_settings.return_value = AsyncMock(
+        infrastructure=AsyncMock(
+            s3_base_url="https://s3.example.com",
+            s3_bucket_prefix="test-prefix",
+            S3_ACCESS_KEY="test-access-key",
+            S3_SECRET="test-secret-key",
+            S3_REGION="test-region"
+        )
+    )
+    with patch("s3_service.main.S3Service") as mock_aioboto3:
+        from s3_service.main import S3Service, get_s3_service, s3_service_dependency
 
 
 @pytest.fixture
@@ -48,7 +60,7 @@ async def test_upload_file_success(s3_service, mock_upload_file):
 
 @pytest.mark.asyncio
 async def test_upload_file_attribute_error(s3_service):
-    bad_file = MagicMock(spec=UploadFile)
+    bad_file = AsyncMock(spec=UploadFile)
     del bad_file.file
     with pytest.raises(Exception, match="Uploading file error"):
         await s3_service.upload_file(bad_file, "test-key")
@@ -56,7 +68,7 @@ async def test_upload_file_attribute_error(s3_service):
 
 @pytest.mark.asyncio
 async def test_get_file_bytes_success(s3_service):
-    mock_body = MagicMock()
+    mock_body = AsyncMock()
     mock_body.read = AsyncMock(return_value=b"file data")
     s3_service.s3_client.get_object = AsyncMock(return_value={"Body": mock_body})
 
@@ -66,7 +78,7 @@ async def test_get_file_bytes_success(s3_service):
 
 @pytest.mark.asyncio
 async def test_get_file_bytes_error(s3_service):
-    mock_body = MagicMock()
+    mock_body = AsyncMock()
     mock_body.read = AsyncMock(side_effect=Exception("read error"))
     s3_service.s3_client.get_object = AsyncMock(return_value={"Body": mock_body})
     with pytest.raises(Exception, match="Failed to get file bytes"):
