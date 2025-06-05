@@ -31,6 +31,7 @@ jobs:
           "hyperliquid-client",
           "qdrant-client-custom",
           "redis-client",
+          "redis-utils",
         ]
     steps:
       - name: Checkout repository
