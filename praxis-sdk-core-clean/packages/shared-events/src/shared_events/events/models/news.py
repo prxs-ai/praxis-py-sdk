@@ -1,6 +1,8 @@
 from enum import IntEnum
 from typing import ClassVar
+
 from pydantic import Field
+
 from .base import Model
 from .meta import EventMeta
 from .timedelta import Timedelta

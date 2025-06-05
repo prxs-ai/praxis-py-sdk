@@ -1,4 +1,4 @@
-name: Packages - publish example-package
+name: Packages - publish infra-configs
 
 on:
   push:
@@ -8,9 +8,9 @@ on:
       - "hotfix/**"
       - "release/**"
     paths:
-      - "packages/example-package/**"
+      - "packages/infra-configs/**"
     tags:
-      - "packages/example-package-v*"
+      - "packages/infra-configs-v*"
 
 jobs:
   build:
@@ -19,6 +19,6 @@ jobs:
       contents: read
     uses: ./.github/workflows/reusable.publish-python.yml
     with:
-      path: ./packages/example-package
+      path: ./packages/infra-configs
     secrets:
       REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}

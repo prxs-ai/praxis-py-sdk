@@ -1,6 +1,6 @@
-from pydantic import BaseModel
 from typing import TypedDict
 
+from pydantic import BaseModel
 from schemas.enums import (
     AspectRatio,
     BackgroundFit,

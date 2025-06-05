@@ -8,6 +8,9 @@ on:
         description: 'package name'
         options:
         - example-package
+        - send-openai-request
+        - infra-configs
+        - redis-client
 
 jobs:
   publish:

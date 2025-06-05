@@ -1,11 +1,11 @@
 from functools import lru_cache
 
-from pydantic import Field, RedisDsn, SecretStr, ValidationInfo, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class InterfaceSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra='ignore')
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 class CoingeckoSettings(InterfaceSettings):

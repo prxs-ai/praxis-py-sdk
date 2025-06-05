@@ -1,7 +1,7 @@
 # DexScreener API Wrapper
 
-This package is an asynchronous wrapper for the DexScreener API. 
-It simplifies interaction with the API, automatically manages rate limits, 
+This package is an asynchronous wrapper for the DexScreener API.
+It simplifies interaction with the API, automatically manages rate limits,
 and provides a convenient interface for retrieving data.
 
 ## Technologies Used
@@ -12,7 +12,7 @@ Describe all available endpoints and their functionalities here.
 
 ### Available Methods:
 - `/token-profiles/latest/v1` – Get the latest token profiles (rate-limit 60 requests per minute)
- 
+
 Response Example:
 ```json
 [

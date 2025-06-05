@@ -8,4 +8,6 @@ class APIError(BaseException):
         self.kwargs = kwargs
 
     def __repr__(self) -> str:
-        return f"\tStatus Code: {self.status}\n\tMessage: {self.message}\n\n{self.kwargs}"
+        return (
+            f"\tStatus Code: {self.status}\n\tMessage: {self.message}\n\n{self.kwargs}"
+        )

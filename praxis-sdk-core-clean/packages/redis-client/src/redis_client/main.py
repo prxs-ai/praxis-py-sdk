@@ -1,17 +1,16 @@
+import asyncio
+import inspect
 import json
 import threading
 import time
-from random import random
-from typing import Any, List
-from dataclasses import dataclass
-from dataclasses import asdict
-import asyncio
-from random import randint
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Set
-import inspect
 from functools import wraps
+from random import randint, random
+from typing import Any
+
 import redis
+
 from redis_client.config import get_settings
 
 settings = get_settings()
@@ -27,98 +26,91 @@ class Post:
     is_reply_to: str | None = None
     is_news_summary_tweet: bool = False
 
+
 FUNCTION_VARIABLES = {
-    'create_comment_to_post': {'twitter_post', 'relevant_knowledge'},
-    'create_comment_to_comment': {'comment_text', 'relevant_knowledge'},
-    'create_tweet': {'project_tweets', 'my_tweets', 'relevant_knowledge'},
-    'create_quoted_tweet': {'tweet_for_quote', 'my_tweets', 'relevant_knowledge'},
-    'create_news_tweet': {'news_tweets', 'my_tweets', 'relevant_knowledge'},
-    'check_answer_is_needed': {'twitter_comment'},
-    'check_tweet_for_marketing': {'tweet_text', 'relevant_knowledge'},
-    'create_marketing_comment': {'tweet_text', 'relevant_knowledge', 'question_prompt'},
+    "create_comment_to_post": {"twitter_post", "relevant_knowledge"},
+    "create_comment_to_comment": {"comment_text", "relevant_knowledge"},
+    "create_tweet": {"project_tweets", "my_tweets", "relevant_knowledge"},
+    "create_quoted_tweet": {"tweet_for_quote", "my_tweets", "relevant_knowledge"},
+    "create_news_tweet": {"news_tweets", "my_tweets", "relevant_knowledge"},
+    "check_answer_is_needed": {"twitter_comment"},
+    "check_tweet_for_marketing": {"tweet_text", "relevant_knowledge"},
+    "create_marketing_comment": {"tweet_text", "relevant_knowledge", "question_prompt"},
 }
 
+
 class RedisDB:
-    """
-    A class for interacting with a Redis database.
+    """A class for interacting with a Redis database.
 
     It connects to Redis based on the environment variables:
         REDIS_HOST (str): Redis host (default: 'localhost')
         REDIS_PORT (int): Redis port (default: 6379)
         REDIS_DB (int): Redis database index (default: 0)
     """
+
     _NO_DEFAULT = object()
 
     def __init__(self) -> None:
-        """
-        Initialize the Redis connection.
-        """
+        """Initialize the Redis connection."""
         REDIS_HOST = settings.REDIS_HOST if settings.REDIS_HOST else "localhost"
         REDIS_PORT = settings.REDIS_PORT if settings.REDIS_PORT else 6379
         REDIS_DB = settings.REDIS_DB if settings.REDIS_DB else 0
-        print(
-            f'Redis: {REDIS_HOST}:{REDIS_PORT} '
-            f'db={REDIS_DB}'
-        )
+        print(f"Redis: {REDIS_HOST}:{REDIS_PORT} db={REDIS_DB}")
         self.r = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
-            db=REDIS_DB  # 0 - main, 1 - test
+            db=REDIS_DB,  # 0 - main, 1 - test
         )
 
         if self.wait_for_redis(timeout=100):
-            print('Redis connected')
+            print("Redis connected")
         else:
-            print('Failed to connect to Redis after the timeout.')
-            raise ConnectionError('Failed to connect to Redis.')
+            print("Failed to connect to Redis after the timeout.")
+            raise ConnectionError("Failed to connect to Redis.")
         self._save_function_variables_on_startup()
 
     def _save_function_variables_on_startup(self):
-        function_vars_dict = {key: list(value) for key, value in FUNCTION_VARIABLES.items()}
+        function_vars_dict = {
+            key: list(value) for key, value in FUNCTION_VARIABLES.items()
+        }
         self.set("function_variables", function_vars_dict, log=False)
 
     def add_to_set(self, key: str, value: str) -> None:
-        """
-        Add a value to a Redis set at the given key.
-        """
+        """Add a value to a Redis set at the given key."""
         self.r.sadd(key, value)
 
-    def get_set(self, key: str) -> List[str]:
-        """
-        Retrieve all members of a Redis set as a list of strings.
-        """
-        return [item.decode('utf-8') for item in self.r.smembers(key)]
+    def get_set(self, key: str) -> list[str]:
+        """Retrieve all members of a Redis set as a list of strings."""
+        return [item.decode("utf-8") for item in self.r.smembers(key)]
 
     def wait_for_redis(self, timeout: int) -> bool:
-        """
-        Wait for Redis to become available within the given timeout in seconds.
+        """Wait for Redis to become available within the given timeout in seconds.
 
         Returns True if successful, otherwise False.
         """
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                self.r.set('__temp_test_key__', 'value')
-                self.r.delete('__temp_test_key__')
+                self.r.set("__temp_test_key__", "value")
+                self.r.delete("__temp_test_key__")
                 return True
             except redis.exceptions.BusyLoadingError:
-                print('Redis is still loading. Waiting...')
+                print("Redis is still loading. Waiting...")
                 time.sleep(1)
             except redis.exceptions.ConnectionError as e:
                 repr(e)
                 time.sleep(1)
             except Exception as e:
                 repr(e)
-                if 'Temporary failure in name resolution' in str(e):
-                    print('Temporary failure in name resolution. Waiting...')
+                if "Temporary failure in name resolution" in str(e):
+                    print("Temporary failure in name resolution. Waiting...")
                     time.sleep(1)
                 else:
                     return False
         return False
 
     def get(self, key: str, default: Any = _NO_DEFAULT) -> Any:
-        """
-        Get the value for the given key. The stored data is expected to be JSON.
+        """Get the value for the given key. The stored data is expected to be JSON.
 
         If the key does not exist and a default is provided, return that default.
         """
@@ -129,69 +121,62 @@ class RedisDB:
             return None
         return json.loads(v)
 
-    def set(self, key: str, value: Any, log: bool = True, keep_ttl: bool = False) -> None:
-        """
-        Set the value for the given key, serializing the value to JSON.
+    def set(
+        self, key: str, value: Any, log: bool = True, keep_ttl: bool = False
+    ) -> None:
+        """Set the value for the given key, serializing the value to JSON.
 
         If value is None, the key will be deleted.
 
         Args:
             keep_ttl (bool): If True, the current TTL is preserved.
+
         """
         if log:
-            print(f'Set {key} to {value}')
+            print(f"Set {key} to {value}")
         if value is None:
             self.r.delete(key)
         else:
             self.r.set(key, json.dumps(value), keepttl=keep_ttl)
 
     def setex(self, key: str, value: Any, ex: int, log: bool = True) -> None:
-        """
-        Set the value for the given key with an expiration time (in seconds).
+        """Set the value for the given key with an expiration time (in seconds).
 
         If value is None, the key will be deleted.
         """
         if log:
-            print(f'Set EXPIRY {key} to {value}, expiry: {ex}')
+            print(f"Set EXPIRY {key} to {value}, expiry: {ex}")
         if value is None:
-            print(f'Set EXPIRY value is None, deleting {key}')
+            print(f"Set EXPIRY value is None, deleting {key}")
             self.r.delete(key)
         else:
             self.r.setex(key, ex, json.dumps(value))
 
     def set_default(self, key: str, value: Any) -> None:
-        """
-        Set a default value if the key does not exist or is empty.
-        """
+        """Set a default value if the key does not exist or is empty."""
         existing_value = self.get(key)
-        if existing_value is None or existing_value == '':
-            if value:
-                self.set(key, value)
+        if (existing_value is None or existing_value == "") and value:
+            self.set(key, value)
 
     def delete(self, key: str, log: bool = True) -> None:
-        """
-        Delete the given key.
-        """
+        """Delete the given key."""
         if log:
-            print(f'Delete {key}')
+            print(f"Delete {key}")
         self.r.delete(key)
 
-    def get_keys_by_pattern(self, pattern: str) -> List[str]:
-        """
-        Retrieve a list of keys matching the given pattern using SCAN.
-        """
+    def get_keys_by_pattern(self, pattern: str) -> list[str]:
+        """Retrieve a list of keys matching the given pattern using SCAN."""
         result = []
         for key in self.r.scan_iter(pattern):
-            result.append(key.decode('utf-8'))
+            result.append(key.decode("utf-8"))
         return result
 
-    def get_keys_by_pattern_blocking(self, pattern: str) -> List[str]:
-        """
-        Retrieve a list of keys matching the pattern using KEYS command.
+    def get_keys_by_pattern_blocking(self, pattern: str) -> list[str]:
+        """Retrieve a list of keys matching the pattern using KEYS command.
 
         Note: This is a blocking operation and not recommended for large databases.
         """
-        return [key.decode('utf-8') for key in self.r.keys(pattern)]
+        return [key.decode("utf-8") for key in self.r.keys(pattern)]
 
     def __getitem__(self, item: str) -> Any:
         return self.get(item)
@@ -202,9 +187,8 @@ class RedisDB:
     def __delitem__(self, key: str) -> None:
         self.delete(key)
 
-    def parse_list(self, key: str) -> List[str]:
-        """
-        Retrieve the value by key as a list.
+    def parse_list(self, key: str) -> list[str]:
+        """Retrieve the value by key as a list.
 
         If the value is already a list, return it as is.
         If it's a string, split by comma.
@@ -216,11 +200,10 @@ class RedisDB:
         if chat_ids is None:
             return []
         if isinstance(chat_ids, str):
-            if chat_ids in ['-', '']:
+            if chat_ids in ["-", ""]:
                 return []
-            else:
-                return chat_ids.split(',')
-        raise ValueError(f'Unknown type of chat_ids: {type(chat_ids)} {chat_ids=}')
+            return chat_ids.split(",")
+        raise ValueError(f"Unknown type of chat_ids: {type(chat_ids)} {chat_ids=}")
 
     def get_twitter_data_keys(self):
         keys = []
@@ -232,31 +215,37 @@ class RedisDB:
         self.r.zadd(key, {value: score})
 
     def get_sorted_set(self, key: str, start: int = 0, end: int = -1):
-        return [item.decode('utf-8') for item in self.r.zrange(key, start, end)]
+        return [item.decode("utf-8") for item in self.r.zrange(key, start, end)]
 
     def add_user_post(self, username: str, post: Post):
         post_json = json.dumps(asdict(post))
-        self.add_to_sorted_set(f'posted_tweets:{username}', post.timestamp, post_json)
+        self.add_to_sorted_set(f"posted_tweets:{username}", post.timestamp, post_json)
 
     def get_user_posts(self, username: str) -> list[Post]:
-        posts = self.get_sorted_set(f'posted_tweets:{username}')
+        posts = self.get_sorted_set(f"posted_tweets:{username}")
         return [Post(**json.loads(post)) for post in posts]
 
-    def get_user_posts_by_create_time(self, username: str, second_ago: int = 3 * 60 * 60) -> list[Post]:
-        """Newest in the end of list"""
+    def get_user_posts_by_create_time(
+        self, username: str, second_ago: int = 3 * 60 * 60
+    ) -> list[Post]:
+        """Newest in the end of list."""
         current_timestamp = int(time.time())
         min_score = current_timestamp - second_ago
-        posts = self.r.zrangebyscore(f'posted_tweets:{username}', min_score, current_timestamp)
+        posts = self.r.zrangebyscore(
+            f"posted_tweets:{username}", min_score, current_timestamp
+        )
         return [Post(**json.loads(post)) for post in posts]
 
     def add_send_partnership(self, username: str, partner_user_id: str):
-        self.add_to_sorted_set(f'send_partnership:{username}', int(time.time()), partner_user_id)
+        self.add_to_sorted_set(
+            f"send_partnership:{username}", int(time.time()), partner_user_id
+        )
 
     def get_send_partnership(self, username: str) -> list[str]:
-        return self.get_sorted_set(f'send_partnership:{username}')
+        return self.get_sorted_set(f"send_partnership:{username}")
 
     def get_active_twitter_accounts(self) -> list[str]:
-        """Получаем все активные твиттер аккаунты"""
+        """Получаем все активные твиттер аккаунты."""
         accounts = []
         for key in self.get_keys_by_pattern("twitter_data:*"):
             username = key.split(":")[1]
@@ -264,21 +253,23 @@ class RedisDB:
         return accounts
 
     def get_account_last_action_time(self, username: str, action_type: str) -> float:
-        """Получаем время последнего действия для аккаунта"""
+        """Получаем время последнего действия для аккаунта."""
         key = f"{action_type}:{username}"
         return float(self.get(key) or 0)
 
-    def update_account_last_action_time(self, username: str, action_type: str, timestamp: float):
-        """Обновляем время последнего действия для аккаунта"""
+    def update_account_last_action_time(
+        self, username: str, action_type: str, timestamp: float
+    ):
+        """Обновляем время последнего действия для аккаунта."""
         key = f"{action_type}:{username}"
         self.set(key, timestamp)
 
     def is_account_active(self, username: str) -> bool:
-        """Проверяем активен ли аккаунт"""
+        """Проверяем активен ли аккаунт."""
         return bool(self.r.exists(f"twitter_data:{username}"))
 
     def remove_account(self, username: str):
-        """Удаляем все данные аккаунта"""
+        """Удаляем все данные аккаунта."""
         # Удаляем основные данные аккаунта
         self.delete(f"twitter_data:{username}")
 
@@ -289,7 +280,7 @@ class RedisDB:
             "last_likes_time",
             "last_comment_agix_time",
             "last_answer_my_comment_time",
-            "last_answer_comment_time"
+            "last_answer_comment_time",
         ]:
             self.delete(f"{action_type}:{username}")
 
@@ -302,8 +293,9 @@ class RedisDB:
         print(f"Account {username} removed from Redis")
 
     def get_function_variables(self) -> dict[str, list[str]]:
-
-        function_vars_dict = {key: list(value) for key, value in FUNCTION_VARIABLES.items()}
+        function_vars_dict = {
+            key: list(value) for key, value in FUNCTION_VARIABLES.items()
+        }
 
         # Сохраняем в Redis
         self.set("function_variables", function_vars_dict)
@@ -312,7 +304,7 @@ class RedisDB:
         return function_vars_dict
 
     def save_tweet_link(self, function_name: str, tweet_id: str) -> None:
-        """Сохраняет ссылку на твит для конкретной функции"""
+        """Сохраняет ссылку на твит для конкретной функции."""
         key = f"created_tweet:{function_name}"
         link = f"https://twitter.com/i/web/status/{tweet_id}"
         self.r.rpush(key, link)
@@ -323,13 +315,14 @@ def get_redis_db(*args, **kwargs) -> RedisDB:
 
 
 class PromptManager:
-    _instance = None
+    _instance: "PromptManager | None" = None
     _lock = threading.Lock()
+    _initialized: bool
 
     def __new__(cls, redis_db: RedisDB):
         with cls._lock:
             if cls._instance is None:
-                cls._instance = super(PromptManager, cls).__new__(cls)
+                cls._instance = super().__new__(cls)
                 cls._instance._initialized = False
             return cls._instance
 
@@ -345,17 +338,17 @@ class PromptManager:
         self._initialized = True
 
     def _start_subscriber_thread(self):
-        """Запускает Redis подписчика в отдельном потоке"""
+        """Запускает Redis подписчика в отдельном потоке."""
 
         def subscriber_worker():
             pubsub = self.redis.r.pubsub()
-            pubsub.subscribe('prompt_updates')
+            pubsub.subscribe("prompt_updates")
 
             while self._running:
                 try:
                     message = pubsub.get_message()
-                    if message and message['type'] == 'message':
-                        prompt_key = message['data'].decode('utf-8')
+                    if message and message["type"] == "message":
+                        prompt_key = message["data"].decode("utf-8")
                         if prompt_key in self.prompt_cache:
                             del self.prompt_cache[prompt_key]
                             print(f"Промпт обновлен: {prompt_key}")
@@ -366,15 +359,14 @@ class PromptManager:
             pubsub.close()
 
         self._subscriber_thread = threading.Thread(
-            target=subscriber_worker,
-            daemon=True
+            target=subscriber_worker, daemon=True
         )
         self._subscriber_thread.start()
 
     def get_prompt(self, function_name: str) -> str:
-        """Получает актуальный промпт для функции из Redis"""
+        """Получает актуальный промпт для функции из Redis."""
         # Добавляем префикс к ключу
-        redis_key = f'prompt:{function_name}'
+        redis_key = f"prompt:{function_name}"
 
         if redis_key not in self.prompt_cache:
             prompt = self.redis.get(redis_key)
@@ -397,10 +389,11 @@ class PromptManager:
         return self.prompt_cache[redis_key]
 
     @staticmethod
-    def _extract_fstring_vars(template: str) -> Set[str]:
-        """Extract variable names from f-string"""
+    def _extract_fstring_vars(template: str) -> set[str]:
+        """Extract variable names from f-string."""
         import re
-        pattern = r'{([^{}:]+)(?::[^{}]+)?}'
+
+        pattern = r"{([^{}:]+)(?::[^{}]+)?}"
         return set(re.findall(pattern, template))
 
     def __del__(self):
@@ -410,7 +403,7 @@ class PromptManager:
 
 
 def use_dynamic_prompt(function_name: str):
-    """Декоратор для использования динамических промптов из Redis"""
+    """Декоратор для использования динамических промптов из Redis."""
 
     def decorator(func):
         @wraps(func)
@@ -434,26 +427,30 @@ def use_dynamic_prompt(function_name: str):
             bound_args.apply_defaults()
             format_dict = dict(bound_args.arguments)
 
-            if function_name == 'check_tweet_for_marketing' and 'tweets' in format_dict:
-                kwargs['prompt'] = template
+            if function_name == "check_tweet_for_marketing" and "tweets" in format_dict:
+                kwargs["prompt"] = template
                 return await func(*args, **kwargs)
 
-            if function_name == 'create_marketing_comment':
-                format_dict['question_prompt'] = " or sometimes combine your thoughts with a relevant question." if random() < 0.45 else ""
+            if function_name == "create_marketing_comment":
+                format_dict["question_prompt"] = (
+                    " or sometimes combine your thoughts with a relevant question."
+                    if random() < 0.45
+                    else ""
+                )
 
-            if 'relevant_knowledge' in variables:
-                knowledge_base = bound_args.arguments.get('knowledge_base')
+            if "relevant_knowledge" in variables:
+                knowledge_base = bound_args.arguments.get("knowledge_base")
                 query = "What is the project about?"
                 if knowledge_base and query:
                     relevant_knowledge = await knowledge_base.search_knowledge(
                         query=query,
                         k=2,
                     )
-                    format_dict['relevant_knowledge'] = relevant_knowledge
+                    format_dict["relevant_knowledge"] = relevant_knowledge
 
             try:
                 formatted_prompt = template.format(**format_dict)
-                kwargs['prompt'] = formatted_prompt
+                kwargs["prompt"] = formatted_prompt
                 return await func(*args, **kwargs)
             except KeyError as e:
                 print(f"Отсутствует переменная для форматирования промпта: {e}")
@@ -466,17 +463,18 @@ def use_dynamic_prompt(function_name: str):
                 raise
 
         return wrapper
+
     return decorator
 
 
 # Дефолтные промпты
 DEFAULT_PROMPTS = {
-    'create_comment_to_post': """DONT USE HASHTAG You are an AI and crypto enthusiast with a vision for the future of decentralized tech.    
+    "create_comment_to_post": """DONT USE HASHTAG You are an AI and crypto enthusiast with a vision for the future of decentralized tech.
 You need to create one comment for the twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
 
-The comments should be positive, bullish, and as human-like as possible. Use simple, natural language, as if it's a genuine opinion from a person. 
+The comments should be positive, bullish, and as human-like as possible. Use simple, natural language, as if it's a genuine opinion from a person.
 Max length of comment is 1 sentence. Make comment as short as possible. DO NOT USE ROCKET EMOJI. Use hashtags from our knowledge base if appropriate.
 
 TWITTER POST: {twitter_post}
@@ -485,7 +483,7 @@ Be Positive: Always maintain a positive tone, but avoid being overly pushy or in
 Conciseness: Replies should be short and to the point—1-2 sentences maximum.
 No Rocket Emoji: DO NOT USE THIS EMOJI 🚀 or similar cliché symbols.
 """,
-    'create_comment_to_comment': """DONT USE HASHTAG You are a technology community manager. Your task is to create a reply to the conversation using provided knowledge base context.
+    "create_comment_to_comment": """DONT USE HASHTAG You are a technology community manager. Your task is to create a reply to the conversation using provided knowledge base context.
 You need to create one comment for the twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
@@ -514,12 +512,12 @@ Reply Guidelines:
   - Keep it authentic and engaging
   - Be helpful and informative
 """,
-'create_tweet': """ DONT USE HASHTAG You are an autonomous AI Twitter Ambassador and enthusiast. Your task is to generate engaging content using the provided knowledge base context.
+    "create_tweet": """ DONT USE HASHTAG You are an autonomous AI Twitter Ambassador and enthusiast. Your task is to generate engaging content using the provided knowledge base context.
 
 
 Guidelines for tweet creation:
 1. Length: Maximum 260 characters
-2. Style: 
+2. Style:
    - Bullish and positive tone
    - Professional but casual language
    - Natural, human-like writing
@@ -545,14 +543,13 @@ Recent project updates:
 {project_tweets}
 
 Generate a unique tweet that differs from previous ones in approach and style.""",
-
-    'create_quoted_tweet': """ DONT USE HASHTAG You are autonomous AI Twitter Ambassador and crypto enthusiast with a vision for decentralized tech.
+    "create_quoted_tweet": """ DONT USE HASHTAG You are autonomous AI Twitter Ambassador and crypto enthusiast with a vision for decentralized tech.
 
 YOUR TASK IS TO COMMENT THIS TWEET: {tweet_for_quote}
 
 The tweet should be bullish, positive, with humor.
-You can add sarcasm if it's appropriate, and include memes if relevant. 
-The tweet should be written in simple, human language. 
+You can add sarcasm if it's appropriate, and include memes if relevant.
+The tweet should be written in simple, human language.
 Use double line breaks as much as possible.
 Every 1-2 sentences must be in different paragraphs separated by '\\n\\n'.
 
@@ -563,10 +560,9 @@ When providing a reply, write the text directly, without prefixes or similar.
 
 DO NOT USE EMOJIS
 
-The new tweet should be different from my previous tweets, with a different idea, approach, and style. 
+The new tweet should be different from my previous tweets, with a different idea, approach, and style.
 Previous tweets for reference: {my_tweets}""",
-
-    'create_news_tweet': """ DONT USE HASHTAG You are a Twitter content creator focused on technology and innovation. Your task is to analyze tweets and create engaging content that aligns with our knowledge base.
+    "create_news_tweet": """ DONT USE HASHTAG You are a Twitter content creator focused on technology and innovation. Your task is to analyze tweets and create engaging content that aligns with our knowledge base.
 You need to create one twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
@@ -600,14 +596,13 @@ Content Guidelines:
   {my_tweets}
 
 Create a unique tweet that builds on the news while staying aligned with our project's focus and knowledge base.""",
-
-    'create_marketing_comment': """ DONT USE HASHTAG You are a technology enthusiast engaging in Web3 and AI discussions.
+    "create_marketing_comment": """ DONT USE HASHTAG You are a technology enthusiast engaging in Web3 and AI discussions.
 You need to create one comment for the twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
 
 
-Your task is to write a very brief comment (1-2 sentences) in response to a tweet. 
+Your task is to write a very brief comment (1-2 sentences) in response to a tweet.
 The comment should:
 - Express relevant thoughts based on the knowledge context
 - Use natural, human-like language
@@ -623,8 +618,7 @@ Guidelines:
 
 Tweet to respond to:
 {tweet_text}""",
-
-'check_answer_is_needed': """You are an AI community manager focused on technology discussions.
+    "check_answer_is_needed": """You are an AI community manager focused on technology discussions.
 You need to create one comment for the twitter post.
 You are an autonomous AI Twitter Ambassador for the project NFINITY. Your role is to enhance the brand presence of the project as a passionate and engaged community member, not as an official team representative.
 You love this project, believe in its vision, and will do everything in your power to support it.
@@ -646,8 +640,7 @@ Comment to analyze:
 {twitter_comment}
 
 Respond with one word - True or False.""",
-
-'check_tweet_for_marketing': """You are a technology and Web3 enthusiast focused on AI and blockchain innovations.
+    "check_tweet_for_marketing": """You are a technology and Web3 enthusiast focused on AI and blockchain innovations.
 
 
 Your task is to analyze tweets and determine if they discuss topics related to our focus areas.
@@ -668,7 +661,6 @@ Tweet to evaluate:
 {tweet_text}
 
 Respond with one word - True or False.""",
-
 }
 
 
@@ -679,7 +671,12 @@ async def ensure_delay_between_posts(username: str, delay: int = None):
     past_date = datetime(2023, 1, 1, 12, 0)
     past_timestamp = int(past_date.timestamp())
     posts = [
-        Post(id="1", text="Mock tweet 1", sender_username=username, timestamp=past_timestamp),
+        Post(
+            id="1",
+            text="Mock tweet 1",
+            sender_username=username,
+            timestamp=past_timestamp,
+        ),
         Post(
             id="2",
             text="Mock tweet 2",
@@ -688,16 +685,16 @@ async def ensure_delay_between_posts(username: str, delay: int = None):
             is_news_summary_tweet=True,
         ),
     ]
-    print(f'ensure_delay_between_posts {username=} {len(posts)=}')
+    print(f"ensure_delay_between_posts {username=} {len(posts)=}")
     if posts:
         last_post = posts[-1]
         time_since_last_post = time.time() - last_post.timestamp
         if not delay:
             delay = randint(5 * 60, 10 * 60)
-        print(f'ensure_delay_between_posts {username=} {time_since_last_post=}')
+        print(f"ensure_delay_between_posts {username=} {time_since_last_post=}")
         if time_since_last_post < delay:
             wait_time = delay - time_since_last_post
-            print(f'Waiting: {username=} {wait_time=}')
+            print(f"Waiting: {username=} {wait_time=}")
             await asyncio.sleep(wait_time)
 
 
@@ -707,12 +704,11 @@ def decode_redis(src):
         for key in src:
             rv.append(decode_redis(key))
         return rv
-    elif isinstance(src, dict):
+    if isinstance(src, dict):
         rv = {}
         for key in src:
             rv[key.decode()] = decode_redis(src[key])
         return rv
-    elif isinstance(src, bytes):
+    if isinstance(src, bytes):
         return src.decode()
-    else:
-        raise Exception("type not handled: " + type(src))
+    raise Exception("type not handled: " + type(src))

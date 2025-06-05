@@ -1,9 +1,5 @@
-import asyncio
-import logging
-from typing import Collection, Optional
-
-from qdrant_client import QdrantClient, AsyncQdrantClient
-from qdrant_client.models import VectorParams, Distance, PointStruct
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams
 from qdrant_client_custom.config import get_settings
 
 settings = get_settings()
@@ -23,7 +19,6 @@ class QdrantClientPackage(QdrantClient):
             self.create_collection(
                 collection_name=collection_name,
                 vectors_config=VectorParams(
-                    size=settings.VECTOR_DIMENSION,
-                    distance=Distance.COSINE
-                )
+                    size=settings.VECTOR_DIMENSION, distance=Distance.COSINE
+                ),
             )

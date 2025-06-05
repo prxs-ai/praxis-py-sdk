@@ -1,5 +1,5 @@
 [tool.bumpversion]
-current_version = "0.0.1"
+current_version = "0.0.3"
 message = "Bump version of infra-configs: {current_version} -> {new_version}"
 tag_name = "packages/infra-configs-v{new_version}"
 commit = false
