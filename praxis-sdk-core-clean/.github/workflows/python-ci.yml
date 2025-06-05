@@ -31,7 +31,6 @@ jobs:
           "hyperliquid-client",
           "qdrant-client-custom",
           "redis-client",
-          "redis-utils",
         ]
     steps:
       - name: Checkout repository
@@ -121,14 +120,3 @@ jobs:
         run: |
           echo "=== Listing all files after test run ==="
           ls -R .
-
-      - name: Check coverage file exists
-        working-directory: packages/${{ matrix.package }}
-        run: |
-          if [ -f "coverage.xml" ]; then
-            echo "Coverage file created successfully"
-            ls -la coverage.xml
-          else
-            echo "Coverage file not found, creating empty one"
-            echo '<?xml version="1.0"?><coverage version="0.0" timestamp="0" lines-valid="0" lines-covered="0" line-rate="0.0"></coverage>' > coverage.xml
-          fi
