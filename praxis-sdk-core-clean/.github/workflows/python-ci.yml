@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        fail-fast: false
         package: [
           "agents-tools-logger",
           "ai-tools",
@@ -31,6 +32,7 @@ jobs:
           "hyperliquid-client",
           "qdrant-client-custom",
           "redis-client",
+          "redis-utils",
         ]
     steps:
       - name: Checkout repository
