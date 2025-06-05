@@ -2,7 +2,6 @@ import pytest
 import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
-from loguru import logger
 
 with patch("redis_client.config.Settings") as mock_settings:
     mock_settings.return_value = MagicMock(
