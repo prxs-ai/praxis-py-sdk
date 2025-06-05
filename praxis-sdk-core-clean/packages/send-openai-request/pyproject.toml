@@ -8,6 +8,10 @@ authors = [
 requires-python = ">=3.10,<4"
 dependencies = [
     "openai (>=1.63.2,<2.0.0)",
+    "pydantic_settings>=2.7.1",
+    "python-multipart>=0.0.6",
+    "pytest-asyncio (==0.26.0)",
+    "tenacity (>=8.1.0,!=8.4.0,<10)",
 ]
 readme = "README.md"
 

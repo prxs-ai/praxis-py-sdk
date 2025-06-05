@@ -34,7 +34,8 @@ jobs:
           "redis-client",
           "redis-utils",
           "rugcheck-wrapper",
-          "s3-service"
+          "s3-service",
+          "send-openai-request"
         ]
     steps:
       - name: Checkout repository
