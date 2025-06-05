@@ -40,6 +40,7 @@ jobs:
           "shared-utils",
           "tik-tok-package",
           "tweetscout-utils",
+          "twitter-ambassador-utils",
         ]
     steps:
       - name: Checkout repository

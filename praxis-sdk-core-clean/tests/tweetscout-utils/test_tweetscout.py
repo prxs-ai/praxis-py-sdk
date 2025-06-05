@@ -25,7 +25,7 @@ def mock_aiohttp_session():
 
 
 @pytest.fixture
-async def mock_client_session(mock_aiohttp_session):
+def mock_client_session(mock_aiohttp_session):
     with patch("aiohttp.ClientSession", return_value=mock_aiohttp_session):
         yield mock_aiohttp_session
 

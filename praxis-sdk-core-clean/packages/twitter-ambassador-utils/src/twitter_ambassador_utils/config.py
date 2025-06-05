@@ -8,11 +8,11 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    TWITTER_CLIENT_ID: str
-    TWITTER_REDIRECT_URI: str
-    TWITTER_CLIENT_SECRET: str
-    FERNET_KEY: bytes
-    TWITTER_BASIC_BEARER_TOKEN: str
+    TWITTER_CLIENT_ID: str = ""
+    TWITTER_REDIRECT_URI: str = ""
+    TWITTER_CLIENT_SECRET: str = ""
+    FERNET_KEY: bytes = b"ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg="
+    TWITTER_BASIC_BEARER_TOKEN: str = "str"
     VAULT_URL: Optional[str] = None
     VAULT_NAMESPACE: Optional[str] = None
     VAULT_ROLE_ID: Optional[str] = None
