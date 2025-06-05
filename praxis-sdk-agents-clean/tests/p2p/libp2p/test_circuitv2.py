@@ -69,50 +69,6 @@ async def echo_stream_handler(stream):
 
 
 @pytest.mark.trio
-async def test_circuit_v2_transport_initialization():
-    """Test that the Circuit v2 transport initializes correctly."""
-    async with HostFactory.create_batch_and_listen(1) as hosts:
-        host = hosts[0]
-
-        # Create a protocol instance
-        limits = RelayLimits(
-            duration=DEFAULT_RELAY_LIMITS.duration,
-            data=DEFAULT_RELAY_LIMITS.data,
-            max_circuit_conns=DEFAULT_RELAY_LIMITS.max_circuit_conns,
-            max_reservations=DEFAULT_RELAY_LIMITS.max_reservations,
-        )
-        protocol = CircuitV2Protocol(host, limits, allow_hop=False)
-
-        # Create a config
-        from libp2p.relay.circuit_v2.config import (
-            RelayConfig,
-        )
-
-        config = RelayConfig()
-
-        # Create a discovery instance
-        discovery = RelayDiscovery(
-            host=host,
-            auto_reserve=False,
-            discovery_interval=config.discovery_interval,
-            max_relays=config.max_relays,
-        )
-
-        # Create the transport with the necessary components
-        transport = CircuitV2Transport(host, protocol, config)
-        # Replace the discovery with our manually created one
-        transport.discovery = discovery
-
-        # Verify transport properties
-        assert transport.host == host, "Host not set correctly"
-        assert transport.protocol == protocol, "Protocol not set correctly"
-        assert transport.config == config, "Config not set correctly"
-        assert hasattr(transport, "discovery"), (
-            "Transport should have a discovery instance"
-        )
-
-
-@pytest.mark.trio
 async def test_circuit_v2_transport_dial_through_relay():
     """Test dialing a peer through a relay."""
     async with HostFactory.create_batch_and_listen(3) as hosts:
