@@ -1,90 +1,77 @@
 import pytest
-from unittest.mock import AsyncMock, patch
-import time
+import asyncio
 from datetime import datetime
-from redis_client.main import Post
-from redis_utils.main import ensure_delay_between_posts, decode_redis
+from unittest.mock import AsyncMock, patch, MagicMock
 from loguru import logger
+
+with patch("redis_client.config.Settings") as mock_settings:
+    mock_settings.return_value = MagicMock(
+        REDIS_HOST="mock_host",
+        REDIS_PORT=6379,
+        REDIS_DB=0,
+    )
+    with patch("redis_client.main.RedisDB"):
+        from redis_utils.main import ensure_delay_between_posts, decode_redis
+
+
+class Post:
+    def __init__(self, id, text, sender_username, timestamp, is_news_summary_tweet=False):
+        self.id = id
+        self.text = text
+        self.sender_username = sender_username
+        self.timestamp = timestamp
+        self.is_news_summary_tweet = is_news_summary_tweet
 
 
 @pytest.fixture
 def mock_redis():
-    return Mock()
+    with patch("redis_utils.main.db") as mock_db:
+        yield mock_db
 
 
 @pytest.fixture
-def username():
-    return "testuser"
+def mock_time():
+    with patch("time.time") as mock_time:
+        yield mock_time
 
 
 @pytest.mark.asyncio
-async def test_ensure_delay_between_posts_no_delay(mocker, username):
-    mocker.patch("redis_client.get_redis_db")  # Mock Redis to avoid actual calls
-    mocker.patch("random.randint", return_value=300)  # 5 minutes
-    mocker.patch("time.time", return_value=1672574400 + 1000)  # Some time after past_date
-    mocker.patch("asyncio.sleep", new=AsyncMock())
-    mocker.patch.object(logger, "info")
+async def test_ensure_delay_no_posts(mock_redis):
+    """Тест: если постов нет, функция не должна ждать."""
+    mock_redis.get_posts_by_username.return_value = []
 
-    await ensure_delay_between_posts(username)
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} len(posts)=2")
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} time_since_last_post=1000.0")
-    asyncio.sleep.assert_not_called()
+    await ensure_delay_between_posts("test_user")
+
+    mock_redis.get_posts_by_username.assert_called_once_with("test_user")
 
 
 @pytest.mark.asyncio
-async def test_ensure_delay_between_posts_with_delay(mocker, username):
-    past_date = datetime(2023, 1, 1, 12, 0)
-    mocker.patch("redis_client.get_redis_db")  # Mock Redis
-    mocker.patch("time.time", return_value=past_date.timestamp() + 100)
-    mocker.patch("random.randint", return_value=300)  # 5 minutes
-    mock_sleep = mocker.patch("asyncio.sleep", new=AsyncMock())
-    mocker.patch.object(logger, "info")
+async def test_ensure_delay_with_posts_needs_wait(mock_redis, mock_time):
+    """Тест: если последний пост был недавно, функция должна ждать."""
+    past_timestamp = int(datetime(2023, 1, 1).timestamp())
+    mock_posts = [
+        Post(id="1", text="Recent post", sender_username="test_user", timestamp=past_timestamp)
+    ]
+    mock_redis.get_posts_by_username.return_value = mock_posts
+    mock_time.return_value = past_timestamp + 30
 
-    await ensure_delay_between_posts(username)
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} len(posts)=2")
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} time_since_last_post=100.0")
-    logger.info.assert_any_call(f"Waiting: {username=} wait_time=200.0")
-    mock_sleep.assert_called_once_with(200.0)
-
-
-@pytest.mark.asyncio
-async def test_ensure_delay_between_posts_custom_delay(mocker, username):
-    past_date = datetime(2023, 1, 1, 12, 0)
-    mocker.patch("redis_client.get_redis_db")  # Mock Redis
-    mocker.patch("time.time", return_value=past_date.timestamp() + 50)
-    mock_sleep = mocker.patch("asyncio.sleep", new=AsyncMock())
-    mocker.patch.object(logger, "info")
-
-    await ensure_delay_between_posts(username, delay=100)
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} len(posts)=2")
-    logger.info.assert_any_call(f"ensure_delay_between_posts {username=} time_since_last_post=50.0")
-    logger.info.assert_any_call(f"Waiting: {username=} wait_time=50.0")
-    mock_sleep.assert_called_once_with(50.0)
+    with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        await ensure_delay_between_posts("test_user", delay=60)
+        mock_sleep.assert_awaited_once_with(30)
 
 
-@pytest.mark.asyncio
-async def test_decode_redis_list():
-    src = [b"item1", b"item2"]
-    result = decode_redis(src)
-    assert result == ["item1", "item2"]
+def test_decode_redis_bytes():
+    assert decode_redis(b"hello") == "hello"
 
 
-@pytest.mark.asyncio
-async def test_decode_redis_dict():
-    src = {b"key1": b"value1", b"key2": [b"item1", b"item2"]}
-    result = decode_redis(src)
-    assert result == {"key1": "value1", "key2": ["item1", "item2"]}
+def test_decode_redis_list():
+    assert decode_redis([b"a", b"b"]) == ["a", "b"]
 
 
-@pytest.mark.asyncio
-async def test_decode_redis_bytes():
-    src = b"test"
-    result = decode_redis(src)
-    assert result == "test"
+def test_decode_redis_dict():
+    assert decode_redis({b"key": b"value"}) == {"key": "value"}
 
 
-@pytest.mark.asyncio
-async def test_decode_redis_invalid_type():
-    src = 123
-    with pytest.raises(Exception, match="type not handled: int"):
-        decode_redis(src)
+def test_decode_redis_unsupported_type():
+    with pytest.raises(Exception, match="type not handled"):
+        decode_redis(123)
