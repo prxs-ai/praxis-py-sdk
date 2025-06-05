@@ -1,10 +1,11 @@
-from typing import Callable, ClassVar, Unpack, override
+from typing import Callable, ClassVar
 
 from aiohttp import ClientSession
 from aiohttp.client import _RequestOptions
 from multidict import CIMultiDict
 
 from shared_clients.aiohttp_.session import AiohttpSession
+
 
 
 class TweetScoutSession(AiohttpSession):
@@ -16,8 +17,7 @@ class TweetScoutSession(AiohttpSession):
         super().__init__(session_provider, self.BASE_URL)
         self.__api_key = api_key
 
-    @override
-    def _handle_kwargs(self, **kwargs: Unpack[_RequestOptions]) -> _RequestOptions:
+    def _handle_kwargs(self, **kwargs) -> _RequestOptions:
         headers = CIMultiDict[str]()
         headers.extend(kwargs.get("headers") or {})
         headers.add("ApiKey", self.__api_key)

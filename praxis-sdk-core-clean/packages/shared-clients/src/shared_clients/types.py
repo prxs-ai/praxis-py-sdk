@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from types import TracebackType
-from typing import Protocol
+from typing import Protocol, TypeVar, Generic
+
+R = TypeVar("R")
 
 
-class API[R](Protocol):
+class API(Protocol, Generic[R]):
     __slots__ = ()
 
     @abstractmethod
@@ -14,9 +16,9 @@ class API[R](Protocol):
 
     @abstractmethod
     async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
+            self,
+            exc_type: type[BaseException] | None,
+            exc_val: BaseException | None,
+            exc_tb: TracebackType | None,
     ) -> None:
         raise NotImplementedError

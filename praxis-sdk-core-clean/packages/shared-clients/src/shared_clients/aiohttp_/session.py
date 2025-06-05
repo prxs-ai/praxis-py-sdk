@@ -1,38 +1,37 @@
 from __future__ import annotations
 
 from collections.abc import Coroutine
-from functools import partialmethod
+from functools import partial
 from types import TracebackType
-from typing import Any, Callable, Self, Unpack
+from typing import Any, Callable, ParamSpec, TypeVar, Generic
 from urllib.parse import urlparse
 
 from aiohttp import ClientResponse, ClientSession
 from aiohttp.client import _BaseRequestContextManager, _RequestOptions
+from shared_clients.exceptions import APIError
 
-from services.shared.clients.exceptions import APIError
-
-
-def _factory[**P, R](verb: str, _: Callable[P, R]) -> Callable[P, R]:
-    @partialmethod
-    def method(*args: P.args, **kwargs: P.kwargs) -> R:
-        return args[0].request(verb, *args[1:], **kwargs)  # type: ignore
-
-    return method  # type: ignore
+P = ParamSpec("P")
+R = TypeVar("R", bound=ClientResponse)
 
 
-class ResponseWrapper[R: ClientResponse]:
-    __slots__ = "_coro", "_resp"
+def _factory(method: str) -> Callable[..., ResponseWrapper]:
+    def wrapper(self: AiohttpSession, url: str, **kwargs: Any) -> ResponseWrapper:
+        return ResponseWrapper(self.request(method.upper(), url, **kwargs))  # type: ignore
+    return wrapper
 
-    def __init__(self, coro: Coroutine[Any, None, R]) -> None:
-        self._coro = coro
 
-    async def __aenter__(
-        self,
-    ) -> ClientResponse:
-        self._resp: R = await self._coro
+class ResponseWrapper(Generic[R]):
+    __slots__ = "_coro", "_resp", "_context"  # Добавляем _context
+
+    def __init__(self, context: _BaseRequestContextManager[R]) -> None:
+        self._coro = context.__aenter__
+        self._context = context
+
+    async def __aenter__(self) -> R:
+        self._resp: R = await self._coro()
         if not self._resp.ok:
             raise APIError(self._resp.status, repr(await self._resp.read()))
-        return await self._resp.__aenter__()
+        return self._resp
 
     async def __aexit__(
         self,
@@ -40,7 +39,7 @@ class ResponseWrapper[R: ClientResponse]:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        await self._resp.__aexit__(exc_type, exc, tb)
+        await self._context.__aexit__(exc_type, exc, tb)
 
 
 def _create_session() -> ClientSession:
@@ -53,8 +52,6 @@ class AiohttpSession:
         "_base_url",
         "_session",
     )
-
-    _session: ClientSession
 
     def __init__(
         self,
@@ -69,30 +66,29 @@ class AiohttpSession:
         self,
         method: str,
         url: str,
-        **kwargs: Unpack[_RequestOptions],
+        **kwargs: Any,
     ) -> _BaseRequestContextManager[ClientResponse]:
         if not urlparse(url).netloc:
             url = self._base_url + url
-        kwargs = self._handle_kwargs(**kwargs)
-        return self._session.request(method, url, **kwargs)
+        return self._session.request(method, url, **self._handle_kwargs(**kwargs))
 
-    def _handle_kwargs(self, **kwargs: Unpack[_RequestOptions]) -> _RequestOptions:
+    def _handle_kwargs(self, **kwargs: Any) -> _RequestOptions:
         return kwargs
 
-    def get(self, url: str, **kwargs: Unpack[_RequestOptions]) -> ResponseWrapper[ClientResponse]:
-        return ResponseWrapper(self.request("GET", url, **kwargs)._coro)
+    def get(self, url: str, **kwargs: Any) -> ResponseWrapper[ClientResponse]:
+        return ResponseWrapper(self.request("GET", url, **kwargs))
 
-    post = _factory("post", get)
-    delete = _factory("delete", get)
-    put = _factory("put", get)
-    patch = _factory("patch", get)
-    head = _factory("head", get)
-    options = _factory("options", get)
-    trace = _factory("trace", get)
-    connect = _factory("connect", get)
+    post = _factory("post")
+    delete = _factory("delete")
+    put = _factory("put")
+    patch = _factory("patch")
+    head = _factory("head")
+    options = _factory("options")
+    trace = _factory("trace")
+    connect = _factory("connect")
 
-    async def __aenter__(self) -> Self:
-        if not self._session or self._session.closed:
+    async def __aenter__(self):
+        if not hasattr(self, "_session") or self._session.closed:
             self._create_session()
         await self._session.__aenter__()
         return self
