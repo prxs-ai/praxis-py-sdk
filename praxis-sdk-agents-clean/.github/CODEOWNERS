@@ -1,0 +1,20 @@
+# This file defines code owners for the Praxis SDK Agents repository
+# Code owners are automatically requested for review when someone opens a PR
+
+* @hyp0cr4t @0xDevZip @ruthuwjwb
+
+/docs/ @ruthuwjwb @0xDevZip
+*.md @ruthuwjwb @0xDevZip
+/README.md @ruthuwjwb @0xDevZip
+
+/pyproject.toml @hyp0cr4t @hexavor
+/poetry.lock @hyp0cr4t @hexavor
+/.github/ @hyp0cr4t @hexavor
+
+/src/ @hyp0cr4t @0xDevZip
+/base-agent/ @hyp0cr4t @0xDevZip
+/tests/ @hyp0cr4t @0xDevZip
+
+/.github/workflows/ @hyp0cr4t @hexavor
+
+/LICENSE @hyp0cr4t @0xDevZip @ruthuwjwb @hexavor
