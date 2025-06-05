@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class P2PConfig(BaseSettings):
     relay_addr: str = "/ip4/127.0.0.1/tcp/9000/p2p/RELAY_PEER_ID"
+    keystore_path: str = "./keys"
+    noise_key: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
