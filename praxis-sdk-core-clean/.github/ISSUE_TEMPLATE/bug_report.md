@@ -31,7 +31,7 @@ A clear and concise description of what actually happened.
 
 - OS: [e.g. macOS 13.0, Ubuntu 22.04]
 - Python version: [e.g. 3.10.8]
-- Praxis SDK version: [e.g. 1.2.3]
+- Praxis SDK Core version: [e.g. 1.2.3]
 - Poetry version: [e.g. 1.4.2]
 
 ## Additional Context

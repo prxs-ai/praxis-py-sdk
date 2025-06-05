@@ -43,7 +43,7 @@ poetry install
 poetry run pytest
 ```
 
-## Adding New Services
+## Adding New Packages
 
 To add a new service, replicate the structure of `s3-service` and update the root documentation as needed.
 
