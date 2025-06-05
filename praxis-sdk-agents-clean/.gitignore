@@ -122,5 +122,5 @@ cython_debug/
 # Pyre stuff:
 .vscode/
 
-# P2P stuff: 
+# P2P stuff:
 keys/

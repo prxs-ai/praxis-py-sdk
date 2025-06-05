@@ -1,9 +1,10 @@
-from pathlib import Path
-from libp2p.crypto.keys import KeyPair, PrivateKey
-from libp2p.crypto.ed25519 import create_new_key_pair, Ed25519PrivateKey
-from loguru import logger
-from base64 import b64decode
 import os
+from base64 import b64decode
+from pathlib import Path
+
+from libp2p.crypto.ed25519 import Ed25519PrivateKey, create_new_key_pair
+from libp2p.crypto.keys import KeyPair, PrivateKey
+from loguru import logger
 
 
 def load_or_create_node_key(seed_path: str) -> KeyPair:
