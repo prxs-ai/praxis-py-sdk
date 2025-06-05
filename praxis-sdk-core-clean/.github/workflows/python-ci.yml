@@ -41,6 +41,7 @@ jobs:
           "tik-tok-package",
           "tweetscout-utils",
           "twitter-ambassador-utils",
+          "twitter-follow",
         ]
     steps:
       - name: Checkout repository
