@@ -38,6 +38,7 @@ jobs:
           "send-openai-request",
           "shared-clients",
           "shared-utils",
+          "tik-tok-package",
         ]
     steps:
       - name: Checkout repository
