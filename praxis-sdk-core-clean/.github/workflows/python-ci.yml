@@ -34,6 +34,7 @@ jobs:
           "redis-client",
           "redis-utils",
           "rugcheck-wrapper",
+          "s3-service"
         ]
     steps:
       - name: Checkout repository

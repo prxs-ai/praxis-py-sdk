@@ -1,12 +1,9 @@
 import pytest
-import re
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import UploadFile
 from botocore.exceptions import ClientError
 import pytest_asyncio
 
-
-# Мокируем зависимости до импорта основного модуля
 with patch("s3_service.config.Settings") as mock_settings:
     mock_settings.return_value = MagicMock(
         infrastructure=MagicMock(
@@ -21,7 +18,6 @@ with patch("s3_service.config.Settings") as mock_settings:
         from s3_service.main import S3Service, get_s3_service, s3_service_dependency
 
 
-# Фикстуры для тестов
 @pytest.fixture
 def mock_upload_file():
     file = MagicMock(spec=UploadFile)
@@ -41,11 +37,10 @@ async def s3_service():
         mock_aioboto3.Session.return_value = mock_session
 
         service = S3Service("test-bucket")
-        service.s3_client = mock_client  # ручная инициализация
+        service.s3_client = mock_client
         yield service
 
 
-# Тесты
 def test_init_invalid_bucket_name():
     with pytest.raises(ValueError, match="Invalid bucket name"):
         S3Service("invalid_bucket_name!")
