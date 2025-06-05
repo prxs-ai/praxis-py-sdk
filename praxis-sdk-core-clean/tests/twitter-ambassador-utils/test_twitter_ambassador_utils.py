@@ -1,8 +1,7 @@
 import pytest
 import aiohttp
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
-
+from datetime import datetime
 from loguru import logger
 
 with patch("redis_client.config.Settings") as mock_settings:
@@ -37,7 +36,7 @@ def mock_aiohttp_session():
 
 
 @pytest.fixture
-async def mock_client_session(mock_aiohttp_session):
+def mock_client_session(mock_aiohttp_session):
     with patch("aiohttp.ClientSession", return_value=mock_aiohttp_session):
         yield mock_aiohttp_session
 

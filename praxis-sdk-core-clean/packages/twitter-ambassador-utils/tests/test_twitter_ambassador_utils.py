@@ -1,8 +1,7 @@
 import pytest
 import aiohttp
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
-
+from datetime import datetime
 from loguru import logger
 
 with patch("redis_client.config.Settings") as mock_settings:
@@ -15,8 +14,6 @@ with patch("redis_client.config.Settings") as mock_settings:
         from twitter_ambassador_utils.main import (
             post_request, create_post, retweet, set_like, TwitterAuthClient
         )
-
-
 
 
 # Фикстуры
@@ -39,7 +36,7 @@ def mock_aiohttp_session():
 
 
 @pytest.fixture
-async def mock_client_session(mock_aiohttp_session):
+def mock_client_session(mock_aiohttp_session):
     with patch("aiohttp.ClientSession", return_value=mock_aiohttp_session):
         yield mock_aiohttp_session
 
@@ -66,7 +63,7 @@ def mock_cipher():
 def mock_oauth2_session():
     oauth_session = MagicMock()
     oauth_session.authorization_url.return_value = (
-    "https://twitter.com/i/oauth2/authorize?state=test_state", "test_state")
+        "https://twitter.com/i/oauth2/authorize?state=test_state", "test_state")
     oauth_session.fetch_token.return_value = {
         "access_token": "test_access_token",
         "refresh_token": "test_refresh_token",
