@@ -36,7 +36,8 @@ jobs:
           "rugcheck-wrapper",
           "s3-service",
           "send-openai-request",
-          "shared-clients"
+          "shared-clients",
+          "shared-utils",
         ]
     steps:
       - name: Checkout repository
