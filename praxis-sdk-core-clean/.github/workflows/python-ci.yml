@@ -39,6 +39,7 @@ jobs:
           "shared-clients",
           "shared-utils",
           "tik-tok-package",
+          "tweetscout-utils",
         ]
     steps:
       - name: Checkout repository
