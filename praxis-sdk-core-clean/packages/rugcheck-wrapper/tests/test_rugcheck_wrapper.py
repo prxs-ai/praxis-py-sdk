@@ -1,6 +1,9 @@
 import pytest
 import aiohttp
 from unittest.mock import AsyncMock, patch, MagicMock
+
+import pytest_asyncio
+
 from rugcheck_wrapper.main import RugCheckAPI
 
 
@@ -10,7 +13,7 @@ def mock_aiohttp():
         yield mock_session
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def rugcheck_api(mock_aiohttp):
     api = RugCheckAPI()
     yield api
