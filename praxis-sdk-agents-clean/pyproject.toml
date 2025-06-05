@@ -106,6 +106,7 @@ ignore = [
     "DTZ",
     "S",
     "RUF",
+    "PGH003",
     "PERF203",
     "ANN",
     "TRY401",
@@ -121,6 +122,7 @@ ignore = [
     "ISC001",
     "RUF001",
     "B904",
+    "SLF001",
     "ASYNC110",   # ← Разрешает trio.sleep в while циклах
     "ASYNC210",   # ← Разрешает блокирующие HTTP в async функциях
     "ASYNC230",

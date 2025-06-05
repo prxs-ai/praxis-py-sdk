@@ -54,56 +54,31 @@ class P2PManager:
 
     async def _start(self) -> None:
         """Trio-based implementation of the P2P node."""
-        from libp2p import new_host
-        from libp2p.peer.peerinfo import info_from_p2p_addr
-        from libp2p.relay.circuit_v2.config import RelayConfig
-        from libp2p.relay.circuit_v2.protocol import CircuitV2Protocol
-        from libp2p.relay.circuit_v2.transport import CircuitV2Transport
         from multiaddr import Multiaddr
 
-        from .const import PROTOCOL_CARD
-        from .handlers import handle_card
+        from base_agent.p2p.libp2p import LibP2PNode
 
-        host = new_host()
-        self._libp2p_node = host
-
-        host.set_stream_handler(PROTOCOL_CARD, handle_card)
-        # Print host information
-        logger.info(f"Destination node started with ID: {host.get_id()}")
-        logger.info(f"Listening on: {host.get_addrs()}")
-
-        config = RelayConfig(
-            enable_stop=True,  # Accept relayed connections
-            enable_client=True,  # Use relays for outbound connections
-        )
-        # Initialize the relay protocol
-        protocol = CircuitV2Protocol(host)
+        # Create the libp2p node
+        node = LibP2PNode(self.config)
+        host = await node.initialize()
+        self._libp2p_node = node
 
         async with host.run(listen_addrs=[Multiaddr("/ip4/0.0.0.0/tcp/9001")]), trio.open_nursery() as nursery:
-            transport = CircuitV2Transport(host, protocol, config)
-            listener = transport.create_listener(lambda stream: handle_card(stream))  # type: ignore[misc]
-
-            # start listening
-            await listener.listen(None, nursery)  # type: ignore[misc]
-            logger.info("Destination node ready to accept relayed connections")
+            # Set up the listener
+            await node.setup_listener(nursery)
 
             # Connect to relay and keep node running
             while not self._shutdown_event.is_set():
                 try:
                     # Connect to the relay node
-                    relay_addr = self.config.relay_addr
-                    logger.info(f"Connecting to relay at {relay_addr}")
-                    try:
-                        await host.connect(info_from_p2p_addr(Multiaddr(relay_addr)))
-                        logger.info("Connected to relay successfully")
-                    except Exception as e:
-                        logger.error(f"Failed to connect to relay: {e}")
+                    success = await node.connect_to_relay()
+                    if not success:
                         await trio.sleep(10)
                         continue
 
                     # Keep checking if we should shut down
                     while not self._shutdown_event.is_set():
-                        await trio.sleep(5)
+                        await trio.sleep(10)
 
                 except Exception as e:
                     logger.error(f"Error in p2p node loop: {e}")
@@ -124,7 +99,7 @@ class P2PManager:
 
         logger.info("P2P manager started in separate thread")
 
-    async def shutdown(self) -> None:
+    async def shutdown(self):
         """Shutdown libp2p node."""
         if not self._running:
             logger.warning("P2P manager is not running")

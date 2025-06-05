@@ -1,19 +1,23 @@
-from base_agent.p2p.config import P2PConfig
-from base_agent.p2p.libp2p.utils import decode_noise_key, load_or_create_node_key
+import os
+from typing import TYPE_CHECKING
+
 from libp2p import new_host
-from libp2p.crypto.keys import KeyPair
+from libp2p.peer.peerinfo import info_from_p2p_addr
+from libp2p.relay.circuit_v2.config import RelayConfig
 from libp2p.relay.circuit_v2.protocol import CircuitV2Protocol
 from libp2p.relay.circuit_v2.transport import CircuitV2Transport
 from libp2p.security.noise.transport import PROTOCOL_ID as NOISE_PROTOCOL_ID
 from libp2p.security.noise.transport import Transport as NoiseTransport
-from libp2p.relay.circuit_v2.config import RelayConfig
-from base_agent.p2p.handlers import handle_card
-from base_agent.p2p.const import PROTOCOL_CARD
-from libp2p.peer.peerinfo import info_from_p2p_addr
-from multiaddr import Multiaddr
-import os
-
 from loguru import logger
+from multiaddr import Multiaddr
+
+from base_agent.p2p.config import P2PConfig
+from base_agent.p2p.const import PROTOCOL_CARD
+from base_agent.p2p.handlers import handle_card
+from base_agent.p2p.libp2p.utils import decode_noise_key, load_or_create_node_key
+
+if TYPE_CHECKING:
+    from libp2p.crypto.keys import KeyPair
 
 
 class LibP2PNode:
@@ -27,12 +31,10 @@ class LibP2PNode:
         self._init_keypair()
 
     def _init_keypair(self, host_key_filename: str = "node.key"):
-        self.keypair: KeyPair = load_or_create_node_key(
-            os.path.join(self.config.keystore_path, host_key_filename)
-        )
+        self.keypair: KeyPair = load_or_create_node_key(os.path.join(self.config.keystore_path, host_key_filename))
 
     def _init_host(self):
-        """Initialize libp2p host"""
+        """Initialize libp2p host."""
         sec_opt = None
 
         if self.config.noise_key is not None:
@@ -46,7 +48,6 @@ class LibP2PNode:
 
     async def initialize(self):
         """Initialize the libp2p node."""
-
         self.host = self._init_host()
         self.host.set_stream_handler(PROTOCOL_CARD, handle_card)
 
@@ -66,7 +67,6 @@ class LibP2PNode:
 
     async def connect_to_relay(self):
         """Connect to the relay node."""
-
         relay_addr = self.config.relay_addr
         logger.info(f"Connecting to relay at {relay_addr}")
         try:
@@ -79,7 +79,6 @@ class LibP2PNode:
 
     async def setup_listener(self, nursery):
         """Set up the listener for incoming connections."""
-
         listener = self.transport.create_listener(lambda stream: handle_card(stream))  # type: ignore
         # start listening
         await listener.listen(None, nursery)  # type: ignore
