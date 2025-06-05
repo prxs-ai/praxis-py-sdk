@@ -37,7 +37,7 @@ def test_setstate(p2p_manager):
 def test_node_property_not_initialized(p2p_manager):
     """Test node property raises exception when not initialized."""
     with pytest.raises(RuntimeError, match="libp2p node is not initialized yet"):
-        p2p_manager.node
+        assert p2p_manager.node
 
 
 def test_node_property_initialized(p2p_manager):
