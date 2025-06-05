@@ -33,6 +33,7 @@ jobs:
           "qdrant-client-custom",
           "redis-client",
           "redis-utils",
+          "rugcheck-wrapper",
         ]
     steps:
       - name: Checkout repository
