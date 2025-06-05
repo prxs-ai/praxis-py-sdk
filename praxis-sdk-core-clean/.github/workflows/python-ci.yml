@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        fail-fast: false
+#        fail-fast: false
         package: [
           "agents-tools-logger",
           "ai-tools",
