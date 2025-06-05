@@ -9,7 +9,7 @@ requires-python = ">=3.10,<4"
 dependencies = [
     "asyncio>=3.4.3",
     "loguru>=0.7.2,<0.8.0",
-    "redis-client>=0.1.6"
+    "redis-client==0.1.7"
 ]
 
 readme = "README.md"
@@ -19,11 +19,8 @@ packages = [{ include = "*", from = "src" }]
 
 [[tool.poetry.source]]
 name = "praxis"
-url = "https://praxis-688567299207.d.codeartifact.eu-west-1.amazonaws.com/pypi/praxis/simple/"
-priority = "primary"
-
-[tool.poetry.dependencies]
-redis-client = {source = "praxis"}
+url = "https://packages.pypi.prx.ai/simple/"
+priority = "supplemental"
 
 
 [build-system]
