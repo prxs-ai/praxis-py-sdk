@@ -1,16 +1,7 @@
-name: Images - publish base-agent
+name: Release - praxis-sdk-agents
 
 on:
   push:
-    branches-ignore:
-      - "main"
-      - "staging"
-      - "hotfix/**"
-      - "release/**"
-    paths:
-      - "src/**"
-      - "./Dockerfile"
-      - "./pyproject.toml"
     tags:
       - "v*"
 
