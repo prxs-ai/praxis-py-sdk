@@ -3,17 +3,17 @@
 
 * @hyp0cr4t @0xDevZip @ruthuwjwb
 
-/docs/ @ruthuwjwb @0xDevZip
-*.md @ruthuwjwb @0xDevZip
-/README.md @ruthuwjwb @0xDevZip
+/docs/ @hyp0cr4t @ruthuwjwb @0xDevZip
+*.md @hyp0cr4t @ruthuwjwb @0xDevZip
+/README.md @hyp0cr4t @ruthuwjwb @0xDevZip
 
 /pyproject.toml @hyp0cr4t @hexavor
 /poetry.lock @hyp0cr4t @hexavor
 /.github/ @hyp0cr4t @hexavor
 
-/src/ @hyp0cr4t @0xDevZip
-/base-agent/ @hyp0cr4t @0xDevZip
 /tests/ @hyp0cr4t @0xDevZip
+
+/praxis_sdk/ @hyp0cr4t @0xDevZip @hexavor
 
 /.github/workflows/ @hyp0cr4t @hexavor
 
