@@ -1,6 +1,6 @@
 [project]
 name = "praxis-sdk-agents"
-version = "0.0.5"
+version = "0.1.0"
 description = "Praxis SDK Agents"
 authors = [{ name = "hyp0cr4t", email = "hyp0cr4t@icloud.com" }]
 readme = "README.md"
