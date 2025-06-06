@@ -3,9 +3,9 @@
 
 * @hyp0cr4t @0xDevZip @ruthuwjwb
 
-/docs/ @ruthuwjwb @0xDevZip
-*.md @ruthuwjwb @0xDevZip
-/README.md @ruthuwjwb @0xDevZip
+/docs/ @hyp0cr4t @ruthuwjwb @0xDevZip
+*.md @hyp0cr4t @ruthuwjwb @0xDevZip
+/README.md @hyp0cr4t @ruthuwjwb @0xDevZip
 
 /pyproject.toml @hyp0cr4t @hexavor
 /poetry.lock @hyp0cr4t @hexavor
