@@ -1,0 +1,12 @@
+@startuml
+!include  https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+System_Boundary(agent, "SDK Agent") {
+    Container(sdk, "SDK Library", "Python", "Bootstraps agent and provides utilities")
+    Container(runtime, "Agent Runtime", "Ray Serve", "Executes workflows and manages memory")
+    Container(plugins, "Plugin/Adapter Layer", "Python", "Custom tools and third-party integrations")
+}
+
+Rel(sdk, runtime, "Initialize")
+Rel(runtime, plugins, "HTTP/SDK calls")
+@enduml

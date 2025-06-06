@@ -1,0 +1,14 @@
+@startuml
+!include  https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "End User")
+Person_Ext(thirdparty, "Third-Party API")
+System(agent, "SDK Agent")
+System(ai_registry, "AI Registry")
+System(relay, "Relay Service")
+
+Rel(user, agent, "Uses API")
+Rel(agent, ai_registry, "Discover tools & agents")
+Rel(agent, relay, "Message routing")
+Rel(agent, thirdparty, "Tool calls")
+@enduml
