@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir -r ./requirements.txt && \
     rm ./requirements.txt
 
 # Set the environment variables
-ENV PIP_EXTRA_INDEX_URL="https://packages.pypi.prxs.ai/simple/ https://tools.pypi.prxs.ai/simple/"
+ENV PIP_EXTRA_INDEX_URL="https://packages.pypi.prxs.ai/simple/ https://agents.pypi.prxs.ai/simple/ https://tools.pypi.prxs.ai/simple/"
 
 WORKDIR /serve_app
 
