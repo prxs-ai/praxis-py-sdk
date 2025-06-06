@@ -4,10 +4,6 @@ FROM ${BASE_IMAGE} as builder
 
 USER root
 
-RUN apt update && \
-    apt -y --no-install-recommends install libgmp3-dev && \
-    rm -rf /var/lib/apt/lists/*
-
 # Install poetry and dependencies
 RUN pip install poetry poetry-plugin-export && \
     poetry config virtualenvs.create false
@@ -21,6 +17,12 @@ RUN poetry export -f requirements.txt --without-hashes --output requirements.txt
 
 FROM ${BASE_IMAGE}
 
+USER root
+
+RUN apt update && \
+    apt -y --no-install-recommends install libgmp3-dev gcc && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install dependencies with a private registry
 COPY --from=builder /build/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r ./requirements.txt && \
@@ -31,5 +33,6 @@ ENV PIP_EXTRA_INDEX_URL="https://packages.pypi.prxs.ai/simple/ https://tools.pyp
 
 WORKDIR /serve_app
 
-COPY src/base_agent /serve_app/base_agent
+COPY ./praxis_sdk /serve_app/praxis_sdk
+
 COPY entrypoint.py /serve_app/entrypoint.py
