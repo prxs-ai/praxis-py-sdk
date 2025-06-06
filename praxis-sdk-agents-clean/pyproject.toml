@@ -1,7 +1,7 @@
 [project]
 name = "praxis-sdk-agents"
 version = "0.0.2"
-description = "Base agent for Ray Serve"
+description = "Praxis SDK Agents"
 authors = [{ name = "hyp0cr4t", email = "hyp0cr4t@icloud.com" }]
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -22,52 +22,52 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{ include = "*", from = "src" }]
+packages = [{ include = "praxis_sdk.agents" }]
 
 [project.entry-points."agent.executor.config"]
-basic = "base_agent.langchain.config:get_langchain_config"
+basic = "praxis_sdk.agents.langchain.config:get_langchain_config"
 
 [project.entry-points."agent.executor.entrypoint"]
-basic = "base_agent.langchain.executor:agent_executor"
+basic = "praxis_sdk.agents.langchain.executor:agent_executor"
 
 [project.entry-points."agent.prompt.config"]
-basic = "base_agent.prompt.config:get_prompt_config"
+basic = "praxis_sdk.agents.prompt.config:get_prompt_config"
 
 [project.entry-points."agent.prompt.entrypoint"]
-basic = "base_agent.prompt.builder:prompt_builder"
+basic = "praxis_sdk.agents.prompt.builder:prompt_builder"
 
 [project.entry-points."agent.workflow.config"]
-basic = "base_agent.orchestration.config:get_workflow_config"
+basic = "praxis_sdk.agents.orchestration.config:get_workflow_config"
 
 [project.entry-points."agent.workflow.entrypoint"]
-basic = "base_agent.orchestration.runner:dag_runner"
+basic = "praxis_sdk.agents.orchestration.runner:dag_runner"
 
 [project.entry-points."agent.entrypoint"]
-basic = "base_agent.ray_entrypoint:agent_builder"
+basic = "praxis_sdk.agents.ray_entrypoint:agent_builder"
 
 [project.entry-points."ai.registry.config"]
-basic = "base_agent.ai_registry.config:get_ai_registry_config"
+basic = "praxis_sdk.agents.ai_registry.config:get_ai_registry_config"
 
 [project.entry-points."ai.registry.entrypoint"]
-basic = "base_agent.ai_registry.client:ai_registry_client"
+basic = "praxis_sdk.agents.ai_registry.client:ai_registry_client"
 
 [project.entry-points."domain.knowledge.config"]
-basic = "base_agent.domain_knowledge.config:get_light_rag_config"
+basic = "praxis_sdk.agents.domain_knowledge.config:get_light_rag_config"
 
 [project.entry-points."domain.knowledge.entrypoint"]
-basic = "base_agent.domain_knowledge.client:light_rag_client"
+basic = "praxis_sdk.agents.domain_knowledge.client:light_rag_client"
 
 [project.entry-points."memory.config"]
-basic = "base_agent.memory.config:get_memory_config"
+basic = "praxis_sdk.agents.memory.config:get_memory_config"
 
 [project.entry-points."memory.entrypoint"]
-basic = "base_agent.memory.client:memory_client"
+basic = "praxis_sdk.agents.memory.client:memory_client"
 
 [project.entry-points."card.entrypoint"]
-basic = "base_agent.card.builder:get_agent_card"
+basic = "praxis_sdk.agents.card.builder:get_agent_card"
 
 [project.entry-points."p2p.entrypoint"]
-basic = "base_agent.p2p.manager:get_p2p_manager"
+basic = "praxis_sdk.agents.p2p.manager:get_p2p_manager"
 
 [tool.poetry.group.dev.dependencies]
 ray = { extras = ["serve"], version = "2.42.1" }

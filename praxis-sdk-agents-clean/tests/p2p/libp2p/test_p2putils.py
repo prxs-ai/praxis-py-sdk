@@ -6,7 +6,7 @@ from pathlib import Path
 from libp2p.crypto.ed25519 import Ed25519PrivateKey, create_new_key_pair
 from libp2p.crypto.keys import KeyPair
 
-from base_agent.p2p.libp2p.utils import decode_noise_key, load_or_create_node_key
+from praxis_sdk.agents.p2p.libp2p.utils import decode_noise_key, load_or_create_node_key
 
 
 class TestP2PUtils:

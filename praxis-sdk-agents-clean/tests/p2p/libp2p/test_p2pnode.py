@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from libp2p.crypto.keys import KeyPair
 
-from base_agent.p2p.config import P2PConfig
-from base_agent.p2p.libp2p.node import LibP2PNode
+from praxis_sdk.agents.p2p.config import P2PConfig
+from praxis_sdk.agents.p2p.libp2p.node import LibP2PNode
 
 
 @pytest.fixture
@@ -22,14 +22,14 @@ def mock_keypair():
 
 @pytest.fixture
 def node(config):
-    with patch("base_agent.p2p.libp2p.node.load_or_create_node_key") as mock_load_key:
+    with patch("praxis_sdk.agents.p2p.libp2p.node.load_or_create_node_key") as mock_load_key:
         mock_load_key.return_value = MagicMock(spec=KeyPair)
         return LibP2PNode(config)
 
 
 class TestLibP2PNode:
     def test_init(self, config):
-        with patch("base_agent.p2p.libp2p.node.load_or_create_node_key") as mock_load_key:
+        with patch("praxis_sdk.agents.p2p.libp2p.node.load_or_create_node_key") as mock_load_key:
             mock_load_key.return_value = MagicMock(spec=KeyPair)
             node = LibP2PNode(config)
 
@@ -40,7 +40,7 @@ class TestLibP2PNode:
             mock_load_key.assert_called_once_with(os.path.join(config.keystore_path, "node.key"))
 
     def test_init_keypair(self, node, config):
-        with patch("base_agent.p2p.libp2p.node.load_or_create_node_key") as mock_load_key:
+        with patch("praxis_sdk.agents.p2p.libp2p.node.load_or_create_node_key") as mock_load_key:
             mock_load_key.return_value = MagicMock(spec=KeyPair)
 
             node._init_keypair("custom.key")
@@ -50,9 +50,9 @@ class TestLibP2PNode:
 
     def test_init_host(self, node):
         with (
-            patch("base_agent.p2p.libp2p.node.new_host") as mock_new_host,
-            patch("base_agent.p2p.libp2p.node.decode_noise_key") as mock_decode,
-            patch("base_agent.p2p.libp2p.node.NoiseTransport") as mock_noise,
+            patch("praxis_sdk.agents.p2p.libp2p.node.new_host") as mock_new_host,
+            patch("praxis_sdk.agents.p2p.libp2p.node.decode_noise_key") as mock_decode,
+            patch("praxis_sdk.agents.p2p.libp2p.node.NoiseTransport") as mock_noise,
         ):
             mock_decode.return_value = "decoded_noise_key"
             mock_host = MagicMock()
@@ -73,8 +73,8 @@ class TestLibP2PNode:
 
         with (
             patch.object(node, "_init_host", return_value=mock_host),
-            patch("base_agent.p2p.libp2p.node.CircuitV2Protocol") as mock_protocol,
-            patch("base_agent.p2p.libp2p.node.CircuitV2Transport") as mock_transport,
+            patch("praxis_sdk.agents.p2p.libp2p.node.CircuitV2Protocol") as mock_protocol,
+            patch("praxis_sdk.agents.p2p.libp2p.node.CircuitV2Transport") as mock_transport,
         ):
             result = await node.initialize()
 
@@ -90,7 +90,7 @@ class TestLibP2PNode:
         mock_host.connect = AsyncMock()
         node.host = mock_host
 
-        with patch("base_agent.p2p.libp2p.node.info_from_p2p_addr") as mock_info:
+        with patch("praxis_sdk.agents.p2p.libp2p.node.info_from_p2p_addr") as mock_info:
             result = await node.connect_to_relay()
 
             mock_info.assert_called_once()
@@ -103,7 +103,7 @@ class TestLibP2PNode:
         mock_host.connect = AsyncMock(side_effect=Exception("Connection failed"))
         node.host = mock_host
 
-        with patch("base_agent.p2p.libp2p.node.info_from_p2p_addr"):
+        with patch("praxis_sdk.agents.p2p.libp2p.node.info_from_p2p_addr"):
             result = await node.connect_to_relay()
 
             assert result is False
@@ -118,7 +118,7 @@ class TestLibP2PNode:
 
         mock_nursery = MagicMock()
 
-        with patch("base_agent.p2p.libp2p.node.handle_card"):
+        with patch("praxis_sdk.agents.p2p.libp2p.node.handle_card"):
             await node.setup_listener(mock_nursery)
 
             mock_transport.create_listener.assert_called_once()
@@ -126,9 +126,9 @@ class TestLibP2PNode:
 
     def test_init_host_with_noise_protocol(self, node):
         with (
-            patch("base_agent.p2p.libp2p.node.new_host") as mock_new_host,
-            patch("base_agent.p2p.libp2p.node.decode_noise_key") as mock_decode,
-            patch("base_agent.p2p.libp2p.node.NoiseTransport") as mock_noise,
+            patch("praxis_sdk.agents.p2p.libp2p.node.new_host") as mock_new_host,
+            patch("praxis_sdk.agents.p2p.libp2p.node.decode_noise_key") as mock_decode,
+            patch("praxis_sdk.agents.p2p.libp2p.node.NoiseTransport") as mock_noise,
         ):
             mock_decode.return_value = "decoded_noise_key"
             mock_host = MagicMock()
