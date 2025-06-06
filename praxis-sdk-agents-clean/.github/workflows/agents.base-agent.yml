@@ -8,9 +8,11 @@ on:
       - "hotfix/**"
       - "release/**"
     paths:
-      - "src/base-agent/**"
+      - "src/**"
+      - "./Dockerfile"
+      - "./pyproject.toml"
     tags:
-      - "agents/base-agent-v*"
+      - "v*"
 
 jobs:
   build:
@@ -19,8 +21,8 @@ jobs:
       contents: read
     uses: ./.github/workflows/reusable.publish-agent.yml
     with:
-      path: ./src
-      agent_name: base-agent
+      path: .
+      agent_name: praxis-sdk-agents
     secrets:
       OCI_REGISTRY_TOKEN: ${{ secrets.OCI_REGISTRY_TOKEN }}
       REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}

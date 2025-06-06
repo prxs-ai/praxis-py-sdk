@@ -12,7 +12,7 @@ on:
       - ".pre-commit-config.yaml"
       - "pyproject.toml"
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened]
 
 jobs:
   pre-commit:
@@ -72,4 +72,11 @@ jobs:
         run: poetry install
 
       - name: Run tests via Makefile
-        run: echo "Tests would run here - adjust path as needed"
+        run: |
+          if [ -f "Makefile" ]; then
+            poetry run make test
+          elif [ -d "tests" ]; then
+            poetry run pytest tests/ -v
+          else
+            echo "No tests found."
+          fi

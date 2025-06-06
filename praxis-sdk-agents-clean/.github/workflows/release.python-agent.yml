@@ -3,13 +3,6 @@ name: Release python agent
 on:
   workflow_dispatch:
     inputs:
-      agent:
-        required: true
-        type: choice
-        description: "agent name"
-        options:
-          - base-agent
-
       part:
         required: true
         type: choice
@@ -30,7 +23,7 @@ jobs:
       contents: write
     uses: ./.github/workflows/reusable.release.yml
     with:
-      working_directory: ./src/${{ github.event.inputs.agent }}
+      working_directory: .
       part: ${{ github.event.inputs.part }}
     secrets:
       RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
