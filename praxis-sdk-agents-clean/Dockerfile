@@ -20,7 +20,7 @@ FROM ${BASE_IMAGE}
 USER root
 
 RUN apt update && \
-    apt -y --no-install-recommends install libgmp3-dev gcc && \
+    apt -y --no-install-recommends install libgmp3-dev gcc build-essential && \
     rm -rf /var/lib/apt/lists/*
 
 # Install dependencies with a private registry
