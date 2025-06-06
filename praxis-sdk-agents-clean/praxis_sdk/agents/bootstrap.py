@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import FastAPI
 from ray.serve.deployment import Deployment
 
-from agents import abc
+from praxis_sdk.agents import abc
 from praxis_sdk.agents.card import card_builder
 from praxis_sdk.agents.orchestration import workflow_builder
 from praxis_sdk.agents.p2p import p2p_builder

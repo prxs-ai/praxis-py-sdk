@@ -34,5 +34,6 @@ ENV PIP_EXTRA_INDEX_URL="https://packages.pypi.prxs.ai/simple/ https://tools.pyp
 WORKDIR /serve_app
 
 COPY ./praxis_sdk /serve_app/praxis_sdk
+RUN touch /serve_app/praxis_sdk/__init__.py
 
 COPY entrypoint.py /serve_app/entrypoint.py
