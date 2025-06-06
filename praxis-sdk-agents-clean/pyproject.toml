@@ -1,6 +1,6 @@
 [project]
 name = "praxis-sdk-agents"
-version = "0.0.4"
+version = "0.0.5"
 description = "Praxis SDK Agents"
 authors = [{ name = "hyp0cr4t", email = "hyp0cr4t@icloud.com" }]
 readme = "README.md"
@@ -163,7 +163,7 @@ exclude = [
     "tests/",
     "build/",
     "dist/",
-    "src/base_agent/ray_entrypoint.py",  # Много ошибок override
+    "praxis_sdk/agents/ray_entrypoint.py",  # Много ошибок override
 ]
 
 # Отключаем самые проблемные коды ошибок
@@ -204,7 +204,7 @@ ignore_errors = true
 # Игнорируем ошибки в проблемных файлах
 [[tool.mypy.overrides]]
 module = [
-    "base_agent.ray_entrypoint",
+    "praxis_sdk.agents.ray_entrypoint",
     "ray_entrypoint",
 ]
 ignore_errors = true

@@ -9,7 +9,7 @@ from praxis_sdk.agents.const import EntrypointGroup
 from praxis_sdk.agents.utils import get_entrypoint
 
 
-def determine_template_path(default_path="base_agent") -> str:
+def determine_template_path(default_path="praxis_sdk.agents") -> str:
     # always exists
     candidate = get_entrypoint(EntrypointGroup.AGENT_ENTRYPOINT)
     pkg_path, _ = candidate.value.split(":", 1)
