@@ -1,4 +1,4 @@
-name: Release python agent
+name: Release praxis-sdk-agents
 
 on:
   workflow_dispatch:
