@@ -1,16 +1,12 @@
-from infra_configs.constants import PROJECT_DESCRIPTION
-from infra_configs.prompt import (
-    check_answer_is_needed_prompt,
-    create_comment_to_message_prompt,
-)
 from loguru import logger
-from send_openai_request.main import send_openai_request
-from social_media_schemas.main import SocialMediaType
 
 
-async def check_answer_is_needed(
-    message: str, social_media_type: SocialMediaType
-) -> bool:
+async def check_answer_is_needed(message: str, social_media_type) -> bool:
+    from infra_configs.constants import PROJECT_DESCRIPTION
+    from infra_configs.prompt import check_answer_is_needed_prompt, create_comment_to_message_prompt
+    from send_openai_request.main import send_openai_request
+
+
     prompt = check_answer_is_needed_prompt.format(social_media_type)
     messages = [
         {
@@ -28,12 +24,15 @@ async def check_answer_is_needed(
 
 
 async def create_comment_to_message(
-    message: str,
-    social_media_type: SocialMediaType,
+        message: str,
+        social_media_type,
 ) -> str:
-    prompt = create_comment_to_message_prompt.format(
-        social_media_type, PROJECT_DESCRIPTION
-    )
+    from infra_configs.constants import PROJECT_DESCRIPTION
+    from infra_configs.prompt import check_answer_is_needed_prompt, create_comment_to_message_prompt
+    from send_openai_request.main import send_openai_request
+
+
+    prompt = create_comment_to_message_prompt.format(social_media_type, PROJECT_DESCRIPTION)
     messages = [
         {
             "role": "system",

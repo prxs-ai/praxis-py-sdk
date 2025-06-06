@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    TWEETSCOUT_API_KEY: str
+    TWEETSCOUT_API_KEY: str = ""
 
 
 @lru_cache

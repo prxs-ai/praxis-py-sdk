@@ -4,9 +4,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    QDRANT_HOST: str
-    QDRANT_PORT: int
-    VECTOR_DIMENSION: int
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = "6688"
+    VECTOR_DIMENSION: int = "1"
 
 
 @lru_cache

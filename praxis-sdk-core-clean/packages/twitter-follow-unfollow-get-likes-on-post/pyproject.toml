@@ -3,15 +3,19 @@ name = "get-likes-from-tweet"
 version = "0.0.1"
 description = "This is package for getting likes from tweet"
 authors = [
-     {name = "hexavor",email = "bychynski.valiantsin@gmail.com"}
+    { name = "hexavor", email = "bychynski.valiantsin@gmail.com" }
 ]
-requires-python = ">=3.11,<4.0"
-dependencies = ["aiohttp (>=3.11.13,<4.0.0)",
-     "agents-tools-logger (==0.0.1.*)"]
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "aiohttp (>=3.11.13,<4.0.0)",
+    "pytest-asyncio (==0.26.0)",
+    "pydantic_settings>=2.7.1",
+    "loguru (>=0.7.3,<0.8.0)",
+]
 readme = "README.md"
 
 [tool.poetry]
-packages = [{include = "*", from="src"}]
+packages = [{ include = "*", from = "src" }]
 
 
 [build-system]

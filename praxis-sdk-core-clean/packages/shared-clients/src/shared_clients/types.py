@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Generic, Protocol, TypeVar
-
-if TYPE_CHECKING:
-    from types import TracebackType
+from types import TracebackType
+from typing import Protocol, TypeVar, Generic
 
 R = TypeVar("R")
 
@@ -18,9 +16,9 @@ class API(Protocol, Generic[R]):
 
     @abstractmethod
     async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
+            self,
+            exc_type: type[BaseException] | None,
+            exc_val: BaseException | None,
+            exc_tb: TracebackType | None,
     ) -> None:
         raise NotImplementedError

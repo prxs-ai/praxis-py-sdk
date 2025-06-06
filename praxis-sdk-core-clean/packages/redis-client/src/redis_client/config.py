@@ -4,9 +4,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    REDIS_HOST: str
-    REDIS_PORT: int
-    REDIS_DB: int
+    REDIS_HOST: str = 'localhost'
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 1
 
 
 @lru_cache
