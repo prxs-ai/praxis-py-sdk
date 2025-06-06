@@ -5,7 +5,7 @@ import ray
 from ray import workflow
 from ray.runtime_env import RuntimeEnv
 
-from agents import abc
+from praxis_sdk.agents import abc
 from praxis_sdk.agents.const import EntrypointGroup
 from praxis_sdk.agents.models import Workflow, WorkflowStep
 from praxis_sdk.agents.orchestration.config import BasicWorkflowConfig

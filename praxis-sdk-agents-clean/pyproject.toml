@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{ include = "praxis_sdk.agents" }]
+packages = [{ include = "praxis_sdk" }]
 
 [project.entry-points."agent.executor.config"]
 basic = "praxis_sdk.agents.langchain.config:get_langchain_config"

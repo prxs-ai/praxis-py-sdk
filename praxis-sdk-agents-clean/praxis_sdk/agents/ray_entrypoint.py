@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 import requests
 from ray.serve.deployment import Application
 
-from agents import abc, const
+from praxis_sdk.agents import abc, const
 from praxis_sdk.agents.ai_registry import ai_registry_builder
 from praxis_sdk.agents.bootstrap import bootstrap_main
 from praxis_sdk.agents.card.models import AgentCard
