@@ -1,14 +1,11 @@
-name: Tests - base-agent
+name: Tests - praxis-sdk-agents
 
 on:
   push:
     branches-ignore:
       - "main"
-      - "staging"
-      - "hotfix/**"
-      - "release/**"
     paths:
-      - "src/base_agent/**"
+      - "praxis_sdk/**"
       - ".pre-commit-config.yaml"
       - "pyproject.toml"
   pull_request:
