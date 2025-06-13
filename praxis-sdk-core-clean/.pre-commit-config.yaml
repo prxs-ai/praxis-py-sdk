@@ -4,8 +4,11 @@ repos:
     rev: v4.6.0
     hooks:
     -   id: check-yaml
+        files: \.(yaml|yml)$
     -   id: end-of-file-fixer
+        files: \.py$
     -   id: trailing-whitespace
+        files: \.py$
     -   id: check-merge-conflict
     -   id: check-added-large-files
 
@@ -14,7 +17,9 @@ repos:
     hooks:
     -   id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+        files: \.py$
     -   id: ruff-format
+        files: \.py$
 
 -   repo: local
     hooks:
