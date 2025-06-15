@@ -20,7 +20,6 @@ from praxis_sdk.agents.models import (
     AgentModel,
     ChatMessageModel,
     GoalModel,
-    HandoffParamsModel,
     InsightModel,
     MemoryModel,
     ToolModel,
@@ -163,6 +162,9 @@ class BaseAgent(abc.AbstractAgent):
         tools = [ToolModel(**tool) for tool in response]
 
         for agent in agents:
+            if not agent.peer_id:
+                continue
+
             card_url = urljoin(agent.endpoint, "/card")
             try:
                 resp = requests.get(card_url)
@@ -174,23 +176,33 @@ class BaseAgent(abc.AbstractAgent):
                 logger.warning(f"Failed to fetch card from agent {agent} at {card_url}: {e}")
                 continue
             for skill in card.skills:
-                func_name = f"{agent.name}_{skill.id}".replace("-", "_")
+                func_name = f"{agent.name}_p2p_delegate".replace("-", "_")
                 spec = {
                     "type": "function",
                     "function": {
                         "name": func_name,
-                        "description": skill.description,
-                        "parameters": skill.input_model.model_json_schema(),
+                        "description": f"Delegate task to agent '{agent.name}' via P2P for skill: {skill.description}",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "target_peer_id": {
+                                    "type": "string",
+                                    "description": "Target peer ID for delegation",
+                                    "default": agent.peer_id,
+                                },
+                                "goal": {"type": "string", "description": "Goal to delegate"},
+                                "plan": {"type": "object", "description": "Optional plan to execute", "default": None},
+                            },
+                            "required": ["target_peer_id", "goal"],
+                        },
                         "output": skill.output_model.model_json_schema(),
                     },
                 }
                 tools.append(
                     ToolModel(
-                        name="handoff-tool",
+                        name="p2p_delegate_tool",
                         version="0.1.0",
-                        default_parameters=HandoffParamsModel(
-                            endpoint=agent.endpoint, path=skill.path, method=skill.method
-                        ).model_dump(),
+                        default_parameters={"target_peer_id": agent.peer_id},
                         parameters_spec=skill.params_model.model_json_schema(),
                         openai_function_spec=spec,
                     )
@@ -416,17 +428,15 @@ class BaseAgent(abc.AbstractAgent):
         plan: Workflow,
         context: abc.BaseAgentInputModel | None = None,
     ) -> abc.BaseAgentOutputModel:
-        return await self.workflow_runner.run(plan, context)
+        return await self.workflow_runner.run(plan, agent=self, context=context)
 
     def reconfigure(self, config: dict[str, Any]):
         pass
 
-    async def handoff(self, endpoint: str, goal: str, plan: dict):
-        """Handle case when agent can't find a solution (wrong route/wrong plan/etc).
-
-        Agent decides to handoff the task to another agent.
-        """
-        return requests.post(urljoin(endpoint, goal), json=plan).json()
+    async def _delegate_p2p(self, target_peer_id: str, goal: str, plan: dict | None = None) -> dict:
+        """Delegate a task to another agent via P2P."""
+        payload = {"goal": goal, "plan": plan}
+        return await self.p2p_manager.delegate(target_peer_id, payload)
 
 
 def agent_builder(args: dict) -> Application:

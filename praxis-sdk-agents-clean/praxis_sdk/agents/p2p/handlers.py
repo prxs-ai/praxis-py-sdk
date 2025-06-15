@@ -14,6 +14,8 @@ from praxis_sdk.agents.p2p.models import HandOffRequest
 if TYPE_CHECKING:
     from libp2p.network.stream.net_stream import INetStream
 
+    from praxis_sdk.agents import abc
+
 
 # ---------- CARD ----------- #
 async def handle_card(stream: INetStream) -> None:
@@ -23,8 +25,7 @@ async def handle_card(stream: INetStream) -> None:
 
     logger.info(f"[{timestamp}] Received card request on {PROTOCOL_CARD} from peer {peer_id_str}")
 
-    cfg = get_p2p_config()
-    card_url = f"{cfg.agent_host.url}/card"
+    card_url = "http://localhost:8000/card"
 
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
@@ -131,3 +132,39 @@ async def handle_handoff(stream: INetStream) -> None:
         except Exception as e:
             logger.error(f"[{ts}] Error closing stream for handoff with peer {peer_id}: {e}")
         logger.info(f"[{ts}] Closed stream for handoff with peer {peer_id}")
+
+
+async def handle_delegate(stream: INetStream, agent: abc.AbstractAgent) -> None:
+    peer_id_obj = stream.muxed_conn.peer_id
+    peer_id_str = str(peer_id_obj) if peer_id_obj else "UnknownPeer"
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    logger.info(f"[{timestamp}] Received delegate request on {PROTOCOL_DELEGATE} from peer {peer_id_str}")
+
+    try:
+        data = await stream.read()
+        payload = json.loads(data.decode("utf-8"))
+
+        goal = payload.get("goal")
+        plan = payload.get("plan")
+
+        if not goal:
+            raise ValueError("Goal is required in delegate payload")
+
+        result = await agent.handle(goal=goal, plan=plan)
+
+        response = json.dumps(result.model_dump()).encode("utf-8")
+        await stream.write(response)
+
+        logger.info(f"[{timestamp}] Successfully handled delegate request from peer {peer_id_str}")
+
+    except Exception as e:
+        logger.error(f"[{timestamp}] Error handling delegate request from {peer_id_str}: {e}")
+        error_response = json.dumps({"error": str(e), "code": 500}).encode("utf-8")
+        await stream.write(error_response)
+    finally:
+        try:
+            await stream.close()
+        except Exception as e:
+            logger.error(f"[{timestamp}] Error closing delegate stream with peer {peer_id_str}: {e}")
+        logger.info(f"[{timestamp}] Closed delegate stream with peer {peer_id_str}")

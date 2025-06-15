@@ -156,13 +156,15 @@ class AbstractWorkflowRunner(ABC):
     @abstractmethod
     async def run(
         self,
-        plan: Workflow,
+        dag_spec: Workflow,
+        agent: "AbstractAgent",
         context: AbstractAgentInputModel | None = None,
     ) -> AbstractAgentOutputModel:
         """Execute a workflow plan.
 
         Args:
-            plan: A dictionary mapping step IDs to Task objects
+            dag_spec: A workflow specification to execute
+            agent: The agent instance calling the runner
             context: Optional context data for execution
 
         Returns:
@@ -290,20 +292,6 @@ class AbstractAgent(ABC):
 
         """
 
-    @abstractmethod
-    async def handoff(self, endpoint: str, goal: str, plan: dict) -> Any:
-        """Hand off execution to another agent.
-
-        Args:
-            endpoint: The endpoint of the agent to hand off to
-            goal: The goal to achieve
-            plan: The plan to execute
-
-        Returns:
-            The result from the agent that was handed off to
-
-        """
-
 
 class AbstractAgentP2PManager(ABC):
     """A manager for P2P communication between agents."""
@@ -317,3 +305,6 @@ class AbstractAgentP2PManager(ABC):
 
     @abstractmethod
     async def shutdown(self) -> None: ...
+
+    @abstractmethod
+    async def delegate(self, target_peer_id: str, payload: dict) -> dict: ...
