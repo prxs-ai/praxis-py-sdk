@@ -182,7 +182,7 @@ class TestBaseAgent:
     #     self.agent.run_workflow(wf, ctx)
     #     self.agent.workflow_runner.run.assert_called_once_with(wf, ctx)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_handoff(self):
         # Patch requests.post in handoff
         with patch("praxis_sdk.agents.ray_entrypoint.requests.post") as mock_post:
