@@ -8,19 +8,19 @@ from praxis_sdk.agents.p2p.config import P2PConfig
 from praxis_sdk.agents.p2p.libp2p.node import LibP2PNode
 
 
-@pytest.fixture()
+@pytest.fixture
 def config():
     return P2PConfig(
         keystore_path="/tmp/test_keystore", relay_addr="/ip4/127.0.0.1/tcp/8888/p2p/QmTest", noise_key="test_noise_key"
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_keypair():
     return MagicMock(spec=KeyPair)
 
 
-@pytest.fixture()
+@pytest.fixture
 def node(config):
     with patch("praxis_sdk.agents.p2p.libp2p.node.load_or_create_node_key") as mock_load_key:
         mock_load_key.return_value = MagicMock(spec=KeyPair)
@@ -65,7 +65,7 @@ class TestLibP2PNode:
             mock_new_host.assert_called_once()
             assert result == mock_host
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_initialize(self, node):
         mock_host = MagicMock()
         mock_host.get_id.return_value = "test_id"
@@ -83,7 +83,7 @@ class TestLibP2PNode:
             assert result == mock_host
             assert node.host == mock_host
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_connect_to_relay_success(self, node):
         mock_host = MagicMock()
         mock_host.connect = AsyncMock()
@@ -96,7 +96,7 @@ class TestLibP2PNode:
             mock_host.connect.assert_called_once()
             assert result is True
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_connect_to_relay_failure(self, node):
         mock_host = MagicMock()
         mock_host.connect = AsyncMock(side_effect=Exception("Connection failed"))
@@ -107,7 +107,7 @@ class TestLibP2PNode:
 
             assert result is False
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_setup_listener(self, node):
         mock_transport = MagicMock()
         mock_listener = MagicMock()

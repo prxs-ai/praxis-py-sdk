@@ -29,7 +29,7 @@ class TestE2EIntegration:
         await self.registry_client.aclose()
         await self.local_api_client.aclose()
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_end_to_end_integration_with_mock(self):
         test_payload = {
             "method": "POST",
