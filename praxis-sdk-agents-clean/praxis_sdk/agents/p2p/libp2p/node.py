@@ -12,8 +12,8 @@ from loguru import logger
 from multiaddr import Multiaddr
 
 from praxis_sdk.agents.p2p.config import P2PConfig
-from praxis_sdk.agents.p2p.const import PROTOCOL_CARD
-from praxis_sdk.agents.p2p.handlers import handle_card
+from praxis_sdk.agents.p2p.const import PROTOCOL_CARD, PROTOCOL_HANDOFF
+from praxis_sdk.agents.p2p.handlers import handle_card, handle_handoff
 from praxis_sdk.agents.p2p.libp2p.utils import decode_noise_key, load_or_create_node_key
 
 if TYPE_CHECKING:
@@ -50,6 +50,7 @@ class LibP2PNode:
         """Initialize the libp2p node."""
         self.host = self._init_host()
         self.host.set_stream_handler(PROTOCOL_CARD, handle_card)
+        self.host.set_stream_handler(PROTOCOL_HANDOFF, handle_handoff)
 
         # Print host information
         logger.info(f"Node started with ID: {self.host.get_id()}")
