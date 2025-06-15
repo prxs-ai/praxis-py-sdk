@@ -1,15 +1,10 @@
 """Isolated P2P module to avoid serialization issues."""
 
-import json
 import threading
 from typing import Any
 
-import requests
 import trio
-from libp2p.peer.id import ID as PeerID  # noqa: N811
-from libp2p.peer.peerinfo import PeerInfo
 from loguru import logger
-from multiaddr import Multiaddr
 
 from praxis_sdk.agents.p2p.config import P2PConfig, get_p2p_config
 
@@ -25,7 +20,7 @@ class P2PManager:
         self._shutdown_event: threading.Event = threading.Event()
 
     def __getstate__(self) -> object:
-        odict = self.__dict__.copy()  # get attribute dictionary
+        odict = self.__dict__.copy()
 
         for k in ["_libp2p_node", "_thread", "_running", "_shutdown_event"]:
             del odict[k]
@@ -48,7 +43,6 @@ class P2PManager:
     def _run_in_thread(self) -> None:
         """Run the P2P node in a separate thread using Trio."""
         try:
-            # Run the Trio event loop in this thread
             trio.run(self._start)
         except Exception as e:
             logger.error(f"Error in P2P thread: {e}")
@@ -59,25 +53,24 @@ class P2PManager:
 
     async def _start(self) -> None:
         """Trio-based implementation of the P2P node."""
-        # Create the libp2p node
+        from multiaddr import Multiaddr
+
+        from praxis_sdk.agents.p2p.libp2p import LibP2PNode
+
         node = LibP2PNode(self.config)
         host = await node.initialize()
         self._libp2p_node = node
 
         async with host.run(listen_addrs=[Multiaddr("/ip4/0.0.0.0/tcp/9001")]), trio.open_nursery() as nursery:
-            # Set up the listener
             await node.setup_listener(nursery)
 
-            # Connect to relay and keep node running
             while not self._shutdown_event.is_set():
                 try:
-                    # Connect to the relay node
                     success = await node.connect_to_relay()
                     if not success:
                         await trio.sleep(10)
                         continue
 
-                    # Keep checking if we should shut down
                     while not self._shutdown_event.is_set():
                         await trio.sleep(10)
 
@@ -94,7 +87,6 @@ class P2PManager:
         self._running = True
         self._shutdown_event.clear()
 
-        # Create and start the thread
         self._thread = threading.Thread(target=self._run_in_thread, daemon=True)
         self._thread.start()
 
@@ -110,37 +102,27 @@ class P2PManager:
         self._shutdown_event.set()
 
         if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=10)  # Wait up to 10 seconds for thread to exit
+            self._thread.join(timeout=10)
 
         self._libp2p_node = None
         self._running = False
         logger.info("P2P shutdown completed.")
 
-    async def discover_peer_addrs(self, agent_name: str) -> list[str]:
-        resp = requests.get(f"{self.config.relay_service.url}/peers?agent_name={agent_name}", timeout=5)
-        resp.raise_for_status()
-        info = resp.json()
-        return info.get("addresses", [])
+    async def delegate(self, target_peer_id: str, payload: dict) -> dict:
+        logger.info("--- MOCK  ---")
+        logger.info(f"Target Peer ID: {target_peer_id}")
+        logger.info(f"Payload: {payload}")
 
-    async def delegate(self, agent_name: str, target_peer_id: str, payload: dict) -> dict:
-        # 1. Discover target addrs
-        addrs = await self.discover_peer_addrs(agent_name)
-        if not addrs:
-            raise ValueError(f"No addresses found for peer {target_peer_id}")
+        mock_response = {
+            "status": "success",
+            "result": f"Mock response for goal '{payload.get('goal')}' from peer {target_peer_id}",
+            "executed_by": target_peer_id,
+            "mock": True,
+        }
 
-        pid = PeerID.from_base58(target_peer_id)
-        peerinfo = PeerInfo(pid, addrs)
+        logger.info(f"Mock Response: {mock_response}")
 
-        # 2. Dial via relay
-        conn = await self._libp2p_node.transport.dial(peerinfo, relay_peer_id=self._libp2p_node.get_peer_id())
-
-        # 3. Send task
-        await conn.stream.write(json.dumps(payload).encode("utf-8"))
-
-        # 4. Read response
-        data = await conn.stream.read()
-        await conn.stream.close()
-        return json.loads(data.decode("utf-8"))
+        return mock_response
 
 
 def get_p2p_manager() -> P2PManager:

@@ -150,6 +150,7 @@ class AgentModel(BaseModel):
     name: str
     description: str
     version: str
+    peer_id: str | None = Field(default=None, description="P2P peer ID for direct delegation")
 
     @computed_field
     def endpoint(self) -> str:
@@ -188,3 +189,9 @@ class HandoffParamsModel(BaseModel):
     path: str = Field(default="/{goal}", description="Path to append to the endpoint")
     method: str = Field("POST", description="HTTP method to use for the request")
     params: dict[str, Any] = Field(default_factory=dict, description="Parameters to pass in the request")
+
+
+class DelegateParamsModel(BaseModel):
+    target_peer_id: str = Field(..., description="Target peer ID for P2P delegation")
+    goal: str = Field(..., description="Goal to delegate")
+    plan: dict[str, Any] | None = Field(default=None, description="Optional plan to execute")
