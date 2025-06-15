@@ -55,7 +55,7 @@ def test_run_in_thread(mock_trio_run, p2p_manager):
 
 
 @patch("threading.Thread")
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_start(mock_thread, p2p_manager):
     """Test start method initializes and starts a thread."""
     # Mock thread instance
@@ -72,7 +72,7 @@ async def test_start(mock_thread, p2p_manager):
 
 
 @patch("threading.Thread")
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_start_already_running(mock_thread, p2p_manager):
     """Test start method does nothing when already running."""
     p2p_manager._running = True
@@ -80,7 +80,7 @@ async def test_start_already_running(mock_thread, p2p_manager):
     mock_thread.assert_not_called()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_shutdown_not_running(p2p_manager):
     """Test shutdown when not running."""
     p2p_manager._running = False
@@ -89,7 +89,7 @@ async def test_shutdown_not_running(p2p_manager):
 
 
 @patch.object(threading.Event, "set")
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_shutdown(mock_event_set, p2p_manager):
     """Test shutdown sets event and cleans up."""
     # Setup

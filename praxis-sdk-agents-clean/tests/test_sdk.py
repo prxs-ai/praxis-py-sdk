@@ -11,7 +11,7 @@ from praxis_sdk.agents.models import AgentModel, InsightModel
 
 class TestBaseAgent:
     @pytest.fixture(autouse=True)
-    def setup_agent(self):
+    def setup_agent(self): # noqa: PT004
         # Patch all external dependencies at the class level for all tests
         with (
             patch.object(ray_entrypoint, "executor_builder") as mock_executor_builder,
@@ -182,7 +182,7 @@ class TestBaseAgent:
         self.agent.run_workflow(wf, ctx)
         self.agent.workflow_runner.run.assert_called_once_with(wf, ctx)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_handoff(self):
         # Patch requests.post in handoff
         with patch("praxis_sdk.agents.ray_entrypoint.requests.post") as mock_post:
