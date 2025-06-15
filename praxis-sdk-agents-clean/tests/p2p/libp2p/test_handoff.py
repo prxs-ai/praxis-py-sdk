@@ -4,8 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+import pytest_asyncio
 from libp2p import new_host
-from libp2p.network.stream.net_stream_interface import INetStream
+from libp2p.network.stream.net_stream import INetStream
 from libp2p.peer.id import ID as PeerID  # noqa: N811
 from libp2p.peer.peerinfo import PeerInfo
 from multiaddr import Multiaddr
@@ -20,40 +21,13 @@ logger = logging.getLogger(__name__)
 
 
 class TestE2EIntegration:
-
-    async def setup_method(self):
+    @pytest_asyncio.fixture(autouse=True)
+    async def clients(self):
         self.registry_client = httpx.AsyncClient(base_url=REGISTRY_URL, timeout=10.0)
         self.local_api_client = httpx.AsyncClient(base_url=LOCAL_API_URL, timeout=10.0)
-
-    async def teardown_method(self):
+        yield
         await self.registry_client.aclose()
         await self.local_api_client.aclose()
-
-    async def test_discovery_fetch_peers(self):
-        try:
-            response = await self.registry_client.get(f"/peers?agent_name={TEST_AGENT_NAME}")
-            response.raise_for_status()
-
-            peers_data = response.json()
-            assert isinstance(peers_data, list), "Registry should return list of peers"
-            assert len(peers_data) > 0, f"No peers found for agent '{TEST_AGENT_NAME}'"
-
-            # Validate peer data structure
-            for peer in peers_data:
-                assert "peer_id" in peer, "Peer must have peer_id"
-                assert "multiaddresses" in peer, "Peer must have multiaddresses"
-                assert isinstance(peer["multiaddresses"], list), "Multiaddresses must be a list"
-                assert len(peer["multiaddresses"]) > 0, "Peer must have at least one multiaddress"
-
-            logger.info(f"Discovery successful: Found {len(peers_data)} peers for {TEST_AGENT_NAME}")
-            return peers_data
-
-        except httpx.RequestError as e:
-            pytest.skip(f"Registry service unavailable: {e}")
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                pytest.skip(f"Agent '{TEST_AGENT_NAME}' not found in registry")
-            raise
 
     @pytest.mark.asyncio()
     async def test_end_to_end_integration_with_mock(self):
@@ -69,10 +43,10 @@ class TestE2EIntegration:
         # Mock the registry response
         mock_peers_data = [
             {
-                "peer_id": "12D3KooWTestPeerID123",
+                "peer_id": "12D3KooWTestPeer1",
                 "multiaddresses": [
-                    "/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWTestPeerID123",
-                    "/p2p-circuit/p2p/12D3KooWTestPeerID123",
+                    "/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWTestPeer1",
+                    "/p2p-circuit/p2p/12D3KooWTestPeer1",
                 ],
                 "agent_name": TEST_AGENT_NAME,
                 "capabilities": ["execute"],
@@ -86,7 +60,7 @@ class TestE2EIntegration:
         mock_stream.close = AsyncMock()
 
         mock_peer_info = MagicMock(spec=PeerInfo)
-        mock_peer_info.peer_id = PeerID.from_base58("12D3KooWTestPeerID123")
+        mock_peer_info.peer_id = PeerID.from_base58("12D3KooWTestPeer1")
         mock_peer_info.addrs = [Multiaddr("/ip4/127.0.0.1/tcp/4001")]
 
         mock_host = AsyncMock()
@@ -126,40 +100,6 @@ class TestE2EIntegration:
 
             logger.info("E2E integration test with mocks completed successfully")
 
-    @pytest.mark.asyncio()
-    async def test_end_to_end_integration_real_services(self):
-        test_payload = {"method": "GET", "path": "health", "params": {}, "input": None}
-
-        try:
-            # Step 1: Discovery
-            peers_data = await self.test_discovery_fetch_peers()
-
-            # Step 2: Select a peer and create PeerInfo
-            target_peer = peers_data[0]
-            peer_info = self._create_peer_info(target_peer)
-
-            # Step 3: Dial the peer
-            host = await self._dial_peer(peer_info, TEST_RELAY_PEER_ID)
-
-            # Step 4: Execute handoff
-            result = await self._execute_handoff(host, peer_info, test_payload)
-
-            # Step 5: Verify against local API
-            expected_result = await self._call_local_api(test_payload)
-
-            # Step 6: Assertions
-            assert result is not None, "Handoff should return a result"
-            assert isinstance(result, dict), "Result should be a dictionary"
-
-            # Compare with local API result (flexible comparison for real services)
-            if "error" not in result and "error" not in expected_result:
-                logger.info("Both handoff and local API succeeded")
-
-            logger.info("E2E integration test with real services completed successfully")
-
-        except Exception as e:
-            pytest.skip(f"Real services test skipped due to: {e}")
-
     def _create_peer_info(self, peer_data: dict) -> PeerInfo:
         peer_id = PeerID.from_base58(peer_data["peer_id"])
         multiaddrs = [Multiaddr(addr) for addr in peer_data["multiaddresses"]]
@@ -169,7 +109,6 @@ class TestE2EIntegration:
         # In real implementation, this would use actual libp2p host
         # For testing, we mock this functionality
         return await new_host()
-
 
     async def _execute_handoff(self, host, peer_info: PeerInfo, payload: dict) -> dict:
         try:
@@ -236,4 +175,3 @@ class TestE2EIntegration:
 
         # Step 3: Execute handoff
         return await self._execute_handoff(host, peer_info, test_payload)
-

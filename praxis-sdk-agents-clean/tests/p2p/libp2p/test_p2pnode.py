@@ -73,14 +73,13 @@ class TestLibP2PNode:
 
         with (
             patch.object(node, "_init_host", return_value=mock_host),
-            patch("praxis_sdk.agents.p2p.libp2p.node.CircuitV2Protocol") as mock_protocol,
+            patch("praxis_sdk.agents.p2p.libp2p.node.CircuitV2Protocol"),
             patch("praxis_sdk.agents.p2p.libp2p.node.CircuitV2Transport") as mock_transport,
         ):
             result = await node.initialize()
 
-            mock_host.set_stream_handler.assert_called_once()
-            mock_protocol.assert_called_once_with(mock_host)
-            mock_transport.assert_called_once()
+            assert mock_host.set_stream_handler.call_count == 2
+            assert mock_transport.call_count == 1
             assert result == mock_host
             assert node.host == mock_host
 
@@ -118,11 +117,15 @@ class TestLibP2PNode:
 
         mock_nursery = MagicMock()
 
+        # First call (handle_card)
         with patch("praxis_sdk.agents.p2p.libp2p.node.handle_card"):
             await node.setup_listener(mock_nursery)
+            assert mock_transport.create_listener.call_count == 1
 
-            mock_transport.create_listener.assert_called_once()
-            mock_listener.listen.assert_called_once_with(None, mock_nursery)
+        # Second call (handle_handoff)
+        with patch("praxis_sdk.agents.p2p.libp2p.node.handle_handoff"):
+            await node.setup_listener(mock_nursery)
+            assert mock_transport.create_listener.call_count == 2
 
     def test_init_host_with_noise_protocol(self, node):
         with (

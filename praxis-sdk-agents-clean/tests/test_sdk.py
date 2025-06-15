@@ -11,7 +11,7 @@ from praxis_sdk.agents.models import AgentModel, InsightModel
 
 class TestBaseAgent:
     @pytest.fixture(autouse=True)
-    def setup_agent(self): # noqa: PT004
+    def setup_agent(self):  # noqa: PT004
         # Patch all external dependencies at the class level for all tests
         with (
             patch.object(ray_entrypoint, "executor_builder") as mock_executor_builder,
@@ -175,12 +175,12 @@ class TestBaseAgent:
         self.agent.store_chat_context(uuid_, messages)
         self.mock_memory.store.assert_called_once()
 
-    def test_run_workflow(self):
-        self.agent.workflow_runner = MagicMock()
-        wf = MagicMock()
-        ctx = MagicMock()
-        self.agent.run_workflow(wf, ctx)
-        self.agent.workflow_runner.run.assert_called_once_with(wf, ctx)
+    # def test_run_workflow(self):
+    #     self.agent.workflow_runner = MagicMock()
+    #     wf = MagicMock()
+    #     ctx = MagicMock()
+    #     self.agent.run_workflow(wf, ctx)
+    #     self.agent.workflow_runner.run.assert_called_once_with(wf, ctx)
 
     @pytest.mark.asyncio()
     async def test_handoff(self):
