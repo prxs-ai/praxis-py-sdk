@@ -4,7 +4,23 @@ import pydantic
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-# REGISTRY_HTTP_URL
+class AgentHost(BaseSettings):
+    host: str = pydantic.Field("localhost", description="Agent Host")
+    port: int = pydantic.Field(default=8000, description="Agent Port")
+    schema: str = pydantic.Field(default="http", description="https or http")
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="RELAY_SERVICE_",
+        env_file_encoding="utf-8",
+        extra=pydantic.Extra.ignore,
+    )
+
+    @property
+    def url(self) -> str:
+        return f"{self.schema}://{self.host}" if self.port == 80 else f"{self.schema}://{self.host}:{self.port}"
+
+
 class RelayService(BaseSettings):
     host: str = pydantic.Field("relay-service.dev.prxs.ai", description="Relay Service Host")
     port: int = pydantic.Field(default=80, description="Relay Service Port")
@@ -28,6 +44,7 @@ class P2PConfig(BaseSettings):
     noise_key: str | None = None
 
     relay_service: RelayService = RelayService()  # type: ignore
+    agent_host: AgentHost = AgentHost()  # type: ignore
 
     model_config = SettingsConfigDict(
         env_file=".env",
