@@ -5,9 +5,9 @@ import json
 from typing import TYPE_CHECKING
 
 import httpx
-from config import get_p2p_config
 from loguru import logger
 
+from praxis_sdk.agents.p2p.config import get_p2p_config
 from praxis_sdk.agents.p2p.const import PROTOCOL_CARD
 
 if TYPE_CHECKING:
