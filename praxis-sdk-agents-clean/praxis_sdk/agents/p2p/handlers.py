@@ -5,6 +5,7 @@ import json
 from typing import TYPE_CHECKING
 
 import httpx
+from config import get_p2p_config
 from loguru import logger
 
 from praxis_sdk.agents.p2p.const import PROTOCOL_CARD
@@ -21,7 +22,8 @@ async def handle_card(stream: INetStream) -> None:
 
     logger.info(f"[{timestamp}] Received card request on {PROTOCOL_CARD} from peer {peer_id_str}")
 
-    card_url = "http://localhost:8000/card"
+    cfg = get_p2p_config()
+    card_url = f"{cfg.agent_host.url}/card"
 
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
@@ -79,7 +81,9 @@ async def handle_handoff(stream: INetStream) -> None:
         if not method or not path:
             raise ValueError("Missing required fields: method and/or path")
 
-        base_url = "http://localhost:8000"
+        cfg = get_p2p_config()
+        base_url = f"{cfg.agent_host.url}"
+
         formatted_path = path.format(**params) if params and isinstance(params, dict) else path
 
         request_url = f"{base_url}/{formatted_path.lstrip('/')}"
