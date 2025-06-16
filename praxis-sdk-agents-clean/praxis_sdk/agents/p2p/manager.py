@@ -1,12 +1,18 @@
 """Isolated P2P module to avoid serialization issues."""
 
+import json
 import threading
 from typing import Any
 
+import requests
 import trio
+from libp2p.peer.id import ID as PeerID  # noqa: N811
+from libp2p.peer.peerinfo import PeerInfo
 from loguru import logger
+from multiaddr import Multiaddr
 
 from praxis_sdk.agents.p2p.config import P2PConfig, get_p2p_config
+from praxis_sdk.agents.p2p.libp2p import LibP2PNode
 
 
 class P2PManager:
@@ -14,7 +20,7 @@ class P2PManager:
 
     def __init__(self, config: P2PConfig) -> None:
         self.config = config
-        self._libp2p_node: Any = None
+        self._libp2p_node: LibP2PNode | None = None
         self._thread: threading.Thread | None = None
         self._running: bool = False
         self._shutdown_event: threading.Event = threading.Event()
@@ -54,10 +60,6 @@ class P2PManager:
 
     async def _start(self) -> None:
         """Trio-based implementation of the P2P node."""
-        from multiaddr import Multiaddr
-
-        from praxis_sdk.agents.p2p.libp2p import LibP2PNode
-
         # Create the libp2p node
         node = LibP2PNode(self.config)
         host = await node.initialize()
@@ -114,6 +116,32 @@ class P2PManager:
         self._libp2p_node = None
         self._running = False
         logger.info("P2P shutdown completed.")
+
+    async def discover_peer_addrs(self, agent_name: str) -> list[str]:
+        resp = requests.get(f"{self.config.relay_service.url}/peers?agent_name={agent_name}", timeout=5)
+        resp.raise_for_status()
+        info = resp.json()
+        return info.get("addresses", [])
+
+    async def delegate(self, agent_name: str, target_peer_id: str, payload: dict) -> dict:
+        # 1. Discover target addrs
+        addrs = await self.discover_peer_addrs(agent_name)
+        if not addrs:
+            raise ValueError(f"No addresses found for peer {target_peer_id}")
+
+        pid = PeerID.from_base58(target_peer_id)
+        peerinfo = PeerInfo(pid, addrs)
+
+        # 2. Dial via relay
+        conn = await self._libp2p_node.transport.dial(peerinfo, relay_peer_id=self._libp2p_node.get_peer_id())
+
+        # 3. Send task
+        await conn.stream.write(json.dumps(payload).encode("utf-8"))
+
+        # 4. Read response
+        data = await conn.stream.read()
+        await conn.stream.close()
+        return json.loads(data.decode("utf-8"))
 
 
 def get_p2p_manager() -> P2PManager:

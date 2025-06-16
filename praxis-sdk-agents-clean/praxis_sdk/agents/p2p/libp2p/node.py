@@ -1,7 +1,7 @@
 import os
 from typing import TYPE_CHECKING
 
-from libp2p import new_host
+from libp2p import IHost, new_host
 from libp2p.peer.peerinfo import info_from_p2p_addr
 from libp2p.relay.circuit_v2.config import RelayConfig
 from libp2p.relay.circuit_v2.protocol import CircuitV2Protocol
@@ -25,7 +25,7 @@ class LibP2PNode:
 
     def __init__(self, config: P2PConfig) -> None:
         self.config = config
-        self.host = None
+        self.host = IHost | None
         self.shutdown_requested = False
 
         self._init_keypair()
@@ -84,3 +84,6 @@ class LibP2PNode:
         # start listening
         await listener.listen(None, nursery)  # type: ignore
         logger.info("Destination node ready to accept relayed connections")
+
+    def get_peer_id(self) -> str:
+        return self.host.get_id().to_base58()
