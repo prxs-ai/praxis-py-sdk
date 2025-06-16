@@ -25,7 +25,7 @@ class LibP2PNode:
 
     def __init__(self, config: P2PConfig) -> None:
         self.config = config
-        self.host = IHost | None
+        self.host: IHost | None = None
         self.shutdown_requested = False
 
         self._init_keypair()
