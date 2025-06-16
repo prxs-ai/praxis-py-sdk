@@ -8,7 +8,7 @@ class BaseDataSinkConfig(BaseSettings):
 
 
 class KafkaDataSinkConfig(BaseDataSinkConfig):
-    kafka_bootstrap_uri: str
+    kafka_bootstrap_uri: str = "localhost:0000"
 
 
 @lru_cache
