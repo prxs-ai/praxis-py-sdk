@@ -122,6 +122,24 @@ Executes data operations.
 | `KAFKA_BOOTSTRAP_URI`                 | For async | `kafka://cluster:9092` |
 | `VERSION`                                    | Yes | `v1` |
 
+## Sequence diagram
+
+See [`base_provider_sequence.puml`](./diagrams/base_provider/base_provider_sequence.puml):
+
+![base_provider_sequence.png](./diagrams/base_provider/base_provider_sequence.png)
+
+## Core components diagram
+
+See [`base_provider_core_components.puml`](./diagrams/base_provider/base_provider_core_components.puml):
+
+![base_provider_core_components.png](./diagrams/base_provider/base_provider_core_components.png)
+
+## Component diagram
+
+See [`base_provider_component.puml`](./diagrams/base_provider/base_provider_component.puml):
+
+![base_provider_core_components.png](./diagrams/base_provider/base_provider_component.png)
+
 ## Deployment
 
 ### 1. Local Development
