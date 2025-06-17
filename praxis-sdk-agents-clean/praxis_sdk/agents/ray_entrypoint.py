@@ -433,11 +433,6 @@ class BaseAgent(abc.AbstractAgent):
     def reconfigure(self, config: dict[str, Any]):
         pass
 
-    async def _delegate_p2p(self, target_peer_id: str, goal: str, plan: dict | None = None) -> dict:
-        """Delegate a task to another agent via P2P."""
-        payload = {"goal": goal, "plan": plan}
-        return await self.p2p_manager.delegate(target_peer_id, payload)
-
 
 def agent_builder(args: dict) -> Application:
     return bootstrap_main(BaseAgent).bind(config=get_agent_config(**args))

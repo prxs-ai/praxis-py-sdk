@@ -1,5 +1,5 @@
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import ray
 from ray import workflow
@@ -11,9 +11,6 @@ from praxis_sdk.agents.models import Workflow, WorkflowStep
 from praxis_sdk.agents.orchestration.config import BasicWorkflowConfig
 from praxis_sdk.agents.orchestration.utils import get_workflows_from_files
 from praxis_sdk.agents.utils import get_entry_points
-
-if TYPE_CHECKING:
-    from praxis_sdk.agents.abc import AbstractAgent
 
 
 @ray.remote
@@ -83,49 +80,41 @@ class DAGRunner(abc.AbstractWorkflowRunner):
 
         return get_tool_entrypoint_wrapper, step.args
 
-    async def run(self, dag_spec: Workflow, agent: "AbstractAgent", context: Any = None, async_mode=False) -> Any:
+    async def run(self, dag_spec: Workflow, context: Any = None, async_mode: bool = False) -> Any:
         """Run the DAG using Ray Workflows."""
         steps = {}
-        p2p_results = {}
 
         for step in dag_spec.steps:
-            if step.tool.name == "p2p_delegate_tool":
-                params = {inp.name: inp.value for inp in step.inputs}
-                result = await agent._delegate_p2p(**params)
-                p2p_results[step.task_id] = result
-            else:
-                steps[step.task_id] = self.create_step(step)
+            steps[step.task_id] = self.create_step(step)
 
         if not steps:
-            return list(p2p_results.values())[-1] if p2p_results else None
+            return None
 
-        last_task_id = list(steps.keys())[-1] if steps else None
+        last_task_id = list(steps.keys())[-1]
 
         @ray.remote
         def workflow_executor(request_id: str) -> Any:
-            workflow_step_results = {}
+            step_results = {}
 
             for task_id, (task, task_args) in sorted(steps.items()):
                 result = task.bind(**task_args)
-                workflow_step_results[task_id] = result
+                step_results[task_id] = result
 
                 if task_id == last_task_id:
                     return workflow.continuation(result)
 
-            last_result = list(workflow_step_results.values())[-1] if workflow_step_results else None
+            last_result = list(step_results.values())[-1] if step_results else None
             return workflow.continuation(last_result)
 
         func = workflow.run
         if async_mode:
             func = workflow.run_async
 
-        if steps:
-            return func(
-                workflow_executor.bind(generate_request_id.bind()),
-                workflow_id=dag_spec.id,
-                metadata={"dag_spec": dag_spec.model_dump()},
-            )
-        return list(p2p_results.values())[-1] if p2p_results else None
+        return func(
+            workflow_executor.bind(generate_request_id.bind()),
+            workflow_id=dag_spec.id,
+            metadata={"dag_spec": dag_spec.model_dump()},
+        )
 
 
 def dag_runner(config: BasicWorkflowConfig) -> DAGRunner:
