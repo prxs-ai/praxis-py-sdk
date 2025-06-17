@@ -7,7 +7,7 @@ This repository contains standalone Python providers, each organized as an indiv
 Example structure of a provider (`base-provider`):
 
 ```
-base-provider/
+praxis-sdk-providers/
 ├── src/
 │   └── base_provider/
 │       ├── folders
