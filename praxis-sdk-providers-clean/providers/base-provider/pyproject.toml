@@ -1,0 +1,50 @@
+[project]
+name = "base-provider"
+version = "0.1.3"
+description = "Base provider for Ray Serve"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+readme = "README.md"
+requires-python = ">=3.9,<4.0"
+dependencies = [
+    "fastapi (>=0.115.8,<1.0.0)",
+    "pydantic-settings (>=2.8.0,<3.0.0)",
+    "faststream[kafka] (>=0.5.37,<0.6.0)",
+    "fast-depends (>=2.4.12,<3.0.0)",
+]
+
+[tool.poetry]
+packages = [{ include = "*", from = "src" }]
+
+[project.entry-points."provider.entrypoint"]
+basic = "base_provider.ray_entrypoint:provider_builder"
+
+[project.entry-points."provider.contract.entrypoint"]
+basic = "base_provider.contract.base:get_data_contract"
+
+[project.entry-points."provider.trigger.entrypoint"]
+basic = "base_provider.triggers.base:get_data_trigger"
+
+[project.entry-points."provider.source.entrypoint"]
+basic = "base_provider.sources.base:get_data_source"
+
+[project.entry-points."provider.processor.entrypoint"]
+basic = "base_provider.processors.base:get_data_processor"
+
+[project.entry-points."provider.sink.entrypoint"]
+basic = "base_provider.sinks.base:get_data_sink"
+kafka = "base_provider.sinks.kafka:get_kafka_data_sink"
+
+[project.entry-points."provider.stream.entrypoint"]
+basic = "base_provider.stream.base:get_data_stream"
+
+[project.entry-points."provider.runner.entrypoint"]
+basic = "base_provider.runner.base:get_runner"
+
+[tool.poetry.group.dev.dependencies]
+ray = { extras = ["serve"], version = "^2.42.1" }
+pytest = "^8.3.4"
+pyarrow = "^19.0.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
