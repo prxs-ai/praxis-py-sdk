@@ -7,6 +7,7 @@ from ray.serve.deployment import Deployment
 from praxis_sdk.agents import abc
 from praxis_sdk.agents.card import card_builder
 from praxis_sdk.agents.orchestration import workflow_builder
+from praxis_sdk.agents.p2p import p2p_builder
 
 
 def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
@@ -15,6 +16,7 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
 
     runner: abc.AbstractWorkflowRunner = workflow_builder()
     card: abc.AbstractAgentCard = card_builder()
+    p2p: abc.AbstractAgentP2PManager = p2p_builder()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -38,9 +40,7 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
     class Agent(agent_cls):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            from praxis_sdk.agents.p2p.manager import get_p2p_manager
-
-            self.p2p_manager = get_p2p_manager()
+            self.p2p_manager = p2p
             app.state.agent_instance = self
 
         @property

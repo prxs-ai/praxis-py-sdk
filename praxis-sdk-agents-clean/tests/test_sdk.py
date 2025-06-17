@@ -11,7 +11,7 @@ from praxis_sdk.agents.models import AgentModel, InsightModel
 
 class TestBaseAgent:
     @pytest.fixture(autouse=True)
-    def setup_agent(self):  # noqa: PT004
+    def setup_agent(self):
         # Patch all external dependencies at the class level for all tests
         with (
             patch.object(ray_entrypoint, "executor_builder") as mock_executor_builder,
@@ -175,18 +175,12 @@ class TestBaseAgent:
         self.agent.store_chat_context(uuid_, messages)
         self.mock_memory.store.assert_called_once()
 
-    # def test_run_workflow(self):
-    #     self.agent.workflow_runner = MagicMock()
-    #     wf = MagicMock()
-    #     ctx = MagicMock()
-    #     self.agent.run_workflow(wf, ctx)
-    #     self.agent.workflow_runner.run.assert_called_once_with(wf, ctx)
+    def test_run_workflow(self):
+        self.agent.workflow_runner = MagicMock()
+        wf = MagicMock()
+        ctx = MagicMock()
+        self.agent.run_workflow(wf, ctx)
+        self.agent.workflow_runner.run.assert_called_once_with(wf, ctx)
 
-    @pytest.mark.asyncio
-    async def test_handoff(self):
-        # Patch requests.post in handoff
-        with patch("praxis_sdk.agents.ray_entrypoint.requests.post") as mock_post:
-            mock_post.return_value.json.return_value = {"result": "ok"}
-            resp = await self.agent.handoff("http://some-endpoint", "goal", {"plan": 1})
-            assert resp == {"result": "ok"}
-            mock_post.assert_called_once()
+    # NOTE: Old HTTP handoff test removed as handoff method was deprecated.
+    # New P2P handoff implementation is tested in tests/p2p/libp2p/test_handoff.py

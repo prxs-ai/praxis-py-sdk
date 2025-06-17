@@ -108,22 +108,6 @@ class P2PManager:
         self._running = False
         logger.info("P2P shutdown completed.")
 
-    async def delegate(self, target_peer_id: str, payload: dict) -> dict:
-        logger.info("--- MOCK  ---")
-        logger.info(f"Target Peer ID: {target_peer_id}")
-        logger.info(f"Payload: {payload}")
-
-        mock_response = {
-            "status": "success",
-            "result": f"Mock response for goal '{payload.get('goal')}' from peer {target_peer_id}",
-            "executed_by": target_peer_id,
-            "mock": True,
-        }
-
-        logger.info(f"Mock Response: {mock_response}")
-
-        return mock_response
-
 
 def get_p2p_manager() -> P2PManager:
     return P2PManager(config=get_p2p_config())
