@@ -157,15 +157,15 @@ class AbstractWorkflowRunner(ABC):
     async def run(
         self,
         dag_spec: Workflow,
-        agent: "AbstractAgent",
         context: AbstractAgentInputModel | None = None,
+        async_mode: bool = False,
     ) -> AbstractAgentOutputModel:
         """Execute a workflow plan.
 
         Args:
             dag_spec: A workflow specification to execute
-            agent: The agent instance calling the runner
             context: Optional context data for execution
+            async_mode: Whether to run in async mode
 
         Returns:
             The result of executing the plan
