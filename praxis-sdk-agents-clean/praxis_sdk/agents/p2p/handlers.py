@@ -9,6 +9,7 @@ from loguru import logger
 
 from praxis_sdk.agents.p2p.config import get_p2p_config
 from praxis_sdk.agents.p2p.const import PROTOCOL_CARD
+from praxis_sdk.agents.p2p.models import HandOffRequest
 
 if TYPE_CHECKING:
     from libp2p.network.stream.net_stream import INetStream
@@ -67,36 +68,29 @@ async def handle_handoff(stream: INetStream) -> None:
         if not payload_bytes:
             raise ValueError("Empty payload received")
 
-        try:
-            payload = json.loads(payload_bytes.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            raise ValueError(f"Invalid JSON payload: {str(e)}")
-
-        method = payload.get("method")
-        path = payload.get("path")
-        params = payload.get("params", {})
-        input_data = payload.get("input")
-
-        if not method or not path:
-            raise ValueError("Missing required fields: method and/or path")
+        payload = HandOffRequest.parse_obj(payload_bytes)
 
         cfg = get_p2p_config()
         base_url = f"{cfg.agent_host.url}"
 
-        formatted_path = path.format(**params) if params and isinstance(params, dict) else path
+        formatted_path = (
+            payload.path.format(**payload.params)
+            if payload.params and isinstance(payload.params, dict)
+            else payload.path
+        )
 
         request_url = f"{base_url}/{formatted_path.lstrip('/')}"
 
-        logger.info(f"[{ts}] Making {method.upper()} request to {request_url} for peer {peer_id}")
+        logger.info(f"[{ts}] Making {payload.method.upper()} request to {request_url} for peer {peer_id}")
 
         async with httpx.AsyncClient(timeout=10.0) as client:
-            request_kwargs = {"method": method.upper(), "url": request_url}
+            request_kwargs = {"method": payload.method.upper(), "url": request_url}
 
-            if input_data is not None:
-                if isinstance(input_data, dict | list):
-                    request_kwargs["json"] = input_data
+            if payload.input_data is not None:
+                if isinstance(payload.input_data, dict | list):
+                    request_kwargs["json"] = payload.input_data
                 else:
-                    request_kwargs["content"] = str(input_data).encode("utf-8")
+                    request_kwargs["content"] = str(payload.input_data).encode("utf-8")
 
             response = await client.request(**request_kwargs)
             response.raise_for_status()
@@ -123,7 +117,7 @@ async def handle_handoff(stream: INetStream) -> None:
 
     except httpx.RequestError as e:
         logger.error(f"[{ts}] Request error for handoff from {peer_id}: {type(e).__name__} - {str(e)}")
-        error_msg = json.dumps({"error": f"Request to {path} failed or timed out", "code": 504}).encode()
+        error_msg = json.dumps({"error": f"Request to {payload.path} failed or timed out", "code": 504}).encode()
         await stream.write(error_msg)
 
     except Exception as e:
