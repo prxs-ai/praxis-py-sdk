@@ -12,7 +12,6 @@ from loguru import logger
 from multiaddr import Multiaddr
 
 from praxis_sdk.agents.p2p.config import P2PConfig, get_p2p_config
-from praxis_sdk.agents.p2p.libp2p import LibP2PNode
 
 
 class P2PManager:
@@ -20,7 +19,7 @@ class P2PManager:
 
     def __init__(self, config: P2PConfig) -> None:
         self.config = config
-        self._libp2p_node: LibP2PNode | None = None
+        self._libp2p_node: Any = None
         self._thread: threading.Thread | None = None
         self._running: bool = False
         self._shutdown_event: threading.Event = threading.Event()
