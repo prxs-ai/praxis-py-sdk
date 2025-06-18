@@ -88,7 +88,7 @@ class DAGRunner(abc.AbstractWorkflowRunner):
             steps[step.task_id] = self.create_step(step)
 
         if not steps:
-            return None
+            raise ValueError("Workflow cannot be empty - at least one step is required")
 
         last_task_id = list(steps.keys())[-1]
 

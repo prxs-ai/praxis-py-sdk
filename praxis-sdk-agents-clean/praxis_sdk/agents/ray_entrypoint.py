@@ -20,11 +20,13 @@ from praxis_sdk.agents.models import (
     AgentModel,
     ChatMessageModel,
     GoalModel,
+    HandoffParamsModel,
     InsightModel,
     MemoryModel,
     ToolModel,
     Workflow,
 )
+from praxis_sdk.agents.p2p.const import HANDOFF_TOOL_NAME
 from praxis_sdk.agents.prompt import prompt_builder
 
 logger = getLogger(__name__)
@@ -176,33 +178,26 @@ class BaseAgent(abc.AbstractAgent):
                 logger.warning(f"Failed to fetch card from agent {agent} at {card_url}: {e}")
                 continue
             for skill in card.skills:
-                func_name = f"{agent.name}_p2p_delegate".replace("-", "_")
+                func_name = f"{agent.name}_{skill.id}".replace("-", "_")
                 spec = {
                     "type": "function",
                     "function": {
                         "name": func_name,
-                        "description": f"Delegate task to agent '{agent.name}' via P2P for skill: {skill.description}",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "target_peer_id": {
-                                    "type": "string",
-                                    "description": "Target peer ID for delegation",
-                                    "default": agent.peer_id,
-                                },
-                                "goal": {"type": "string", "description": "Goal to delegate"},
-                                "plan": {"type": "object", "description": "Optional plan to execute", "default": None},
-                            },
-                            "required": ["target_peer_id", "goal"],
-                        },
+                        "description": skill.description,
+                        "parameters": skill.input_model.model_json_schema(),
                         "output": skill.output_model.model_json_schema(),
                     },
                 }
                 tools.append(
                     ToolModel(
-                        name="p2p_delegate_tool",
+                        name=HANDOFF_TOOL_NAME,
                         version="0.1.0",
-                        default_parameters={"target_peer_id": agent.peer_id},
+                        default_parameters=HandoffParamsModel(
+                            endpoint=agent.endpoint,
+                            path=skill.path,
+                            method=skill.method,
+                            target_peer_id=agent.peer_id,
+                        ).model_dump(),
                         parameters_spec=skill.params_model.model_json_schema(),
                         openai_function_spec=spec,
                     )
@@ -428,7 +423,7 @@ class BaseAgent(abc.AbstractAgent):
         plan: Workflow,
         context: abc.BaseAgentInputModel | None = None,
     ) -> abc.BaseAgentOutputModel:
-        return await self.workflow_runner.run(plan, agent=self, context=context)
+        return await self.workflow_runner.run(plan, context=context)
 
     def reconfigure(self, config: dict[str, Any]):
         pass
