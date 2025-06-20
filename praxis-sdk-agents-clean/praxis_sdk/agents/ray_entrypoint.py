@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 
 import requests
 from ray.serve.deployment import Application
-
+import asyncio
 from praxis_sdk.agents import abc, const
 from praxis_sdk.agents.ai_registry import ai_registry_builder
 from praxis_sdk.agents.bootstrap import bootstrap_main
@@ -26,8 +26,16 @@ from praxis_sdk.agents.models import (
     ToolModel,
     Workflow,
 )
-from praxis_sdk.agents.p2p.const import HANDOFF_TOOL_NAME
 from praxis_sdk.agents.prompt import prompt_builder
+from praxis_sdk.agents.p2p.manager import get_p2p_manager
+import json
+from praxis_sdk.agents.p2p.const import PROTOCOL_CARD
+from libp2p.peer.id import ID as PeerID  # noqa: N811
+import typing
+
+if typing.TYPE_CHECKING:
+    from libp2p.network.stream.net_stream import INetStream
+
 
 logger = getLogger(__name__)
 
@@ -52,6 +60,9 @@ class BaseAgent(abc.AbstractAgent):
 
         # ---------- Redis Memory ----------#
         self.memory_client = memory_builder()
+
+        # ---------- P2P Manager ----------#
+        self.p2p_manager = get_p2p_manager()
 
     async def handle(
         self,
@@ -155,28 +166,27 @@ class BaseAgent(abc.AbstractAgent):
         #     version = '0.1.0'
         # )]
 
-    def get_most_relevant_tools(self, goal: str, agents: list[AgentModel]) -> list[ToolModel]:
-        """Find the most useful tools for the given goal."""
+    async def get_most_relevant_tools(self, goal: str, agents: list[AgentModel]) -> list[ToolModel]:
+        """Find the most useful tools for the given goal using Libp2p for agent cards."""
+        # Retain the registry call to populate base tools
         response = self.ai_registry_client.post(
             endpoint=self.ai_registry_client.endpoints.find_tools,
             json=GoalModel(goal=goal).model_dump(),
         )
         tools = [ToolModel(**tool) for tool in response]
 
-        for agent in agents:
-            if not agent.peer_id:
+        # Fetch agent cards concurrently using Libp2p
+        agent_cards = await asyncio.gather(*[self.fetch_agent_card(agent) for agent in agents], return_exceptions=True)
+
+        for agent, card_result in zip(agents, agent_cards):
+            if isinstance(card_result, Exception):
+                logger.warning(f"Failed to fetch card from agent {agent.name}: {card_result}")
                 continue
 
-            card_url = urljoin(agent.endpoint, "/card")
-            try:
-                resp = requests.get(card_url)
-                resp.raise_for_status()
-
-                data = resp.json()
-                card = AgentCard(**data)
-            except Exception as e:
-                logger.warning(f"Failed to fetch card from agent {agent} at {card_url}: {e}")
+            card = card_result
+            if card is None:
                 continue
+
             for skill in card.skills:
                 func_name = f"{agent.name}_{skill.id}".replace("-", "_")
                 spec = {
@@ -188,22 +198,34 @@ class BaseAgent(abc.AbstractAgent):
                         "output": skill.output_model.model_json_schema(),
                     },
                 }
+
+                # ToDo: (@ruthuwjwb) move to consts
+                relay_service_peers_url = f"https://relay-service.dev.prxs.ai/peers?{agent.name}"
+                relay_service_response = requests.get(url=relay_service_peers_url)
+                if relay_service_response.status_code != 200:
+                    err_msg = f"Failed fetching agents peer_id: {agent.name}"
+                    logger.error(err_msg)
+                    continue
+
+                peer_response = relay_service_response.json()
+                if not peer_response.get("addresses", []):
+                    err_msg = f"Addresses are empty for agent: {agent.name}"
+                    continue
+
                 tools.append(
                     ToolModel(
-                        name=HANDOFF_TOOL_NAME,
+                        name="handoff-tool",
                         version="0.1.0",
                         default_parameters=HandoffParamsModel(
-                            endpoint=agent.endpoint,
-                            path=skill.path,
-                            method=skill.method,
-                            target_peer_id=agent.peer_id,
+                            endpoint=peer_response["addresses"][0], path=skill.path, method=skill.method
                         ).model_dump(),
                         parameters_spec=skill.params_model.model_json_schema(),
                         openai_function_spec=spec,
                     )
                 )
 
-        return tools + [
+        # Add the return answer tool
+        tools.append(
             ToolModel(
                 name="return-answer-tool",
                 version="0.1.2",
@@ -235,7 +257,67 @@ class BaseAgent(abc.AbstractAgent):
                     },
                 },
             ),
-        ]
+        )
+
+        return tools
+
+    async def fetch_agent_card(self, agent: AgentModel) -> AgentCard | None:
+        """Fetch agent card using Libp2p protocol.
+
+        Args:
+            agent: The agent model containing peer ID information
+
+        Returns:
+            AgentCard if successful, None otherwise
+        """
+        await self.p2p_manager.start()
+
+        try:
+            relay_service_peers_url = f"https://relay-service.dev.prxs.ai/peers?{agent.name}"
+            relay_service_response = requests.get(url=relay_service_peers_url)
+            if relay_service_response.status_code != 200:
+                err_msg = f"Failed fetching agents peer_id: {agent.name}"
+                logger.error(err_msg)
+                return None
+
+            peer_response = relay_service_response.json()
+            if not peer_response.get("peer_id"):
+                err_msg = f"Peer id is not present for agent: {agent.name}"
+                return None
+
+            peer_id = PeerID.from_base58(peer_response["peer_id"])
+
+            # Open stream to peer with timeout
+            stream: INetStream = await asyncio.wait_for(
+                self.libp2p_node.host.new_stream(peer_id, [PROTOCOL_CARD]), timeout=2.0
+            )
+
+            card_bytes = await asyncio.wait_for(stream.read(), timeout=2.0)
+            if not card_bytes:
+                raise ValueError("Empty response received")
+
+            card_data = json.loads(card_bytes.decode("utf-8"))
+
+            if "error" in card_data:
+                logger.error(f"Error fetching card from {agent.name}: {card_data['error']}")
+                return None
+
+            card = AgentCard(**card_data)
+            logger.info(f"Successfully fetched card from agent {agent.name} via Libp2p")
+            return card
+
+        except asyncio.TimeoutError:
+            logger.warning(f"Timeout while fetching card from agent {agent.name} over Libp2p")
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to fetch card from agent {agent.name} over Libp2p: {e}")
+            return None
+        finally:
+            if "stream" in locals():
+                try:
+                    await stream.close()
+                except Exception as e:
+                    logger.error(f"Error closing stream: {e}")
 
     def generate_plan(
         self,
@@ -423,10 +505,17 @@ class BaseAgent(abc.AbstractAgent):
         plan: Workflow,
         context: abc.BaseAgentInputModel | None = None,
     ) -> abc.BaseAgentOutputModel:
-        return await self.workflow_runner.run(plan, context=context)
+        return await self.workflow_runner.run(plan, context)
 
     def reconfigure(self, config: dict[str, Any]):
         pass
+
+    async def handoff(self, endpoint: str, goal: str, plan: dict):
+        """Handle case when agent can't find a solution (wrong route/wrong plan/etc).
+
+        Agent decides to handoff the task to another agent.
+        """
+        return requests.post(urljoin(endpoint, goal), json=plan).json()
 
 
 def agent_builder(args: dict) -> Application:
