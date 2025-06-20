@@ -8,7 +8,6 @@ from logging import getLogger
 from typing import Any
 
 import requests
-from libp2p.peer.id import ID as PeerID  # noqa: N811
 from ray.serve.deployment import Application
 
 from praxis_sdk.agents import abc, const
@@ -30,7 +29,10 @@ from praxis_sdk.agents.models import (
     Workflow,
 )
 from praxis_sdk.agents.p2p.const import HANDOFF_TOOL_NAME, PROTOCOL_CARD
-from praxis_sdk.agents.p2p.manager import get_p2p_manager
+from praxis_sdk.agents.p2p.manager import (
+    PeerID,  # noqa: N811
+    get_p2p_manager,
+)
 from praxis_sdk.agents.prompt import prompt_builder
 
 if typing.TYPE_CHECKING:
