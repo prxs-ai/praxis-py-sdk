@@ -1,13 +1,16 @@
+import asyncio
 import datetime
+import json
+import typing
 import uuid
 from collections.abc import Sequence
 from logging import getLogger
 from typing import Any
-from urllib.parse import urljoin
 
 import requests
+from libp2p.peer.id import ID as PeerID  # noqa: N811
 from ray.serve.deployment import Application
-import asyncio
+
 from praxis_sdk.agents import abc, const
 from praxis_sdk.agents.ai_registry import ai_registry_builder
 from praxis_sdk.agents.bootstrap import bootstrap_main
@@ -26,12 +29,9 @@ from praxis_sdk.agents.models import (
     ToolModel,
     Workflow,
 )
-from praxis_sdk.agents.prompt import prompt_builder
+from praxis_sdk.agents.p2p.const import HANDOFF_TOOL_NAME, PROTOCOL_CARD
 from praxis_sdk.agents.p2p.manager import get_p2p_manager
-import json
-from praxis_sdk.agents.p2p.const import PROTOCOL_CARD
-from libp2p.peer.id import ID as PeerID  # noqa: N811
-import typing
+from praxis_sdk.agents.prompt import prompt_builder
 
 if typing.TYPE_CHECKING:
     from libp2p.network.stream.net_stream import INetStream
@@ -173,7 +173,7 @@ class BaseAgent(abc.AbstractAgent):
         # Fetch agent cards concurrently using Libp2p
         agent_cards = await asyncio.gather(*[self.fetch_agent_card(agent) for agent in agents], return_exceptions=True)
 
-        for agent, card_result in zip(agents, agent_cards):
+        for agent, card_result in zip(agents, agent_cards, strict=False):
             if isinstance(card_result, Exception):
                 logger.warning(f"Failed to fetch card from agent {agent.name}: {card_result}")
                 continue
@@ -194,7 +194,6 @@ class BaseAgent(abc.AbstractAgent):
                     },
                 }
 
-                # ToDo: (@ruthuwjwb) move to consts
                 relay_service_peers_url = f"{self.config.relay_service.url}/peers"
                 relay_service_response = requests.get(url=relay_service_peers_url)
                 if relay_service_response.status_code != 200:
@@ -209,7 +208,7 @@ class BaseAgent(abc.AbstractAgent):
 
                 tools.append(
                     ToolModel(
-                        name="handoff-tool",
+                        name=HANDOFF_TOOL_NAME,
                         version="0.1.0",
                         default_parameters=HandoffParamsModel(
                             endpoint=peer_response["addresses"][0], path=skill.path, method=skill.method
@@ -264,6 +263,7 @@ class BaseAgent(abc.AbstractAgent):
 
         Returns:
             AgentCard if successful, None otherwise
+
         """
         await self.p2p_manager.start()
 
@@ -500,17 +500,10 @@ class BaseAgent(abc.AbstractAgent):
         plan: Workflow,
         context: abc.BaseAgentInputModel | None = None,
     ) -> abc.BaseAgentOutputModel:
-        return await self.workflow_runner.run(plan, context)
+        return await self.workflow_runner.run(plan, context=context)
 
     def reconfigure(self, config: dict[str, Any]):
         pass
-
-    async def handoff(self, endpoint: str, goal: str, plan: dict):
-        """Handle case when agent can't find a solution (wrong route/wrong plan/etc).
-
-        Agent decides to handoff the task to another agent.
-        """
-        return requests.post(urljoin(endpoint, goal), json=plan).json()
 
 
 def agent_builder(args: dict) -> Application:
