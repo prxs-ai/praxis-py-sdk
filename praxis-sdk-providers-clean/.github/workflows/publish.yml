@@ -2,12 +2,19 @@ name: Publish - praxis-sdk-providers
 
 on:
   push:
-    branches:
+    branches-ignore:
       - "main"
+      - "staging"
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - "src/base_provider/**"
+    tags:
+      - "v*"
 
 env:
-  POETRY_REPOSITORIES_PROVIDERS_URL: https://providers.pypi.pnthprx.ai
-  POETRY_HTTP_BASIC_PROVIDERS_USERNAME: providers
+  POETRY_REPOSITORIES_PROVIDERS_URL: https://providers.pypi.prx.ai
+  POETRY_HTTP_BASIC_PROVIDERS_USERNAME: prx
 
 jobs:
   publish-to-pypi:
