@@ -14,18 +14,16 @@ from praxis_sdk.agents.p2p.models import HandOffRequest
 if TYPE_CHECKING:
     from libp2p.network.stream.net_stream import INetStream
 
-    from praxis_sdk.agents import abc
-
 
 # ---------- CARD ----------- #
 async def handle_card(stream: INetStream) -> None:
-    peer_id_obj = stream.muxed_conn.peer_id
-    peer_id_str = str(peer_id_obj) if peer_id_obj else "UnknownPeer"
+    peer_id_str = str(stream.muxed_conn.peer_id)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     logger.info(f"[{timestamp}] Received card request on {PROTOCOL_CARD} from peer {peer_id_str}")
 
-    card_url = "http://localhost:8000/card"
+    cfg = get_p2p_config()
+    card_url = f"{cfg.agent_host.url}/card"
 
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
@@ -59,72 +57,70 @@ async def handle_card(stream: INetStream) -> None:
 
 # ------- HANDOFF -------- #
 async def handle_handoff(stream: INetStream) -> None:
-    peer_id_str = str(stream.muxed_conn.peer_id)
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    peer_id: str = str(stream.muxed_conn.peer_id)
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    logger.info(f"[{timestamp}] Received handoff request on {PROTOCOL_HANDOFF} from peer {peer_id_str}")
+    logger.info(f"[{ts}] Received handoff request from peer {peer_id}")
 
     try:
-        data = await stream.read()
-        if not data:
+        payload_bytes = await stream.read()
+        if not payload_bytes:
             raise ValueError("Empty payload received")
 
-        payload = json.loads(data.decode("utf-8"))
+        payload = HandOffRequest.parse_obj(payload_bytes)
 
-        method = payload.get("method", "POST")
-        path = payload.get("path")
-        params = payload.get("params", {})
-        input_data = payload.get("input_data")
+        cfg = get_p2p_config()
+        base_url = f"{cfg.agent_host.url}"
 
-        if not path:
-            raise ValueError("Path is required in handoff payload")
+        formatted_path = (
+            payload.path.format(**payload.params)
+            if payload.params and isinstance(payload.params, dict)
+            else payload.path
+        )
 
-        formatted_path = path.format(**params) if params else path
-        request_url = f"http://localhost:8000/{formatted_path.lstrip('/')}"
+        request_url = f"{base_url}/{formatted_path.lstrip('/')}"
 
-        logger.info(f"[{timestamp}] Making {method.upper()} request to {request_url} for peer {peer_id_str}")
+        logger.info(f"[{ts}] Making {payload.method.upper()} request to {request_url} for peer {peer_id}")
 
         async with httpx.AsyncClient(timeout=10.0) as client:
-            request_kwargs = {"method": method.upper(), "url": request_url}
+            request_kwargs = {"method": payload.method.upper(), "url": request_url}
 
-            if input_data is not None:
-                if isinstance(input_data, (dict, list)):
-                    request_kwargs["json"] = input_data
+            if payload.input_data is not None:
+                if isinstance(payload.input_data, dict | list):
+                    request_kwargs["json"] = payload.input_data
                 else:
-                    request_kwargs["content"] = str(input_data).encode("utf-8")
+                    request_kwargs["content"] = str(payload.input_data).encode("utf-8")
 
             response = await client.request(**request_kwargs)
             response.raise_for_status()
 
             await stream.write(response.content)
-            logger.info(f"[{timestamp}] Successfully handled handoff request from peer {peer_id_str}")
+            logger.info(f"[{ts}] Successfully handled handoff request for peer {peer_id}")
 
     except json.JSONDecodeError as e:
-        logger.error(f"[{timestamp}] JSON decode error for handoff from {peer_id_str}: {str(e)}")
+        logger.error(f"[{ts}] JSON decode error for handoff from {peer_id}: {str(e)}")
         error_msg = json.dumps({"error": f"Invalid JSON: {str(e)}", "code": 400}).encode()
         await stream.write(error_msg)
 
     except ValueError as e:
-        logger.error(f"[{timestamp}] Validation error for handoff from {peer_id_str}: {str(e)}")
+        logger.error(f"[{ts}] Validation error for handoff from {peer_id}: {str(e)}")
         error_msg = json.dumps({"error": str(e), "code": 400}).encode()
         await stream.write(error_msg)
 
     except httpx.HTTPStatusError as e:
-        logger.error(
-            f"[{timestamp}] HTTP error for handoff from {peer_id_str}: {e.response.status_code} - {e.response.text}"
-        )
+        logger.error(f"[{ts}] HTTP error for handoff from {peer_id}: {e.response.status_code} - {e.response.text}")
         error_msg = json.dumps(
             {"error": f"HTTP error: {e.response.status_code}", "code": e.response.status_code}
         ).encode()
         await stream.write(error_msg)
 
     except httpx.RequestError as e:
-        logger.error(f"[{timestamp}] Request error for handoff from {peer_id_str}: {type(e).__name__} - {str(e)}")
-        error_msg = json.dumps({"error": f"Request to {path} failed or timed out", "code": 504}).encode()
+        logger.error(f"[{ts}] Request error for handoff from {peer_id}: {type(e).__name__} - {str(e)}")
+        error_msg = json.dumps({"error": f"Request to {payload.path} failed or timed out", "code": 504}).encode()
         await stream.write(error_msg)
 
     except Exception as e:
-        logger.error(f"[{timestamp}] Unexpected error processing handoff for {peer_id_str}: {e}", exc_info=True)
+        logger.error(f"[{ts}] Unexpected error processing handoff for {peer_id}: {e}", exc_info=True)
         error_msg = json.dumps({"error": "Internal server error", "code": 500}).encode()
         await stream.write(error_msg)
 
@@ -132,5 +128,5 @@ async def handle_handoff(stream: INetStream) -> None:
         try:
             await stream.close()
         except Exception as e:
-            logger.error(f"[{timestamp}] Error closing stream for handoff with peer {peer_id_str}: {e}")
-        logger.info(f"[{timestamp}] Closed stream for handoff with peer {peer_id_str}")
+            logger.error(f"[{ts}] Error closing stream for handoff with peer {peer_id}: {e}")
+        logger.info(f"[{ts}] Closed stream for handoff with peer {peer_id}")
