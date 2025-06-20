@@ -5,6 +5,16 @@ import pydantic
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class RelayService(BaseSettings):
+    host: str = pydantic.Field(default="relay-service.dev.prxs.ai/", description="Host for relay service")
+    port: int = pydantic.Field(default=80, description="Port for relay service")
+    schema: str = pydantic.Field(default="https://", description="https:// or http://")
+
+    @property
+    def url(self) -> str:
+        return f"{self.schema}{self.host}" if self.port == 80 else f"{self.schema}{self.host}:{self.port}"
+
+
 class BasicAgentConfig(BaseSettings):
     system_prompt: str = "Act as a helpful assistant. You are given a task to complete."
     agents: dict[str, str] = {}
@@ -15,6 +25,8 @@ class BasicAgentConfig(BaseSettings):
     registry_relay_multiaddr_template: str = pydantic.Field("/ip4/127.0.0.1/tcp/4001/p2p/{}")
     agent_p2p_listen_addr: str = pydantic.Field("/ip4/0.0.0.0/tcp/0")
     agent_name: str = pydantic.Field("base-agent")
+
+    relay_service: RelayService = RelayService()  # type: ignore
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
 
