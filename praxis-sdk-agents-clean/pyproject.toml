@@ -16,7 +16,7 @@ dependencies = [
     "mem0ai==0.1.67",
     "lightrag-hku==1.2.5",
     "redisvl (>=0.6.0,<0.7.0)",
-    "libp2p @ git+https://github.com/hyp0cr4t/py-libp2p.git@feat/circuit-v2#egg=libp2p",
+    "libp2p @ git+https://github.com/libp2p/py-libp2p.git@main#egg=libp2p",
     "loguru (>=0.7.3,<0.8.0)",
     "trio-asyncio (>=0.15.0,<0.16.0)",
 ]
