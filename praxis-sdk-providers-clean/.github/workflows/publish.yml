@@ -1,0 +1,47 @@
+name: Publish - praxis-sdk-providers
+
+on:
+  push:
+    branches:
+      - "main"
+
+env:
+  POETRY_REPOSITORIES_PROVIDERS_URL: https://providers.pypi.pnthprx.ai
+  POETRY_HTTP_BASIC_PROVIDERS_USERNAME: providers
+
+jobs:
+  publish-to-pypi:
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Poetry and bump-my-version
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        pip install bump-my-version
+
+    - name: Set development version
+      if: ${{ github.ref_type == 'branch' }}
+      run: |
+        VERSION=$(bump-my-version show current_version)
+        BRANCH=$(echo ${GITHUB_REF_NAME} | sed 's/[\/\.]/-/g' | awk '{print tolower($0)}')
+        COMMIT_HASH=$(git rev-parse --short HEAD)
+        echo "VERSION=$VERSION.dev0+$BRANCH.$COMMIT_HASH" >> $GITHUB_ENV
+        bump-my-version bump --new-version "$VERSION.dev0+$BRANCH.$COMMIT_HASH" branch
+
+    - name: Publish to private registry
+      run: |
+        poetry publish --build -r providers
+      env:
+        POETRY_HTTP_BASIC_PROVIDERS_PASSWORD: ${{ secrets.PROVIDERS_PYPI_TOKEN }}
