@@ -88,6 +88,51 @@ build-backend = "poetry.core.masonry.api"
 line-length = 120
 target-version = "py310"
 
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "BLE001",
+    "F821",
+    "PERF",
+    "INP001",
+    "A001",
+    "PLW2901",
+    "G",
+    "E501",
+    "PTH",
+    "TRY",
+    "ARG",
+    "C",
+    "ERA",
+    "PLR",
+    "DTZ",
+    "S",
+    "RUF",
+    "PGH003",
+    "PERF203",
+    "ANN",
+    "TRY401",
+    "EM",
+    "FBT",
+    "TRY003",
+    "D1",
+    "D203",
+    "D213",
+    "G004",
+    "FA",
+    "COM812",
+    "ISC001",
+    "RUF001",
+    "B904",
+    "SLF001",
+    "ASYNC110",   # ← Разрешает trio.sleep в while циклах
+    "ASYNC210",   # ← Разрешает блокирующие HTTP в async функциях
+    "ASYNC230",
+    "FIX002",
+    "T",        # ← Разрешает print() и pprint()
+    "T201",     # ← Разрешает print()
+    "T203",     # ← Разрешает pprint()
+]
 
 [tool.ruff.format]
 quote-style = "double"
