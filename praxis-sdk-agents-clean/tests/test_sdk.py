@@ -76,8 +76,9 @@ class TestBaseAgent:
         assert isinstance(agents[0], AgentModel)
         assert agents[0].name == "agent1"
 
+    @pytest.mark.asyncio
     @patch("praxis_sdk.agents.ray_entrypoint.requests.get")
-    def test_get_most_relevant_tools(self, mock_requests_get):
+    async def test_get_most_relevant_tools(self, mock_requests_get):
         agent_data = AgentModel(name="agent1", description="desc", version="1.0.0")
         self.mock_ai_registry.post.return_value = [
             {
@@ -90,7 +91,7 @@ class TestBaseAgent:
         mock_requests_get.return_value.json.return_value = {"skills": []}
         mock_requests_get.return_value.raise_for_status = MagicMock()
 
-        tools = self.agent.get_most_relevant_tools("goal", [agent_data])
+        tools = await self.agent.get_most_relevant_tools("goal", [agent_data])
         assert isinstance(tools, list)
         assert any(t.name == "return-answer-tool" for t in tools)
 
