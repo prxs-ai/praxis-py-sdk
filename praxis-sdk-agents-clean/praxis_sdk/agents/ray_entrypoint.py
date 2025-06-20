@@ -160,11 +160,6 @@ class BaseAgent(abc.AbstractAgent):
             return []
 
         return [AgentModel(**agent) for agent in response]
-        # return [AgentModel(
-        #     name = 'example-agent',
-        #     description = 'This is an agent to handoff the any goal',
-        #     version = '0.1.0'
-        # )]
 
     async def get_most_relevant_tools(self, goal: str, agents: list[AgentModel]) -> list[ToolModel]:
         """Find the most useful tools for the given goal using Libp2p for agent cards."""
@@ -200,7 +195,7 @@ class BaseAgent(abc.AbstractAgent):
                 }
 
                 # ToDo: (@ruthuwjwb) move to consts
-                relay_service_peers_url = f"https://relay-service.dev.prxs.ai/peers?{agent.name}"
+                relay_service_peers_url = f"{self.config.relay_service.url}/peers"
                 relay_service_response = requests.get(url=relay_service_peers_url)
                 if relay_service_response.status_code != 200:
                     err_msg = f"Failed fetching agents peer_id: {agent.name}"
@@ -273,7 +268,7 @@ class BaseAgent(abc.AbstractAgent):
         await self.p2p_manager.start()
 
         try:
-            relay_service_peers_url = f"https://relay-service.dev.prxs.ai/peers?{agent.name}"
+            relay_service_peers_url = f"{self.config.relay_service.url}/peers"
             relay_service_response = requests.get(url=relay_service_peers_url)
             if relay_service_response.status_code != 200:
                 err_msg = f"Failed fetching agents peer_id: {agent.name}"
