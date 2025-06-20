@@ -68,7 +68,7 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Run tests via Makefile
+      - name: Run tests via Makefile or directly with poetry
         run: |
           if [ -f "Makefile" ]; then
             poetry run make test

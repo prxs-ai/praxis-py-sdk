@@ -163,7 +163,6 @@ class BaseAgent(abc.AbstractAgent):
 
     async def get_most_relevant_tools(self, goal: str, agents: list[AgentModel]) -> list[ToolModel]:
         """Find the most useful tools for the given goal using Libp2p for agent cards."""
-        # Retain the registry call to populate base tools
         response = self.ai_registry_client.post(
             endpoint=self.ai_registry_client.endpoints.find_tools,
             json=GoalModel(goal=goal).model_dump(),
@@ -218,7 +217,6 @@ class BaseAgent(abc.AbstractAgent):
                     )
                 )
 
-        # Add the return answer tool
         tools.append(
             ToolModel(
                 name="return-answer-tool",
