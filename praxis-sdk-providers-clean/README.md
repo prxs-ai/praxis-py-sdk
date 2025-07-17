@@ -1,7 +1,7 @@
 # Praxis SDK Providers
 
-[![Tests](https://github.com/prx-fun/praxis-sdk-providers/actions/workflows/tests.yml/badge.svg)](https://github.com/prx-fun/praxis-sdk-providers/actions/workflows/tests.yml)
-[![Publish](https://github.com/prx-fun/praxis-sdk-providers/actions/workflows/publish.yml/badge.svg)](https://github.com/prx-fun/praxis-sdk-providers/actions/workflows/publish.yml)
+[![Tests](https://github.com/prxs-ai/praxis-sdk-providers/actions/workflows/tests.yml/badge.svg)](https://github.com/prxs-ai/praxis-sdk-providers/actions/workflows/tests.yml)
+[![Publish](https://github.com/prxs-ai/praxis-sdk-providers/actions/workflows/publish.yml/badge.svg)](https://github.com/prxs-ai/praxis-sdk-providers/actions/workflows/publish.yml)
 
 This repository contains standalone Python providers, each organized as an individual package with its own source code, configuration, and tests.
 
