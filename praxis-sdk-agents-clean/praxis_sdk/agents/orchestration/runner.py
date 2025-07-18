@@ -45,18 +45,18 @@ class DAGRunner(abc.AbstractWorkflowRunner):
         self,
     ) -> None:
         """Run static workflows in the workflow runner engine."""
-        wfs = get_workflows_from_files()
+        workflow_definitions = get_workflows_from_files()
 
-        for _, wf_dict in wfs.items():
-            wf = Workflow(**wf_dict)
-            if wf.id in self.config.WORKFLOWS_TO_RUN and self.config.WORKFLOWS_TO_RUN[wf.id].enabled:
-                self.run(wf, async_mode=True)
+        for _, workflow_dict in workflow_definitions.items():
+            workflow_instance = Workflow(**workflow_dict)
+            if workflow_instance.id in self.config.WORKFLOWS_TO_RUN and self.config.WORKFLOWS_TO_RUN[workflow_instance.id].enabled:
+                self.run(workflow_instance, async_mode=True)
 
     async def list_workflows(self, status: str | None = None):
-        wf_dict = {}
-        for wf_id, _ in workflow.list_all(status):
-            wf_dict[wf_id] = workflow.get_metadata(wf_id)
-        return wf_dict
+        workflow_metadata = {}
+        for workflow_id, _ in workflow.list_all(status):
+            workflow_metadata[workflow_id] = workflow.get_metadata(workflow_id)
+        return workflow_metadata
 
     def create_step(self, step: WorkflowStep):
         """Create a remote function for a workflow step with proper runtime environment.

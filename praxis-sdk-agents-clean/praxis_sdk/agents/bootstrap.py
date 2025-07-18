@@ -25,21 +25,21 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
     """
     from ray import serve
 
-    runner: abc.AbstractWorkflowRunner = workflow_builder()
-    card: abc.AbstractAgentCard = card_builder()
-    p2p: abc.AbstractAgentP2PManager = p2p_builder()
+    workflow_runner: abc.AbstractWorkflowRunner = workflow_builder()
+    agent_card: abc.AbstractAgentCard = card_builder()
+    p2p_manager: abc.AbstractAgentP2PManager = p2p_builder()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         # launch some tasks on app start
-        runner.start_daemon()
-        runner.run_background_workflows()
+        workflow_runner.start_daemon()
+        workflow_runner.run_background_workflows()
 
         agent_instance = app.state.agent_instance
         if hasattr(agent_instance, "p2p_manager"):
             await agent_instance.p2p_manager.start()
         yield
-        runner.stop_daemon()
+        workflow_runner.stop_daemon()
 
         if hasattr(agent_instance, "p2p_manager"):
             await agent_instance.p2p_manager.shutdown()
@@ -51,16 +51,16 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
     class Agent(agent_cls):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.p2p_manager = p2p
+            self.p2p_manager = p2p_manager
             app.state.agent_instance = self
 
         @property
         def workflow_runner(self):
-            return runner
+            return workflow_runner
 
         @property
         def agent_card(self):
-            return card
+            return agent_card
 
         @app.get("/card")
         async def get_card(self):
@@ -71,7 +71,7 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
             return await self.workflow_runner.list_workflows(status)
 
         @app.post("/{goal}")
-        async def handle(self, goal: str, plan: dict | None = None, context: Any = None):
+        async def handle_request(self, goal: str, plan: dict | None = None, context: Any = None):
             return await super().handle(goal, plan, context)
 
     return Agent
