@@ -34,11 +34,13 @@ class DAGRunner(abc.AbstractWorkflowRunner):
 
     @classmethod
     def start_daemon(cls: "DAGRunner", include_failed=False) -> None:
-        pass  # Ensure the method is not empty if all lines are commented
+        """Start the workflow daemon process."""
+        pass
 
     @classmethod
     def stop_daemon(cls: "DAGRunner") -> None:
-        #  TODO(team): Stop all workflows  # https://github.com/project/issues/124
+        """Stop the workflow daemon process."""
+        # TODO(team): Stop all workflows  # https://github.com/project/issues/124
         pass
 
     def run_background_workflows(
