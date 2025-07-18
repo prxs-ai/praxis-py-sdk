@@ -59,7 +59,18 @@ class DAGRunner(abc.AbstractWorkflowRunner):
         return wf_dict
 
     def create_step(self, step: WorkflowStep):
-        """Create a remote function for a step."""
+        """Create a remote function for a workflow step with proper runtime environment.
+        
+        This method creates a Ray remote function that can execute a workflow step
+        with the required dependencies and environment variables. It handles tool
+        loading through entry points and sets up proper error handling.
+        
+        Args:
+            step: The WorkflowStep configuration to create a remote function for
+            
+        Returns:
+            Tuple of (remote_function, step_args) ready for execution
+        """
         runtime_env = RuntimeEnv(pip=[step.tool.render_pip_dependency()], env_vars=step.env_vars)
 
         @ray.workflow.options(checkpoint=True)
