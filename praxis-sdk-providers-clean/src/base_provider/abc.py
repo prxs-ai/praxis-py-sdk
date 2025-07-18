@@ -99,11 +99,11 @@ class AbstractDataStream(Generic[T, U], ABC):
 
     @abstractmethod
     async def setup(
-        self,
-        triggers: dict[str, AbstractDataTrigger[E]],
-        sources: dict[str, AbstractDataSource[T]],
-        processors: dict[str, AbstractDataProcessor[Any, Any]],
-        sinks: dict[str, AbstractDataSink[U]],
+            self,
+            triggers: dict[str, AbstractDataTrigger[E]],
+            sources: dict[str, AbstractDataSource[T]],
+            processors: dict[str, AbstractDataProcessor[Any, Any]],
+            sinks: dict[str, AbstractDataSink[U]],
     ) -> None:
         """Setup the data stream."""
         pass
@@ -152,6 +152,7 @@ class AbstractDataStream(Generic[T, U], ABC):
         """Write a batch of items."""
         pass
 
+
 class AbstractDataRunner(Generic[T], ABC):
     """Abstract base class for data runner implementations."""
 
@@ -176,6 +177,7 @@ class AbstractDataRunner(Generic[T], ABC):
     def stop(cls) -> None:
         """Stop all data workflows."""
         pass
+
 
 class AbstractDataProvider(ABC):
     """Abstract base class for data provider implementations."""
