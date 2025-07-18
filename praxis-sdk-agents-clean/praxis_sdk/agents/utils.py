@@ -15,6 +15,13 @@ TYPE_MAPPING: dict[str, type] = {
     "null": type(None),
 }
 
+# Default entry point configuration
+DEFAULT_ENTRY_POINT = "basic"
+TARGET_ENTRY_POINT = "target"
+
+# Schema property names to skip during model creation
+SKIP_PROPERTIES = ["properties", "required", "default", "additionalProperties"]
+
 
 def get_entry_points(group: str) -> list[EntryPoint]:
     """Retrieve all entry points for a specific group.
@@ -30,7 +37,7 @@ def get_entry_points(group: str) -> list[EntryPoint]:
 
 
 def get_entrypoint(
-    group: EntrypointGroup, target_entrypoint: str = "target", default_entrypoint: str = "basic"
+    group: EntrypointGroup, target_entrypoint: str = TARGET_ENTRY_POINT, default_entrypoint: str = DEFAULT_ENTRY_POINT
 ) -> EntryPoint | None:
     """Find a specific entry point within a group, with fallback to default.
     
@@ -60,9 +67,9 @@ def create_pydantic_model_from_json_schema(
     """Create a Pydantic model from a JSON schema."""
     fields = {}
     for prop_name, prop_info in schema["properties"].items():
-        field_type = prop_info.get("type", "default")  # if no type, then it's the default?
+        field_type = prop_info.get("type", "default")
         py_type = None
-        if field_type == "default" or prop_name in ["properties", "required", "default", "additionalProperties"]:
+        if field_type == "default" or prop_name in SKIP_PROPERTIES:
             continue
         if field_type == "array":
             item_type = prop_info["items"]["type"]
