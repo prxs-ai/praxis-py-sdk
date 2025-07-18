@@ -6,16 +6,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class RelayService(BaseSettings):
+    """Configuration for the relay service connection."""
     host: str = pydantic.Field(default="relay-service.dev.prxs.ai/", description="Host for relay service")
     port: int = pydantic.Field(default=80, description="Port for relay service")
     schema: str = pydantic.Field(default="https://", description="https:// or http://")
 
     @property
     def url(self) -> str:
+        """Generate the complete URL for the relay service."""
         return f"{self.schema}{self.host}" if self.port == 80 else f"{self.schema}{self.host}:{self.port}"
 
 
 class BasicAgentConfig(BaseSettings):
+    """Basic configuration settings for an agent instance."""
     system_prompt: str = "Act as a helpful assistant. You are given a task to complete."
     agents: dict[str, str] = {}
 
@@ -37,4 +40,12 @@ class BasicAgentConfig(BaseSettings):
 
 @lru_cache
 def get_agent_config(**kwargs) -> BasicAgentConfig:
+    """Get cached agent configuration instance.
+    
+    Args:
+        **kwargs: Configuration parameters to pass to BasicAgentConfig
+        
+    Returns:
+        Cached BasicAgentConfig instance
+    """
     return BasicAgentConfig(**kwargs)
