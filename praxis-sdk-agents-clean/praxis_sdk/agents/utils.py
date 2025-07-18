@@ -17,6 +17,14 @@ TYPE_MAPPING: dict[str, type] = {
 
 
 def get_entry_points(group: str) -> list[EntryPoint]:
+    """Retrieve all entry points for a specific group.
+    
+    Args:
+        group: The entry point group name to search for
+        
+    Returns:
+        List of EntryPoint objects found for the specified group
+    """
     entrypoints = entry_points(group=group)
     return list(entrypoints)
 
@@ -24,6 +32,16 @@ def get_entry_points(group: str) -> list[EntryPoint]:
 def get_entrypoint(
     group: EntrypointGroup, target_entrypoint: str = "target", default_entrypoint: str = "basic"
 ) -> EntryPoint | None:
+    """Find a specific entry point within a group, with fallback to default.
+    
+    Args:
+        group: The EntrypointGroup to search within
+        target_entrypoint: The preferred entry point name to find
+        default_entrypoint: Fallback entry point name if target is not found
+        
+    Returns:
+        EntryPoint object if found, None otherwise
+    """
     entrypoints = get_entry_points(group.group_name)
     for ep in entrypoints:
         if ep.name == target_entrypoint:

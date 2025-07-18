@@ -11,7 +11,18 @@ from praxis_sdk.agents.p2p import p2p_builder
 
 
 def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
-    """Bootstrap a main agent with the necessary components to be able to run as a Ray Serve deployment."""
+    """Bootstrap a main agent with the necessary components to be able to run as a Ray Serve deployment.
+    
+    This function creates a Ray Serve deployment class with integrated workflow runner,
+    agent card, and P2P manager components. It sets up the FastAPI application lifecycle
+    and exposes standard agent endpoints.
+    
+    Args:
+        agent_cls: The abstract agent class to bootstrap
+        
+    Returns:
+        Ray Serve deployment class ready for deployment
+    """
     from ray import serve
 
     runner: abc.AbstractWorkflowRunner = workflow_builder()
