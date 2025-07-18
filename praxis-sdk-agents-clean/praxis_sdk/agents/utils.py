@@ -15,15 +15,40 @@ TYPE_MAPPING: dict[str, type] = {
     "null": type(None),
 }
 
+# Default entry point configuration
+DEFAULT_ENTRY_POINT = "basic"
+TARGET_ENTRY_POINT = "target"
+
+# Schema property names to skip during model creation
+SKIP_PROPERTIES = ["properties", "required", "default", "additionalProperties"]
+
 
 def get_entry_points(group: str) -> list[EntryPoint]:
+    """Retrieve all entry points for a specific group.
+    
+    Args:
+        group: The entry point group name to search for
+        
+    Returns:
+        List of EntryPoint objects found for the specified group
+    """
     entrypoints = entry_points(group=group)
     return list(entrypoints)
 
 
 def get_entrypoint(
-    group: EntrypointGroup, target_entrypoint: str = "target", default_entrypoint: str = "basic"
+    group: EntrypointGroup, target_entrypoint: str = TARGET_ENTRY_POINT, default_entrypoint: str = DEFAULT_ENTRY_POINT
 ) -> EntryPoint | None:
+    """Find a specific entry point within a group, with fallback to default.
+    
+    Args:
+        group: The EntrypointGroup to search within
+        target_entrypoint: The preferred entry point name to find
+        default_entrypoint: Fallback entry point name if target is not found
+        
+    Returns:
+        EntryPoint object if found, None otherwise
+    """
     entrypoints = get_entry_points(group.group_name)
     for ep in entrypoints:
         if ep.name == target_entrypoint:
@@ -42,9 +67,9 @@ def create_pydantic_model_from_json_schema(
     """Create a Pydantic model from a JSON schema."""
     fields = {}
     for prop_name, prop_info in schema["properties"].items():
-        field_type = prop_info.get("type", "default")  # if no type, then it's the default?
+        field_type = prop_info.get("type", "default")
         py_type = None
-        if field_type == "default" or prop_name in ["properties", "required", "default", "additionalProperties"]:
+        if field_type == "default" or prop_name in SKIP_PROPERTIES:
             continue
         if field_type == "array":
             item_type = prop_info["items"]["type"]
