@@ -1,6 +1,7 @@
 import hashlib
 import json
 from typing import Any
+from fastapi.security import HTTPAuthorizationCredentials
 
 from base_provider import abc
 from base_provider.bootstrap import bootstrap_main
@@ -12,7 +13,6 @@ from base_provider.sinks import sinks_builder
 from base_provider.sources import sources_builder
 from base_provider.stream import stream_builder
 from base_provider.triggers import triggers_builder
-from fastapi.security import HTTPAuthorizationCredentials
 
 from .abc import AbstractDataContract, AbstractDataProvider, AbstractDataRunner
 
@@ -69,7 +69,7 @@ class BaseProvider(AbstractDataProvider):
         return hashlib.sha256(filter_str.encode()).hexdigest()[:7]
 
     def _get_topic_name(self, data_type: str, topic_hash: str) -> str:
-        """Generate the full topic name."""
+        """Generate the full topic name in format: domain.version.data_type.topic_hash."""
         return f"{self.domain}.{self.version}.{data_type}.{topic_hash}"
 
     async def query(self, filters: dict[str, Any]) -> Any:
