@@ -1,9 +1,10 @@
 import uuid
-from typing import Any
+from typing import Any, Final
 
 import ray
 from ray import workflow
 from ray.runtime_env import RuntimeEnv
+from loguru import logger
 
 from praxis_sdk.agents import abc
 from praxis_sdk.agents.const import EntrypointGroup
@@ -40,8 +41,16 @@ class DAGRunner(abc.AbstractWorkflowRunner):
     @classmethod
     def stop_daemon(cls: "DAGRunner") -> None:
         """Stop the workflow daemon process."""
-        # TODO(team): Stop all workflows  # https://github.com/project/issues/124
-        pass
+        try:
+            active_workflows = workflow.list_all(status="RUNNING")
+            for workflow_id, _ in active_workflows:
+                try:
+                    workflow.cancel(workflow_id)
+                    logger.info(f"Cancelled workflow: {workflow_id}")
+                except Exception as e:
+                    logger.error(f"Failed to cancel workflow {workflow_id}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to list active workflows: {e}")
 
     def run_background_workflows(
         self,
@@ -54,7 +63,7 @@ class DAGRunner(abc.AbstractWorkflowRunner):
             if workflow_instance.id in self.config.WORKFLOWS_TO_RUN and self.config.WORKFLOWS_TO_RUN[workflow_instance.id].enabled:
                 self.run(workflow_instance, async_mode=True)
 
-    async def list_workflows(self, status: str | None = None):
+    async def list_workflows(self, status: str | None = None) -> dict[str, Any]:
         workflow_metadata = {}
         for workflow_id, _ in workflow.list_all(status):
             workflow_metadata[workflow_id] = workflow.get_metadata(workflow_id)
@@ -86,7 +95,8 @@ class DAGRunner(abc.AbstractWorkflowRunner):
             try:
                 tool = entry_points[step.tool.package_name].load()
             except KeyError as exc:
-                raise ValueError(f"Tool {step.tool.package_name} not found in entry points") from exc
+                from praxis_sdk.agents.exceptions import EntryPointError
+                raise EntryPointError(f"Tool {step.tool.package_name} not found in entry points") from exc
             return workflow.continuation(
                 tool.options(runtime_env=RuntimeEnv(env_vars=step.env_vars)).bind(*args, **kwargs)
             )
@@ -101,7 +111,8 @@ class DAGRunner(abc.AbstractWorkflowRunner):
             steps[step.task_id] = self.create_step(step)
 
         if not steps:
-            raise ValueError("Workflow cannot be empty - at least one step is required")
+            from praxis_sdk.agents.exceptions import WorkflowExecutionError
+            raise WorkflowExecutionError("Workflow cannot be empty - at least one step is required")
 
         last_task_id = list(steps.keys())[-1]
 
@@ -130,5 +141,9 @@ class DAGRunner(abc.AbstractWorkflowRunner):
         )
 
 
+# Constants
+DEFAULT_WORKFLOW_ID_PREFIX: Final[str] = "dag-"
+
 def dag_runner(config: BasicWorkflowConfig) -> DAGRunner:
+    """Factory function to create a DAGRunner instance."""
     return DAGRunner(config)

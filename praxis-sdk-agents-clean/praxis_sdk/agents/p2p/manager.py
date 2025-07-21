@@ -2,7 +2,7 @@
 
 import json
 import threading
-from typing import Any
+from typing import Any, Final
 
 import requests
 import trio
@@ -99,9 +99,17 @@ class P2PManager:
         self._thread = threading.Thread(target=self._run_in_thread, daemon=True)
         self._thread.start()
 
-        logger.info("P2P manager started in separate thread")
+        # Wait for node initialization
+        max_attempts = 30
+        for _ in range(max_attempts):
+            if self._libp2p_node is not None:
+                logger.info("P2P manager started successfully")
+                return
+            await trio.sleep(0.1)
+        
+        raise RuntimeError("P2P node failed to initialize within timeout")
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         """Shutdown libp2p node."""
         if not self._running:
             logger.warning("P2P manager is not running")
@@ -118,12 +126,30 @@ class P2PManager:
         logger.info("P2P shutdown completed.")
 
     async def discover_peer_addrs(self, agent_name: str) -> list[str]:
-        resp = requests.get(f"{self.config.relay_service.url}/peers?agent_name={agent_name}", timeout=5)
-        resp.raise_for_status()
-        info = resp.json()
-        return info.get("addresses", [])
+        """Discover peer addresses for a given agent name.
+        
+        Args:
+            agent_name: Name of the agent to discover
+            
+        Returns:
+            List of peer addresses
+            
+        Raises:
+            requests.HTTPError: If the request fails
+        """
+        try:
+            resp = requests.get(
+                f"{self.config.relay_service.url}/peers?agent_name={agent_name}",
+                timeout=5
+            )
+            resp.raise_for_status()
+            info = resp.json()
+            return info.get("addresses", [])
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to discover peer addresses for {agent_name}: {e}")
+            raise
 
-    async def delegate(self, agent_name: str, target_peer_id: str, payload: dict) -> dict:
+    async def delegate(self, agent_name: str, target_peer_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         # 1. Discover target addrs
         addrs = await self.discover_peer_addrs(agent_name)
         if not addrs:
@@ -144,5 +170,11 @@ class P2PManager:
         return json.loads(data.decode("utf-8"))
 
 
+# Constants
+DEFAULT_P2P_PORT: Final[int] = 9001
+DEFAULT_SLEEP_INTERVAL: Final[int] = 10
+INITIALIZATION_TIMEOUT: Final[int] = 30
+
 def get_p2p_manager() -> P2PManager:
+    """Factory function to create a P2P manager instance."""
     return P2PManager(config=get_p2p_config())
