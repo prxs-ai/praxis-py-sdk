@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Union
 
 import pydantic
 
@@ -42,7 +42,7 @@ class AbstractExecutor(ABC):
     """Abstract interface for agent execution engines."""
 
     @abstractmethod
-    def generate_plan(self, prompt: Any, **kwargs) -> Workflow:
+    def generate_plan(self, prompt: Union[str, dict[str, Any]], **kwargs) -> Workflow:
         """Generate a plan based on a prompt and additional parameters.
 
         Args:
@@ -55,7 +55,7 @@ class AbstractExecutor(ABC):
         """
 
     @abstractmethod
-    def chat(self, prompt: Any, **kwargs) -> str:
+    def chat(self, prompt: Union[str, dict[str, Any]], **kwargs) -> str:
         """Generate a chat response based on a prompt and additional parameters.
 
         Args:
@@ -68,7 +68,7 @@ class AbstractExecutor(ABC):
         """
 
     @abstractmethod
-    def classify_intent(self, prompt: Any, **kwargs) -> str:
+    def classify_intent(self, prompt: Union[str, dict[str, Any]], **kwargs) -> str:
         """Classifies user intent based on a prompt and additional parameters.
 
         Args:
@@ -81,7 +81,7 @@ class AbstractExecutor(ABC):
         """
 
     @abstractmethod
-    def reconfigure(self, prompt: Any, **kwargs) -> dict:
+    def reconfigure(self, prompt: Union[str, dict[str, Any]], **kwargs) -> dict[str, Any]:
         """Create new config based on the current config and the user request.
 
         Args:
@@ -187,7 +187,7 @@ class AbstractWorkflowRunner(ABC):
         """Run static workflows in the workflow runner engine."""
 
     @abstractmethod
-    async def list_workflows(self, *args, **kwargs) -> None:
+    async def list_workflows(self, *args, **kwargs) -> list[dict[str, Any]]:
         """List all workflows in the workflow runner engine."""
 
     @abstractmethod
@@ -269,7 +269,15 @@ class AbstractAgent(ABC):
         user_prompt: str,
         **kwargs,
     ) -> AbstractChatResponse:
-        pass
+        """Generate a chat response.
+        
+        Args:
+            user_prompt: The user's input prompt
+            **kwargs: Additional parameters for chat generation
+            
+        Returns:
+            A chat response containing the text and optional action
+        """
 
     @abstractmethod
     async def run_workflow(self, plan: Workflow) -> Any:
