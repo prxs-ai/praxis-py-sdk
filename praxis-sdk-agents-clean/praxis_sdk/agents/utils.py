@@ -1,11 +1,12 @@
+from functools import lru_cache
 from importlib.metadata import EntryPoint, entry_points
-from typing import Any
+from typing import Any, Final
 
 from pydantic import BaseModel, Field, create_model
 
 from praxis_sdk.agents.const import EntrypointGroup
 
-TYPE_MAPPING: dict[str, type] = {
+TYPE_MAPPING: Final[dict[str, type]] = {
     "string": str,
     "integer": int,
     "number": float,
@@ -16,15 +17,16 @@ TYPE_MAPPING: dict[str, type] = {
 }
 
 # Default entry point configuration
-DEFAULT_ENTRY_POINT = "basic"
-TARGET_ENTRY_POINT = "target"
+DEFAULT_ENTRY_POINT: Final[str] = "basic"
+TARGET_ENTRY_POINT: Final[str] = "target"
 
 # Schema property names to skip during model creation
-SKIP_PROPERTIES = ["properties", "required", "default", "additionalProperties"]
+SKIP_PROPERTIES: Final[list[str]] = ["properties", "required", "default", "additionalProperties"]
 
 
+@lru_cache(maxsize=128)
 def get_entry_points(group: str) -> list[EntryPoint]:
-    """Retrieve all entry points for a specific group.
+    """Retrieve all entry points for a specific group with caching.
     
     Args:
         group: The entry point group name to search for
@@ -88,12 +90,12 @@ def create_pydantic_model_from_json_schema(
                 ref_info = schema["properties"].get(prop_info["additionalProperties"]["$ref"].split("/")[-1])
                 py_type = dict[str, create_pydantic_model_from_json_schema(f"{klass}_{prop_name}", ref_info)]
             else:
-                raise Exception(f"Object Error, {py_type} {prop_name} for {field_type}")
+                raise ValueError(f"Object Error: Unable to determine type for property '{prop_name}' with field type '{field_type}'")
         elif TYPE_MAPPING.get(field_type):
             py_type = TYPE_MAPPING[field_type]
 
         if py_type is None:
-            raise Exception(f"Error, {py_type} for {field_type}")
+            raise ValueError(f"Type mapping error: Unable to map field type '{field_type}' to Python type")
 
         default = prop_info.get("default", ...) if prop_name in schema.get("required", []) else ...
         description = prop_info.get("description", "")
