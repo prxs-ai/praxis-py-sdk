@@ -5,6 +5,7 @@ from typing import Any, Final
 from pydantic import BaseModel, Field, create_model
 
 from praxis_sdk.agents.const import EntrypointGroup
+from praxis_sdk.agents.exceptions import EntryPointError
 
 TYPE_MAPPING: Final[dict[str, type]] = {
     "string": str,
@@ -51,54 +52,110 @@ def get_entrypoint(
     Returns:
         EntryPoint object if found, None otherwise
     """
-    entrypoints = get_entry_points(group.group_name)
-    for ep in entrypoints:
-        if ep.name == target_entrypoint:
-            return ep
+    try:
+        entrypoints = get_entry_points(group.group_name)
+        
+        # First pass: look for target entry point
+        for entry_point in entrypoints:
+            if entry_point.name == target_entrypoint:
+                return entry_point
 
-    for ep in entrypoints:
-        if ep.name == default_entrypoint:
-            return ep
+        # Second pass: look for default entry point
+        for entry_point in entrypoints:
+            if entry_point.name == default_entrypoint:
+                return entry_point
 
-    return None
+        return None
+    except Exception as e:
+        raise EntryPointError(f"Failed to retrieve entry point for group '{group.group_name}': {e}") from e
 
 
 def create_pydantic_model_from_json_schema(
-    klass: str, schema: dict[str, Any], base_klass: type[BaseModel] | None = None
+    class_name: str, schema: dict[str, Any], base_class: type[BaseModel] | None = None
 ) -> type[BaseModel]:
-    """Create a Pydantic model from a JSON schema."""
+    """Create a Pydantic model from a JSON schema.
+    
+    Args:
+        class_name: Name for the generated Pydantic model class
+        schema: JSON schema dictionary containing model definition
+        base_class: Optional base class to inherit from
+        
+    Returns:
+        Generated Pydantic model class
+        
+    Raises:
+        ValueError: If schema is invalid or type mapping fails
+        KeyError: If required schema properties are missing
+    """
+    if not isinstance(schema, dict) or "properties" not in schema:
+        raise ValueError("Schema must be a dictionary with 'properties' key")
+        
     fields = {}
-    for prop_name, prop_info in schema["properties"].items():
+    properties = schema["properties"]
+    
+    for prop_name, prop_info in properties.items():
+        if not isinstance(prop_info, dict):
+            continue
+            
         field_type = prop_info.get("type", "default")
-        py_type = None
+        python_type = None
+        
         if field_type == "default" or prop_name in SKIP_PROPERTIES:
             continue
-        if field_type == "array":
-            item_type = prop_info["items"]["type"]
-            if item_type == "object":
-                py_type = list[create_pydantic_model_from_json_schema(f"{klass}_{prop_name}", prop_info["items"])]
+            
+        try:
+            if field_type == "array":
+                if "items" not in prop_info:
+                    raise ValueError(f"Array property '{prop_name}' missing 'items' specification")
+                    
+                item_type = prop_info["items"].get("type")
+                if item_type == "object":
+                    nested_class_name = f"{class_name}_{prop_name.title()}"
+                    python_type = list[create_pydantic_model_from_json_schema(nested_class_name, prop_info["items"])]
+                elif item_type in TYPE_MAPPING:
+                    python_type = list[TYPE_MAPPING[item_type]]
+                else:
+                    raise ValueError(f"Unsupported array item type '{item_type}' for property '{prop_name}'")
+                    
+            elif field_type == "object":
+                nested_class_name = f"{class_name}_{prop_name.title()}"
+                
+                if prop_info.get("properties"):
+                    python_type = create_pydantic_model_from_json_schema(nested_class_name, prop_info)
+                elif prop_info.get("$ref"):
+                    ref_name = prop_info["$ref"].split("/")[-1]
+                    ref_info = properties.get(ref_name)
+                    if ref_info is None:
+                        raise ValueError(f"Reference '{ref_name}' not found in schema properties")
+                    python_type = create_pydantic_model_from_json_schema(nested_class_name, ref_info)
+                elif prop_info.get("additionalProperties", {}).get("$ref"):
+                    ref_name = prop_info["additionalProperties"]["$ref"].split("/")[-1]
+                    ref_info = properties.get(ref_name)
+                    if ref_info is None:
+                        raise ValueError(f"Additional properties reference '{ref_name}' not found")
+                    nested_type = create_pydantic_model_from_json_schema(nested_class_name, ref_info)
+                    python_type = dict[str, nested_type]
+                else:
+                    raise ValueError(f"Object property '{prop_name}' has insufficient type information")
+                    
+            elif field_type in TYPE_MAPPING:
+                python_type = TYPE_MAPPING[field_type]
             else:
-                py_type = list[TYPE_MAPPING.get(item_type)]
-        elif field_type == "object":
-            if prop_info.get("properties", None):
-                py_type = create_pydantic_model_from_json_schema(f"{klass}_{prop_name}", prop_info)
-            elif prop_info.get("$ref"):
-                # NOTE: We probably need to make this more robust
-                ref_info = schema["properties"].get(prop_info["$ref"].split("/")[-1])
-                py_type = create_pydantic_model_from_json_schema(f"{klass}_{prop_name}", ref_info)
-            elif prop_info.get("additionalProperties", {}).get("$ref", None):
-                ref_info = schema["properties"].get(prop_info["additionalProperties"]["$ref"].split("/")[-1])
-                py_type = dict[str, create_pydantic_model_from_json_schema(f"{klass}_{prop_name}", ref_info)]
-            else:
-                raise ValueError(f"Object Error: Unable to determine type for property '{prop_name}' with field type '{field_type}'")
-        elif TYPE_MAPPING.get(field_type):
-            py_type = TYPE_MAPPING[field_type]
+                raise ValueError(f"Unsupported field type '{field_type}' for property '{prop_name}'")
+                
+        except (KeyError, TypeError) as e:
+            raise ValueError(f"Error processing property '{prop_name}': {e}") from e
 
-        if py_type is None:
-            raise ValueError(f"Type mapping error: Unable to map field type '{field_type}' to Python type")
+        if python_type is None:
+            raise ValueError(f"Failed to determine Python type for property '{prop_name}'")
 
-        default = prop_info.get("default", ...) if prop_name in schema.get("required", []) else ...
+        is_required = prop_name in schema.get("required", [])
+        default_value = prop_info.get("default", ... if is_required else None)
         description = prop_info.get("description", "")
-        fields[prop_name] = (py_type, Field(default, description=description))
+        
+        fields[prop_name] = (python_type, Field(default=default_value, description=description))
 
-    return create_model(klass, __base__=base_klass, **fields)
+    try:
+        return create_model(class_name, __base__=base_class, **fields)
+    except Exception as e:
+        raise ValueError(f"Failed to create Pydantic model '{class_name}': {e}") from e
