@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI
 from ray.serve.deployment import Deployment
@@ -30,48 +30,105 @@ def bootstrap_main(agent_cls: type[abc.AbstractAgent]) -> type[Deployment]:
     p2p_manager: abc.AbstractAgentP2PManager = p2p_builder()
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
-        # launch some tasks on app start
+    async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
+        """Manage the lifecycle of the FastAPI application.
+        
+        Args:
+            fastapi_app: The FastAPI application instance
+            
+        Yields:
+            None during application runtime
+        """
+        # Start workflow runner daemon and background tasks
         workflow_runner.start_daemon()
         workflow_runner.run_background_workflows()
 
-        agent_instance = app.state.agent_instance
-        if hasattr(agent_instance, "p2p_manager"):
+        # Start P2P manager if available
+        agent_instance = fastapi_app.state.agent_instance
+        if hasattr(agent_instance, "p2p_manager") and agent_instance.p2p_manager:
             await agent_instance.p2p_manager.start()
+            
         yield
+        
+        # Cleanup on shutdown
         workflow_runner.stop_daemon()
-
-        if hasattr(agent_instance, "p2p_manager"):
+        if hasattr(agent_instance, "p2p_manager") and agent_instance.p2p_manager:
             await agent_instance.p2p_manager.shutdown()
 
-    app = FastAPI(lifespan=lifespan)
+    fastapi_application = FastAPI(lifespan=lifespan)
 
     @serve.deployment
-    @serve.ingress(app)
-    class Agent(agent_cls):
-        def __init__(self, *args, **kwargs):
+    @serve.ingress(fastapi_application)
+    class BootstrappedAgent(agent_cls):
+        """Ray Serve deployment wrapper for the agent class."""
+        
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Initialize the bootstrapped agent with required components.
+            
+            Args:
+                *args: Positional arguments for agent initialization
+                **kwargs: Keyword arguments for agent initialization
+            """
             super().__init__(*args, **kwargs)
             self.p2p_manager = p2p_manager
-            app.state.agent_instance = self
+            fastapi_application.state.agent_instance = self
 
         @property
-        def workflow_runner(self):
+        def workflow_runner(self) -> abc.AbstractWorkflowRunner:
+            """Get the workflow runner instance.
+            
+            Returns:
+                The configured workflow runner
+            """
             return workflow_runner
 
         @property
-        def agent_card(self):
+        def agent_card(self) -> abc.AbstractAgentCard:
+            """Get the agent card instance.
+            
+            Returns:
+                The configured agent card
+            """
             return agent_card
 
-        @app.get("/card")
-        async def get_card(self):
+        @fastapi_application.get("/card")
+        async def get_card(self) -> abc.AbstractAgentCard:
+            """Retrieve the agent card information.
+            
+            Returns:
+                The agent card containing metadata and capabilities
+            """
             return self.agent_card
 
-        @app.get("/workflows")
-        async def list_workflows(self, status: str | None = None):
+        @fastapi_application.get("/workflows")
+        async def list_workflows(self, status: str | None = None) -> list[dict[str, Any]]:
+            """List all workflows in the workflow runner.
+            
+            Args:
+                status: Optional status filter for workflows
+                
+            Returns:
+                List of workflow information dictionaries
+            """
             return await self.workflow_runner.list_workflows(status)
 
-        @app.post("/{goal}")
-        async def handle_request(self, goal: str, plan: dict | None = None, context: Any = None):
+        @fastapi_application.post("/{goal}")
+        async def handle_request(
+            self, 
+            goal: str, 
+            plan: dict | None = None, 
+            context: Any = None
+        ) -> abc.AbstractAgentOutputModel:
+            """Handle incoming requests for goal achievement.
+            
+            Args:
+                goal: The goal to achieve
+                plan: Optional existing plan to use or modify
+                context: Optional input context for the agent
+                
+            Returns:
+                The result of achieving the goal
+            """
             return await super().handle(goal, plan, context)
 
-    return Agent
+    return BootstrappedAgent
