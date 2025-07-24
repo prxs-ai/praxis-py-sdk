@@ -15,16 +15,27 @@ class CoinGeckoApiManager:
         self.base_url = base_url
 
     async def _send_request(
-        self, endpoint: str, params: dict | None = None, method: str = "POST"
-    ):
+            self,
+            endpoint: str,
+            params: dict | None = None,
+            method: str = "POST"
+    ) -> dict:
         headers = {"x-cg-demo-api-key": self.api_key}
-        response = await self.session.request(
-            method=method,
-            url=f"{self.base_url}{endpoint}",
-            headers=headers,
-            params=params,
-        )
-        return await response.json()
+        try:
+            async with self.session.request(
+                    method=method,
+                    url=f"{self.base_url}{endpoint}",
+                    headers=headers,
+                    params=params,
+                    timeout=10
+            ) as response:
+                response.raise_for_status()
+                return await response.json()
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"CoinGecko API request failed: {str(e)}"
+            ) from e
 
     async def get_historical_prices(
         self, token_name: str, days: int = 10, vs_currency: str = "usd"
