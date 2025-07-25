@@ -56,7 +56,7 @@ async def create_comment_to_message(
         },
         {
             "role": "user",
-            "content": f"<conversation>{message}<conversation>",
+            "content": message,
         },
     ]
     result = await send_openai_request(messages=messages, temperature=1.0)
