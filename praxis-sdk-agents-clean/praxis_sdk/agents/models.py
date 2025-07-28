@@ -38,6 +38,11 @@ class ToolModel(BaseModel):
         return name, None
 
     def render_pip_dependency(self) -> str:
+        """Generate pip dependency string for package installation."""
+        return f"{self.package_name}=={self.version}" if self.version else self.package_name
+
+    @property
+    def package_name(self) -> str:
         """Generate pip dependency string for this tool.
         
         Returns:
@@ -56,6 +61,10 @@ class ToolModel(BaseModel):
 
     @property
     def function_name(self) -> str:
+        """Extract function name from OpenAI function specification."""
+        return self.openai_function_spec["function"]["name"]
+
+    def render_function_spec(self) -> str:
         """Extract function name from OpenAI function specification.
         
         Returns:
