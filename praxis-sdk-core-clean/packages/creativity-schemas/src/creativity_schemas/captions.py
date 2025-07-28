@@ -49,3 +49,8 @@ class CaptionSetting(BaseModel):
     hidden: bool = Field(
         default=False, description="Whether captions are hidden or not"
     )
+    text_align: str = Field(
+        default="center",
+        description="Text alignment (left, center, right)",
+        regex=r"^(left|center|right)$"
+    )
