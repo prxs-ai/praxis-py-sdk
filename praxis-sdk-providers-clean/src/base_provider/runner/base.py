@@ -7,12 +7,12 @@ from fast_depends import Depends, inject
 
 T = TypeVar("T")
 
+
 class BaseDataRunner(AbstractDataRunner[T]):
     """Base implementation of data runner."""
 
     def __init__(self, config: BaseDataRunnerConfig):
         self.config = config
-
         self._is_running = False
 
     async def run_once(self, stream: AbstractDataStream[T, Any], *args, filters: dict[str, Any], **kwargs) -> Any:
@@ -25,11 +25,11 @@ class BaseDataRunner(AbstractDataRunner[T]):
         data = await stream.fetch_batch(*args, **kwargs)
         data = await stream.process_batch(data, filters=filters)
 
-        # TODO: fix this
-        kwargs[str(DefaultSinkEntrypointType.KAFKA)] = {"topic": topic}
+        # Create a new dictionary for sink parameters to avoid modifying the original kwargs
+        sink_kwargs = kwargs.copy()
+        sink_kwargs[str(DefaultSinkEntrypointType.KAFKA)] = {"topic": topic}
 
-        await stream.write_batch(data, *args, **kwargs)
-
+        await stream.write_batch(data, *args, **sink_kwargs)
 
     @classmethod
     def start(cls) -> None:
