@@ -29,17 +29,21 @@ class ToolModel(BaseModel):
         return name, None
 
     def render_pip_dependency(self) -> str:
-        return f"{self.package_name}=={self.version}" if self.version else self.name
+        """Generate pip dependency string for package installation."""
+        return f"{self.package_name}=={self.version}" if self.version else self.package_name
 
     @property
     def package_name(self) -> str:
+        """Convert tool name to package name format."""
         return self.name.replace("_", "-")
 
     @property
     def function_name(self) -> str:
+        """Extract function name from OpenAI function specification."""
         return self.openai_function_spec["function"]["name"]
 
     def render_function_spec(self) -> str:
+        """Render function specification as formatted string."""
         return f"""- {self.openai_function_spec["function"]["name"]}
     - description: {self.openai_function_spec["function"]["description"]}
     - parameters: {self.parameters_spec}
