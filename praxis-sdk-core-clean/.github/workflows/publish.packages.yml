@@ -12,6 +12,7 @@ on:
         - infra-configs
         - redis-client
         - tweetscout-utils
+        - twitter-ambassador-utils
 
 jobs:
   publish:
