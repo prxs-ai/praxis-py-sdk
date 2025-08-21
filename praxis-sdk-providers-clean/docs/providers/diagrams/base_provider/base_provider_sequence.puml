@@ -1,0 +1,37 @@
+@startuml QuerySequence
+
+participant Client
+participant Provider
+participant Runner
+participant Stream
+participant Source
+participant Processor
+participant Sink
+
+Client -> Provider: query(filters)
+activate Provider
+
+Provider -> Provider: authenticate()
+Provider -> Runner: run_once(stream, filters)
+activate Runner
+
+Runner -> Stream: fetch_batch()
+activate Stream
+Stream -> Source: fetch()
+Source --> Stream: raw data
+Stream --> Runner: batch
+
+Runner -> Stream: process_batch()
+Stream -> Processor: process(data)
+Processor --> Stream: transformed
+Stream --> Runner: results
+
+Runner -> Sink: write()
+Sink --> Runner: ack
+Runner --> Provider: result
+Provider --> Client: response
+
+deactivate Runner
+deactivate Provider
+deactivate Stream
+@enduml

@@ -1,0 +1,82 @@
+@startuml DataProviderArchitecture
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam classAttributeIconSize 0
+
+package "Base Data Provider" {
+  interface AbstractDataProvider {
+    +query(filters): Any
+    +subscribe(filters): str
+    +contract: AbstractDataContract
+  }
+
+  class BaseProvider {
+    -config: BaseProviderConfig
+    -stream: BaseDataStream
+    +authenticate(): bool
+  }
+
+  AbstractDataProvider <|-- BaseProvider
+
+  package Contracts {
+    interface AbstractDataContract {
+      +spec: dict
+      +build_spec()
+    }
+    class BaseDataContract {
+      -config: BaseDataContractConfig
+      +supported_modes: set[DataMode]
+    }
+    AbstractDataContract <|-- BaseDataContract
+  }
+
+  package Streams {
+    class BaseDataStream {
+      -sources: dict[str, AbstractDataSource]
+      -processors: dict[str, AbstractDataProcessor]
+      -sinks: dict[str, AbstractDataSink]
+      +process_batch()
+      +fetch_batch()
+    }
+  }
+
+  package Runners {
+    class BaseDataRunner {
+      +run_once()
+      +run()
+    }
+  }
+
+  BaseProvider --> BaseDataContract: uses
+  BaseProvider --> BaseDataStream: contains
+  BaseProvider --> BaseDataRunner: delegates
+}
+
+package Integrations {
+  class KafkaDataSink {
+    -broker: KafkaBroker
+    +write()
+  }
+
+  BaseDataStream --> KafkaDataSink: sends to
+  BaseDataStream --> BaseDataProcessor: transforms via
+  BaseDataStream --> BaseDataSource: pulls from
+}
+
+note right of BaseProvider::query
+  Synchronous execution path:
+  1. Validate contract
+  2. Authenticate
+  3. Process through stream
+end note
+
+note left of BaseProvider::subscribe
+  Asynchronous execution:
+  1. Creates Kafka topic
+  2. Starts continuous stream
+  3. Returns topic name
+end note
+
+@enduml
