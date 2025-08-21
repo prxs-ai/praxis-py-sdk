@@ -1,0 +1,30 @@
+[project]
+name = "redis-utils"
+version = "0.0.1"
+description = "Package that consists redis-utils"
+authors = [
+    { name = "0xDevZip", email = "noreply@example.com" }
+]
+requires-python = ">=3.10,<4"
+dependencies = [
+    "asyncio>=3.4.3",
+    "loguru>=0.7.2,<0.8.0",
+    "redis-client==0.1.7",
+    "pytest-asyncio (==0.26.0)",
+    "pydantic_settings>=2.7.1",
+]
+
+readme = "README.md"
+
+[tool.poetry]
+packages = [{ include = "*", from = "src" }]
+
+[[tool.poetry.source]]
+name = "praxis"
+url = "https://packages.pypi.prx.ai/simple/"
+priority = "supplemental"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

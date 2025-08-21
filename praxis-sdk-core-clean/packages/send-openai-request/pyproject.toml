@@ -1,0 +1,24 @@
+[project]
+name = "send-openai-request"
+version = "0.1.2"
+description = "Package that send openai request"
+authors = [
+    {name = "0xDevZip",email = "noreply@example.com"}
+]
+requires-python = ">=3.10,<4"
+dependencies = [
+    "openai (>=1.63.2,<2.0.0)",
+    "pydantic_settings>=2.7.1",
+    "python-multipart>=0.0.6",
+    "pytest-asyncio (==0.26.0)",
+    "tenacity (>=8.1.0,!=8.4.0,<10)",
+]
+readme = "README.md"
+
+[tool.poetry]
+packages = [{include = "*", from="src"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

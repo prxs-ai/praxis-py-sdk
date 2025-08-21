@@ -1,0 +1,25 @@
+[project]
+name = "infra-configs"
+version = "0.0.3"
+description = "Package that consists infrastructure configs"
+authors = [
+    { name = "0xDevZip", email = "noreply@example.com" }
+]
+requires-python = ">=3.10,<4"
+dependencies = [
+    "cryptography>=42.0.0",
+    "python-dotenv>=1.0.1",
+    "pydantic>=2.6.4",
+    "structlog>=24.1.0",
+    "pydantic_settings>=2.7.1",
+]
+
+readme = "README.md"
+
+[tool.poetry]
+packages = [{ include = "*", from = "src" }]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
