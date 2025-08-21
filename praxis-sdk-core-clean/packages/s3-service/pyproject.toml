@@ -1,0 +1,28 @@
+[project]
+name = "s3-service"
+version = "0.0.1"
+description = "Package that consists s3-service"
+authors = [
+    { name = "0xDevZip", email = "noreply@example.com" }
+]
+requires-python = ">=3.10,<4"
+dependencies = [
+    "fastapi>=0.115.8,<0.116.0",
+    "aioboto3>=12.2.0,<13.0.0",
+    "botocore>=1.31.0,<2.0.0",
+    "loguru>=0.7.2,<0.8.0",
+    "pydantic_settings>=2.7.1",
+    "python-multipart>=0.0.6",
+    "pytest-asyncio (==0.26.0)",
+
+]
+
+readme = "README.md"
+
+[tool.poetry]
+packages = [{ include = "*", from = "src" }]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
