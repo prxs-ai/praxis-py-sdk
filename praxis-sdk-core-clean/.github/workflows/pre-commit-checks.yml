@@ -34,7 +34,7 @@ jobs:
 
       - name: Install Poetry
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+          curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Cache pre-commit hooks
@@ -44,7 +44,7 @@ jobs:
           key: ${{ runner.os }}-precommit-${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Install dependencies
-        run: poetry install --with dev --no-root
+        run: uv sync --frozen --group dev 
 
       - name: Run pre-commit
-        run: poetry run pre-commit run --all-files --show-diff-on-failure
+        run: uv run pre-commit run --all-files --show-diff-on-failure
