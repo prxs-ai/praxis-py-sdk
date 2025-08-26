@@ -1,0 +1,18 @@
+# This file defines code owners for the Praxis Py SDK repository
+# Code owners are automatically requested for review when someone opens a PR
+
+* @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+
+/docs/ @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+*.md @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+/README.md @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+
+/pyproject.toml @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+/poetry.lock @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+/.github/ @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+
+/tests/ @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+
+/.github/workflows/ @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb
+
+/LICENSE @hyp0cr4t @0xDevZip @HexaVor @ruthuwjwb

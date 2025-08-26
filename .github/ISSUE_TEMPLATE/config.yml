@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/prxs-ai/praxis-py-sdk/discussions
+    about: Please ask and answer questions here.
+  - name: Documentation
+    url: https://github.com/prxs-ai/praxis-py-sdk/blob/main/docs/CONTRIBUTING.md
+    about: Check our contributing guide for development workflows.
