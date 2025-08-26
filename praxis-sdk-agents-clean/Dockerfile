@@ -4,16 +4,15 @@ FROM ${BASE_IMAGE} as builder
 
 USER root
 
-# Install poetry and dependencies
-RUN pip install poetry poetry-plugin-export && \
-    poetry config virtualenvs.create false
+## Install uv
+RUN pip install uv
 
 # Copy dependency files
-COPY pyproject.toml poetry.lock* /build/
+COPY pyproject.toml uv.lock* /build/
 WORKDIR /build
 
-# Only generate requirements.txt from poetry
-RUN poetry export -f requirements.txt --without-hashes --output requirements.txt
+## Only generate requirements.txt from uv
+RUN uv pip compile pyproject.toml -o requirements.txt
 
 FROM ${BASE_IMAGE}
 

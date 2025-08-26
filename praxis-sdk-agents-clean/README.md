@@ -12,7 +12,7 @@ praxis-sdk-agents/
 ├── src/                  # Source code
 ├── tests/                # Test files
 ├── pyproject.toml        # Project configuration
-└── poetry.lock           # Dependency lock file
+└── uv.lock           # Dependency lock file
 ```
 
 ## Features
@@ -43,7 +43,7 @@ praxis-sdk-agents/
 ## Requirements
 
 * Python 3.10+
-* [Poetry](https://python-poetry.org/) for dependency management
+* [uv](https://astral.sh/uv) for dependency management
 * Ray Serve
 * Redis
 * LightRAG and AI Registry services
@@ -51,13 +51,13 @@ praxis-sdk-agents/
 ## Installation
 
 ```bash
-poetry install
+uv sync
 ```
 
 ## Running Tests
 
 ```bash
-poetry run pytest
+uv run pytest
 ```
 
 ## Development Setup
@@ -70,17 +70,17 @@ This repository uses pre-commit hooks to ensure code quality and consistency. Pr
 
 1. **Install dependencies** (includes pre-commit, ruff, and mypy):
    ```bash
-   poetry install --with dev
+   uv sync --with dev
    ```
 
 2. **Install pre-commit hooks**:
    ```bash
-   poetry run pre-commit install
+   uv run pre-commit install
    ```
 
 3. **Optional: Install pre-push hooks** (recommended):
    ```bash
-   poetry run pre-commit install --hook-type pre-push
+   uv run pre-commit install --hook-type pre-push
    ```
 
 #### Usage
@@ -88,7 +88,7 @@ This repository uses pre-commit hooks to ensure code quality and consistency. Pr
 - **Automatic**: Pre-commit runs automatically on `git commit`
 - **Manual**: Run on all files with:
   ```bash
-  poetry run pre-commit run --all-files
+  uv run pre-commit run --all-files
   ```
 - **Skip hooks** (not recommended):
   ```bash
