@@ -21,9 +21,6 @@ dependencies = [
     "trio-asyncio (>=0.15.0,<0.16.0)",
 ]
 
-[tool.poetry]
-packages = [{ include = "praxis_sdk" }]
-
 [project.entry-points."agent.executor.config"]
 basic = "praxis_sdk.agents.langchain.config:get_langchain_config"
 
@@ -69,20 +66,6 @@ basic = "praxis_sdk.agents.card.builder:get_agent_card"
 [project.entry-points."p2p.entrypoint"]
 basic = "praxis_sdk.agents.p2p.manager:get_p2p_manager"
 
-[tool.poetry.group.dev.dependencies]
-ray = { extras = ["serve"], version = "2.42.1" }
-pytest = "^8.3.4"
-pyarrow = "^19.0.1"
-factory-boy = "^2.12.0"
-pytest-trio = "^0.8.0"
-pytest-asyncio = "^1.0.0"
-pre-commit = "^4.2.0"
-ruff = "^0.11.12"
-mypy = "^1.16.0"
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 120
@@ -136,6 +119,7 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
+
 
 [tool.mypy]
 python_version = "3.10"
@@ -208,3 +192,14 @@ module = [
     "ray_entrypoint",
 ]
 ignore_errors = true
+
+[tool.uv]
+dev-dependencies = ["pytest >=8.3.4", "pyarrow >=19.0.1", "factory-boy >=2.12.0", "pytest-trio >=0.8.0", "pytest-asyncio >=1.0.0", "pre-commit >=4.2.0", "ruff >=0.11.12", "mypy >=1.16.0"]
+
+[tool.setuptools.packages.find]
+include = ['praxis_sdk']
+
+[build-system]
+requires = ['setuptools>=61.0']
+build-backend = "setuptools.build_meta"
+

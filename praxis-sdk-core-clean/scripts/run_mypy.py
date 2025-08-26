@@ -11,7 +11,7 @@ def run_mypy_for_package(package_path: Path) -> bool:
     try:
         result = subprocess.run(
             [
-                "poetry",
+                "uv",
                 "run",
                 "mypy",
                 str(package_path),

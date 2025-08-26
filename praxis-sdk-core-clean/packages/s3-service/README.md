@@ -4,11 +4,11 @@ An asynchronous  client for interacting with S3-compatible storage using `aiobot
 
 ## Installation
 
-### Using [Poetry](https://-poetry.org/)
+### Using [uv](https://astral.sh/uv)
 
 ```toml
-[tool.poetry.dependencies]
- = "^3.11"
+[project.dependencies]
+python = "^3.11"
 fastapi = ">=0.115.8,<0.116.0"
 aioboto3 = ">=12.2.0,<13.0.0"
 loguru = ">=0.7.2,<0.8.0"
@@ -18,7 +18,7 @@ Then run:
 
 
 ```
-poetry install
+uv sync
 ```
 
 ### Or using pip

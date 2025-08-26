@@ -4,10 +4,10 @@ An asynchronous Python client for querying liquidity data from the [Hyperliquid]
 
 ## Installation
 
-### Poetry
+### uv
 
 ```toml
-[tool.poetry.dependencies]
+[project.dependencies]
 python = "^3.11"
 aiohttp = ">=3.11.14,<4.0.0"
 fastapi = ">=0.115.8,<0.116.0"

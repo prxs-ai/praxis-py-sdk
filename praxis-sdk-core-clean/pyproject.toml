@@ -8,23 +8,6 @@ authors = [
 requires-python = ">=3.10"
 dependencies = []
 
-[tool.poetry]
-name = "praxis-sdk-core"
-version = "0.1.0"
-description = "Praxis SDK Core - monorepo with shared Python packages"
-authors = ["Praxis Team"]
-package-mode = false
-
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^3.6.0"
-ruff = "^0.11.12"
-mypy = "^1.16.0"
-pytest = "^8.0.0"
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.ruff]
 line-length = 88
 target-version = "py310"
@@ -111,6 +94,7 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
+
 [tool.mypy]
 python_version = "3.10"
 
@@ -183,3 +167,13 @@ module = [
     "hyperliquid.*",
 ]
 ignore_errors = true
+
+[tool.uv]
+dev-dependencies = ["pre-commit >=3.6.0", "ruff >=0.11.12", "mypy >=1.16.0", "pytest >=8.0.0"]
+
+[tool.setuptools]
+
+[build-system]
+requires = ['setuptools>=61.0']
+build-backend = "setuptools.build_meta"
+

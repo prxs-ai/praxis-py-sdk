@@ -4,10 +4,10 @@ An asynchronous Python client for interacting with the CoinGecko API using `aioh
 
 ## Installation
 
-### Using [Poetry](https://python-poetry.org/)
+### Using [uv](https://astral.sh/uv)
 
 ```toml
-[tool.poetry.dependencies]
+[project.dependencies]
 python = "^3.11"
 fastapi = ">=0.115.8,<0.116.0"
 aiohttp = ">=3.11.14,<4.0.0"
@@ -17,7 +17,7 @@ pandas = ">=2.2.0,<3.0.0"
 Then run:
 
 ```bash
-poetry install
+uv sync
 ```
 
 ### Or using pip
