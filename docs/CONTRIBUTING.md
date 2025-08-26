@@ -68,16 +68,16 @@ git clone https://github.com/your-username/praxis-py-sdk.git
 cd praxis-py-sdk
 
 # Install dependencies
-poetry install
+uv sync
 
 # Run tests
-poetry run pytest
+uv run pytest
 
 # Run linting
-poetry run ruff check .
+uv run ruff check .
 
 # Run type checking
-poetry run mypy .
+uv run mypy .
 ```
 
 ## Code Style
