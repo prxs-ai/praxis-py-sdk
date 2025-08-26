@@ -20,31 +20,31 @@ praxis-sdk-providers/
 │   └── test_base_provider.py
 ├── Dockerfile
 ├── entrypoint.py
-├── poetry.lock
+├── uv.lock
 ├── pyproject.toml
 └── README.md
 ```
 
 * `src/` — contains the main application code.
 * `tests/` — includes unit and integration tests.
-* `pyproject.toml` — defines the package configuration (managed with Poetry).
+* `pyproject.toml` — defines the package configuration (managed with uv).
 * `README.md` — service-level documentation.
 
 ## Requirements
 
 * Python 3.10+
-* [Poetry](https://python-poetry.org/) for dependency management
+* [uv](https://astral.sh/uv) for dependency management
 
 ## Installation
 
 ```bash
-poetry install
+uv sync
 ```
 
 ## Running Tests
 
 ```bash
-poetry run pytest
+uv run pytest
 ```
 
 ## Adding New Packages

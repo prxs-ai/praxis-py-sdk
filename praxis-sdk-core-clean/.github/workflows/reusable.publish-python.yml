@@ -35,7 +35,7 @@ jobs:
 
     - name: Install deps
       run: |
-        pip install poetry bump-my-version
+        pip install uv bump-my-version
 
     - name: Set branch version
       if: ${{ github.ref_type == 'branch' }}
@@ -50,6 +50,6 @@ jobs:
 
     - name: Publish to registry
       run: |
-        poetry publish --build -r prx
+        uv publish --build -r prx
       env:
         POETRY_HTTP_BASIC_PRX_PASSWORD: ${{ secrets.REGISTRY_TOKEN }}

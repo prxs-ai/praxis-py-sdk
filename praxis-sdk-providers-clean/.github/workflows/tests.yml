@@ -25,16 +25,16 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install Poetry
+      - name: Install uv
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+          curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Cache poetry dependencies
+      - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pypoetry
-          key: poetry-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
 
       - name: Cache pre-commit hooks
         uses: actions/cache@v4
@@ -43,10 +43,10 @@ jobs:
           key: ${{ runner.os }}-precommit-${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Install dependencies
-        run: poetry install --with dev
+        run: uv sync --frozen --group dev
 
       - name: Run pre-commit
-        run: poetry run pre-commit run --all-files
+        run: uv run pre-commit run --all-files
 
   test:
     name: Run Tests
@@ -62,19 +62,19 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install Poetry
+      - name: Install uv
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+          curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Cache poetry dependencies
+      - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pypoetry
-          key: poetry-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
 
       - name: Install dependencies
-        run: poetry install
+        run: uv sync --frozen
 
       - name: Run tests
-        run: poetry run pytest tests/ -v
+        run: uv run pytest tests/ -v
