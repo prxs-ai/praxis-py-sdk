@@ -39,11 +39,11 @@ The `main` branch is protected with the following requirements:
 
 1. Fork the repository
 2. Clone your fork locally
-3. Install dependencies: `poetry install`
+3. Install dependencies: `uv sync`
 4. Create a new branch: `git checkout -b feature/your-feature`
 5. Make your changes
-6. Run tests: `poetry run pytest`
-7. Run linting: `poetry run ruff check`
+6. Run tests: `uv run pytest`
+7. Run linting: `uv run ruff check`
 8. Run type checking: `python scripts/run_mypy.py`
 
 ## Pull Request Process
