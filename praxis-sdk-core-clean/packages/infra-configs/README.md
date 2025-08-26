@@ -105,10 +105,10 @@ Make sure to install dependencies:
 pip install -r requirements.txt
 ```
 
-Or if using Poetry:
+Or if using uv:
 
 ```bash
-poetry install
+uv sync
 ```
 
 ---

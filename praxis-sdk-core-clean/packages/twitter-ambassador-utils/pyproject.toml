@@ -15,20 +15,16 @@ dependencies = [
     "pydantic_settings>=2.7.1",
     "pytest-asyncio (==0.26.0)",
     "redis-client==0.1.7",
+    "example-package",
 ]
 readme = "README.md"
 
-[tool.poetry]
-packages = [{include = "*", from="src"}]
-
-[[tool.poetry.source]]
-name = "praxis"
-url = "https://packages.pypi.prx.ai/simple/"
-priority = "supplemental"
 
 
-[tool.poetry.dependencies]
-example-package = {source = "praxis"}
+[tool.setuptools.packages.find]
+include = ['*']
+where = ['src']
+
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ['setuptools>=61.0']
+build-backend = "setuptools.build_meta"
