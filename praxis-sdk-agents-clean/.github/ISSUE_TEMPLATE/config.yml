@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: GitHub Discussions
-    url: https://github.com/prxs-ai/praxis-sdk-agents/discussions
-    about: Please ask and answer questions here.
-  - name: Documentation
-    url: https://github.com/prxs-ai/praxis-sdk-agents/blob/main/docs/CONTRIBUTING.md
-    about: Check our contributing guide for development workflows.
