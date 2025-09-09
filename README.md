@@ -98,7 +98,7 @@ The SDK enables agents to discover each other, communicate securely, share capab
 
 ### Communication Flow
 
-1. **Agent Discovery**: Agents use mDNS and DHT to discover peers
+1. **Agent Discovery**: Agents discover peers
 2. **Capability Exchange**: Agents share their tool capabilities via A2A protocol
 3. **Task Distribution**: Complex tasks are decomposed and distributed to suitable agents
 4. **Tool Execution**: Tools run in isolated environments using various execution engines
@@ -154,23 +154,7 @@ docker-compose up
 
 ## Quick Start Guide
 
-### 1. Basic Agent Setup
-
-```python
-from praxis_sdk import PraxisAgent, load_config
-
-# Load configuration
-config = load_config("configs/agent1.yaml")
-
-# Create and start agent
-agent = PraxisAgent(config, agent_name="my-agent")
-
-# Run the agent
-import trio
-trio.run(agent.run)
-```
-
-### 2. Running with Docker Compose
+### Running with Docker Compose
 
 ```bash
 # Start multi-agent environment
@@ -181,33 +165,7 @@ curl http://localhost:8000/health  # Agent 1
 curl http://localhost:8001/health  # Agent 2
 ```
 
-### 3. Executing Tools
-
-```python
-# Via HTTP API
-import httpx
-
-response = httpx.post("http://localhost:8000/api/tools/execute", json={
-    "tool_name": "calculator",
-    "params": {"expression": "2 + 2 * 3"}
-})
-print(response.json())
-```
-
-### 4. Agent-to-Agent Communication
-
-```python
-# Agents automatically discover and communicate
-# Tasks are routed to agents with appropriate capabilities
-
-# Example: Text analysis task routed to agent with text_analyzer tool
-response = httpx.post("http://localhost:8000/api/tasks/execute", json={
-    "task": "analyze the sentiment of this text: 'Hello world!'",
-    "preferred_agent": "praxis-agent-1"
-})
-```
-
-## Configuration
+### Configuration
 
 ### Agent Configuration (`configs/agent1.yaml`)
 
