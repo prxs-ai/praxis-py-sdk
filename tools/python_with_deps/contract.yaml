@@ -1,0 +1,15 @@
+name: "url_analyzer"
+description: "Fetches and analyzes data from URLs using requests library"
+engine: "dagger"
+params:
+  - name: "url"
+    type: "string"
+    description: "URL to fetch and analyze"
+    required: "true"
+engineSpec:
+  image: "python:3.11-slim"
+  command: ["sh", "-c", "pip install requests && python /shared/tools/python_with_deps/main.py"]
+  mounts:
+    ./shared: /shared
+    ./tools: /shared/tools
+  env_passthrough: []

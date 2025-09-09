@@ -1,0 +1,172 @@
+agent:
+  name: "praxis-python-dev"
+  version: "1.0.0"
+  description: "Praxis Python Agent - Development Environment"
+  url: "http://localhost:8000"
+  shared_dir: "./shared"
+  external_mcp_endpoints:
+    - "http://localhost:3000/mcp"
+  tools:
+    - name: "write_file"
+      description: "Write content to a file in the shared directory"
+      engine: "local"
+      params:
+        - name: "filename"
+          type: "string"
+          description: "Target file path relative to shared directory"
+          required: true
+        - name: "content"
+          type: "string"  
+          description: "Content to write to the file"
+          required: true
+    - name: "read_file"
+      description: "Read content from a file in the shared directory"
+      engine: "local"
+      params:
+        - name: "filename"
+          type: "string"
+          description: "Source file path relative to shared directory"
+          required: true
+    - name: "python_analyzer"
+      description: "Analyze data using an external Python script via Dagger"
+      engine: "dagger"
+      params:
+        - name: "input_file"
+          type: "string"
+          description: "Input file to analyze"
+          required: true
+        - name: "analysis_type"
+          type: "string"
+          description: "Type of analysis to perform"
+          required: false
+          default: "basic"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["python", "/shared/analyzer.py"]
+        mounts:
+          ./shared: /shared
+        env_passthrough: []
+    - name: "twitter_scraper"
+      description: "Scrape tweets from Twitter/X using Apify API"
+      engine: "dagger"
+      params:
+        - name: "username"
+          type: "string"
+          description: "Twitter username to scrape (without @ symbol)"
+          required: true
+        - name: "tweets_count"
+          type: "number"
+          description: "Number of tweets to scrape (default: 50, max: 100)"
+          required: false
+          default: 50
+      engineSpec:
+        image: "python:3.11"
+        command: ["sh", "-c", "pip install apify-client==1.6.4 && python /shared/twitter_scraper.py"]
+        mounts:
+          ./shared: /shared
+        env_passthrough: ["APIFY_API_TOKEN"]
+
+p2p:
+  enabled: true
+  port: 4001
+  host: "0.0.0.0"
+  rendezvous: "praxis-agents-dev"
+  enable_mdns: true
+  enable_dht: true
+  enable_relay: false
+  bootstrap_nodes: []
+  security:
+    enabled: true
+    noise_enabled: true
+    max_peer_connections: 50
+  connection_timeout: 30
+  discovery_interval: 30
+  protocol_version: "0.3.0"
+
+http:
+  enabled: true
+  port: 8000
+  host: "0.0.0.0"
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:3001"
+  max_connections: 100
+  request_timeout: 30
+
+websocket:
+  enabled: true
+  port: 8090
+  host: "0.0.0.0"
+  path: "/ws/workflow"
+  ping_interval: 30
+  max_connections: 50
+
+mcp:
+  enabled: true
+  servers: []
+  limits:
+    max_concurrent_requests: 50
+    request_timeout_ms: 30000
+    max_response_size_bytes: 10485760
+    max_servers_per_node: 5
+    connection_pool_size: 3
+    retry_attempts: 3
+    retry_backoff_ms: 1000
+  log_level: "debug"
+  discovery_enabled: true
+  discovery_endpoints: []
+  auto_register_tools: true
+
+llm:
+  enabled: true
+  provider: "openai"
+  api_key: "${OPENAI_API_KEY}"
+  model: "gpt-4o-mini"
+  max_tokens: 4096
+  temperature: 0.1
+  timeout: 30
+  function_calling:
+    strict_mode: true
+    max_parallel_calls: 5
+    tool_timeout: 15
+    retry_failed_calls: true
+    max_retries: 2
+  caching:
+    enabled: true
+    ttl: 300
+    max_size: 500
+    cache_embeddings: true
+  rate_limiting:
+    requests_per_minute: 100
+    tokens_per_minute: 150000
+    burst_limit: 20
+  always_use_llm_for_dsl: true
+
+execution:
+  default_engine: "dagger"
+  dagger:
+    enabled: true
+    session_timeout: 300
+    default_image: "python:3.11-slim"
+    mount_docker_socket: true
+    resource_limits:
+      cpu: "1000m"
+      memory: "512Mi"
+  enable_sandboxing: true
+  max_execution_time: 600
+  cleanup_temp_files: true
+
+logging:
+  level: "DEBUG"
+  format: "text"
+  enable_console: true
+  enable_file: true
+  file_path: "./logs/praxis-agent.log"
+  max_file_size: "100MB"
+  backup_count: 5
+  structured_logging: false
+  log_requests: true
+  log_p2p_traffic: false
+
+environment: "development"
+debug: true

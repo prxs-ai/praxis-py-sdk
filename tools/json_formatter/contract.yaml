@@ -1,0 +1,23 @@
+name: "json_formatter"
+description: "Formats and beautifies JSON data with options for minification"
+engine: "dagger"
+params:
+  - name: "json_data"
+    type: "string"
+    description: "JSON string to format (alternative to file_path)"
+    required: "false"
+  - name: "file_path"
+    type: "string"
+    description: "Path to JSON file to format (alternative to json_data)"
+    required: "false"
+  - name: "indent"
+    type: "string"
+    description: "Number of spaces for indentation (default: 2)"
+    required: "false"
+engineSpec:
+  image: "python:3.11-slim"
+  command: ["python", "/shared/tools/json_formatter/main.py"]
+  mounts:
+    ./shared: /shared
+    ./tools: /shared/tools
+  env_passthrough: ["JSON_DATA", "json_data", "FILE_PATH", "file_path", "INDENT", "indent"]

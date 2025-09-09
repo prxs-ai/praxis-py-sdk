@@ -1,0 +1,23 @@
+name: "file_merger"
+description: "Merges multiple text files into one with configurable separator"
+engine: "dagger"
+params:
+  - name: "files"
+    type: "string"
+    description: "Comma-separated list of file paths to merge"
+    required: "true"
+  - name: "output_path"
+    type: "string"
+    description: "Output file path (optional, returns content if not specified)"
+    required: "false"
+  - name: "separator"
+    type: "string"
+    description: "Separator between files (default: newline)"
+    required: "false"
+engineSpec:
+  image: "python:3.11-slim"
+  command: ["python", "/shared/tools/file_merger/main.py"]
+  mounts:
+    ./shared: /shared
+    ./tools: /shared/tools
+  env_passthrough: ["FILES", "files", "OUTPUT_PATH", "output_path", "SEPARATOR", "separator"]

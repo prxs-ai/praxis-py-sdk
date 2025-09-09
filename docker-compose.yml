@@ -1,0 +1,154 @@
+version: '3.8'
+
+services:
+  praxis-agent-1:
+    env_file:
+      - ../praxis_demo/praxis-go-sdk/.env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-$(date +%s)}
+    container_name: agent1
+    hostname: agent1
+    ports:
+      - "8000:8000"  # HTTP API (fixed port mapping)
+      - "8090:8090"  # WebSocket
+      - "4001:4001"  # P2P TCP
+      - "9000:9000"  # SSE (fixed port mapping)
+      # mDNS uses internal network, no port mapping needed
+    environment:
+      - AGENT_NAME=praxis-agent-1
+      - AGENT_VERSION=1.0.0
+      - CONFIG_FILE=/app/configs/agent1.yaml
+      - DAGGER_ENGINE_IMAGE=registry.dagger.io/engine:v0.18.14
+      - PRAXIS_API__PORT=8000
+      - PRAXIS_WEBSOCKET__PORT=8090
+      - PRAXIS_P2P__PORT=4001
+      - PRAXIS_MCP__ENABLED=true
+      - PRAXIS_P2P__ENABLED=true
+      - PRAXIS_P2P__MDNS_ENABLED=true
+      - PRAXIS_LOGGING__LEVEL=debug
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - APIFY_API_TOKEN=${APIFY_API_TOKEN:-}
+      - PRAXIS_ENVIRONMENT=development
+      - PRAXIS_DEBUG=true
+    volumes:
+      - ./shared:/app/shared
+      - ./configs:/app/configs
+      - ./keys:/app/keys
+      - ./logs:/app/logs
+      - ./src:/app/src:ro
+      - ./data:/app/data
+      - ./tools:/app/tools:ro  # Mount tools directory for Dagger
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for Dagger
+    networks:
+      - praxis-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    command: ["python", "-m", "praxis_sdk.agent", "/app/configs/agent1.yaml", "praxis-agent-1"]
+    restart: unless-stopped
+
+  praxis-agent-2:
+    env_file:
+      - ../praxis_demo/praxis-go-sdk/.env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-$(date +%s)}
+    container_name: agent2
+    hostname: agent2
+    ports:
+      - "8001:8001"  # HTTP API (fixed port mapping)
+      - "8091:8091"  # WebSocket
+      - "4002:4002"  # P2P TCP
+      - "9001:9001"  # SSE (fixed port mapping)
+      # mDNS uses internal network, no port mapping needed
+    environment:
+      - AGENT_NAME=praxis-agent-2
+      - AGENT_VERSION=1.0.0
+      - CONFIG_FILE=/app/configs/agent2.yaml
+      - DAGGER_ENGINE_IMAGE=registry.dagger.io/engine:v0.18.14
+      - PRAXIS_API__PORT=8001
+      - PRAXIS_WEBSOCKET__PORT=8091
+      - PRAXIS_P2P__PORT=4002
+      - PRAXIS_MCP__ENABLED=true
+      - PRAXIS_P2P__ENABLED=true
+      - PRAXIS_P2P__MDNS_ENABLED=true
+      - PRAXIS_LOGGING__LEVEL=debug
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - APIFY_API_TOKEN=${APIFY_API_TOKEN:-}
+      - PRAXIS_ENVIRONMENT=development
+      - PRAXIS_DEBUG=true
+    volumes:
+      - ./shared:/app/shared
+      - ./configs:/app/configs
+      - ./keys:/app/keys
+      - ./logs:/app/logs
+      - ./src:/app/src:ro
+      - ./data:/app/data
+      - ./tools:/app/tools:ro  # Mount tools directory for Dagger
+      - /var/run/docker.sock:/var/run/docker.sock # Docker socket for Dagger
+    networks:
+      - praxis-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      praxis-agent-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    command: ["python", "-m", "praxis_sdk.agent", "/app/configs/agent2.yaml", "praxis-agent-2"]
+    restart: unless-stopped
+
+  # External MCP filesystem server
+  mcp-filesystem:
+    image: node:20-slim
+    container_name: mcp-filesystem-server
+    working_dir: /app
+    command: >
+      sh -c "
+      npm install -g @modelcontextprotocol/server-filesystem &&
+      npx @modelcontextprotocol/server-filesystem --port 3002 /shared
+      "
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./shared:/shared:rw
+    ports:
+      - "3002:3002"
+    networks:
+      - praxis-net
+    # The filesystem MCP server does not expose /health; disable healthcheck to avoid restarts
+    # Optionally, replace with a simple TCP probe if desired
+    # healthcheck:
+    #   test: ["CMD-SHELL", "nc -z localhost 3002 || exit 1"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    restart: unless-stopped
+
+networks:
+  praxis-net:
+    name: praxis-net
+    driver: bridge
+    enable_ipv6: false
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+
+volumes:
+  shared:
+    driver: local

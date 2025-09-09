@@ -1,0 +1,73 @@
+[tool.poetry]
+name = "praxis-python-sdk"
+version = "0.1.0"
+description = "Python implementation of Praxis SDK with P2P agent communication"
+authors = ["Praxis Team <team@praxis.ai>"]
+readme = "README.md"
+packages = [{include = "praxis_sdk", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+trio = "^0.26.2"
+trio-asyncio = "^0.15.0"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
+websockets = "^13.1"
+pydantic = {extras = ["email"], version = "^2.10.2"}
+pydantic-settings = "^2.6.1"
+loguru = "^0.7.2"
+openai = "^1.55.0"
+pyyaml = "^6.0.2"
+httpx = "^0.28.1"
+aiofiles = "^24.1.0"
+aiohttp = "^3.10.11"
+dagger-io = "0.18.14"
+docker = "^7.1.0"
+libp2p = "^0.2.0"
+multiaddr = "^0.0.9"
+jinja2 = "^3.1.4"
+# MCP libraries - will use httpx for client implementation
+# fastmcp = "^1.5.0"  # Not available in PyPI yet
+# mcp = "^1.0.0"  # Not available in PyPI yet
+click = "^8.1.7"
+zeroconf = "^0.47.1"
+python-multipart = "^0.0.20"
+opentelemetry-exporter-otlp-proto-grpc = "^1.36.0"
+gql = "3.5.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-trio = "^0.8.0"
+pytest-asyncio = "^0.24.0"
+black = "^24.10.0"
+isort = "^5.13.2"
+mypy = "^1.13.0"
+ruff = "^0.8.4"
+
+[tool.poetry.scripts]
+praxis-agent = "praxis_sdk.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.ruff]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = []
+line-length = 88
+target-version = "py311"

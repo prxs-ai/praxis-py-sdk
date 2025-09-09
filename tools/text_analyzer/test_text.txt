@@ -1,0 +1,8 @@
+This is a sample text file for testing the Dagger text analyzer tool.
+It contains multiple lines and various words to test the analysis functionality.
+The text analyzer should count letters, words, and lines accurately.
+
+Here are some numbers: 123, 456, 789
+And some special characters: @#$%^&*()!
+
+This file will be used to verify that the Dagger containerized execution works properly.
