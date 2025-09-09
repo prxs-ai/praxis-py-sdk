@@ -113,7 +113,13 @@ class A2AProtocolHandler:
                     create_rpc_error(A2AErrorCode.INVALID_PARAMS, f"Invalid request format: {e}")
                 )
             
-            logger.debug(f"Handling A2A request: {request.method}")
+            # Structured request log
+            try:
+                log_params = request.params if isinstance(request.params, dict) else {}
+                trunc_params = json.dumps(log_params)[:512]
+            except Exception:
+                trunc_params = str(request.params)[:256]
+            logger.info(f"A2A REQUEST id={request.id} method={request.method} params={trunc_params}")
             
             # Publish request received event
             await self.event_bus.publish_data(
@@ -152,6 +158,7 @@ class A2AProtocolHandler:
                     source="a2a_protocol"
                 )
                 
+                logger.info(f"A2A RESPONSE id={request.id} method={request.method} status=ok")
                 return create_jsonrpc_response(request.id, result)
                 
             except A2AProtocolError as e:
@@ -169,6 +176,7 @@ class A2AProtocolHandler:
                     source="a2a_protocol"
                 )
                 
+                logger.info(f"A2A RESPONSE id={request.id} method={request.method} status=error code={e.code}")
                 return create_jsonrpc_error_response(
                     request.id,
                     create_rpc_error(e.code, e.message, e.data)
@@ -189,6 +197,7 @@ class A2AProtocolHandler:
                     source="a2a_protocol"
                 )
                 
+                logger.info(f"A2A RESPONSE id={request.id} method={request.method} status=error code={A2AErrorCode.INTERNAL_ERROR}")
                 return create_jsonrpc_error_response(
                     request.id,
                     create_rpc_error(A2AErrorCode.INTERNAL_ERROR, "Internal server error")

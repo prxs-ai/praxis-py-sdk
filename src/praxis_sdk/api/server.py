@@ -11,19 +11,21 @@ Provides a complete ASGI server implementation that integrates all components:
 """
 
 import signal
+import asyncio
 import socket
 import sys
 from contextlib import asynccontextmanager
+import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import trio
 import trio_asyncio
 import uvicorn
-from fastapi import FastAPI, WebSocket, BackgroundTasks, Depends, UploadFile, File
+from fastapi import FastAPI, WebSocket, BackgroundTasks, Depends, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
@@ -82,6 +84,23 @@ class PraxisAPIServer:
             global event_bus
             event_bus = event_bus_obj
         logger.info("API server attached to running agent context")
+
+        # Ensure Agent Card is re-applied to API gateway and handlers after re-init
+        try:
+            # Use agent’s A2A card for HTTP publication
+            card_dict = agent.get_agent_card()  # dict with aliases
+            from praxis_sdk.a2a.models import A2AAgentCard
+            agent_card = A2AAgentCard(**card_dict)
+
+            # Compatibility fields for HTTP publication
+            agent_card.version = agent_card.version or "1.0.0"
+            agent_card.supported_transports = ["http"]
+
+            api_gateway.set_agent_card(agent_card)
+            get_request_handlers().set_agent_card(agent_card)
+            logger.info("Agent card re-applied to API handlers after context attach")
+        except Exception as e:
+            logger.warning(f"Failed to apply agent card on attach: {e}")
     
     def _create_app(self) -> FastAPI:
         """Create and configure FastAPI application."""
@@ -287,6 +306,24 @@ class PraxisAPIServer:
             except Exception as e:
                 return JSONResponse(status_code=500, content={"error": str(e)})
 
+        @app.post("/p2p/a2a")
+        async def p2p_a2a(payload: Dict[str, Any]):
+            """Send a raw A2A JSON-RPC request to a peer over libp2p.
+
+            Body: {"peer_id": "<peerId>", "request": {"jsonrpc":"2.0","id":...,"method":"...","params":{...}}}
+            """
+            if not self._agent or not self._agent.p2p_service:
+                return JSONResponse(status_code=503, content={"error": "P2P service not available"})
+            peer_id = payload.get("peer_id")
+            req = payload.get("request")
+            if not peer_id or not isinstance(req, dict):
+                return JSONResponse(status_code=400, content={"error": "peer_id and request are required"})
+            try:
+                result = await self._agent.p2p_service.send_a2a_request(peer_id, req)
+                return result
+            except Exception as e:
+                return JSONResponse(status_code=500, content={"error": str(e)})
+
         @app.post("/p2p/tool")
         async def invoke_p2p_tool(payload: Dict[str, Any]):
             """New P2P tool invocation endpoint (replaces /p2p/tools/{peer_id}/invoke)"""
@@ -454,6 +491,79 @@ class PraxisAPIServer:
             except Exception as e:
                 logger.error(f"Error in A2A tasks/get endpoint: {e}")
                 return JSONResponse(status_code=400, content={"error": str(e)})
+
+        @app.get("/a2a/tasks/stream/{task_id}")
+        async def a2a_tasks_stream(task_id: str, request: Request):
+            """SSE stream for task updates as JSON-RPC responses (spec 3.3 JSON-RPC Streaming).
+
+            Emits one JSON-RPC 2.0 Response per SSE `data:` frame with latest task snapshot.
+            """
+            handlers = get_request_handlers()
+
+            async def event_generator():
+                last_sent = None
+                stream_id = f"tasks/stream:{task_id}"
+                while True:
+                    # Client disconnect
+                    if await request.is_disconnected():
+                        logger.info(f"A2A SSE disconnect for task {task_id}")
+                        break
+                    try:
+                        task = handlers.tasks.get(task_id)
+                        if task is not None:
+                            snapshot = task.dict()
+                            # send only on change
+                            if snapshot != last_sent:
+                                last_sent = snapshot
+                                payload = {
+                                    "jsonrpc": "2.0",
+                                    "id": stream_id,
+                                    "result": {
+                                        "event": "task.update",
+                                        "task": snapshot
+                                    }
+                                }
+                                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                    except Exception as e:
+                        err = {
+                            "jsonrpc": "2.0",
+                            "id": stream_id,
+                            "error": {"code": -32000, "message": str(e)}
+                        }
+                        yield f"data: {json.dumps(err, ensure_ascii=False)}\n\n"
+                    # Throttle
+                    await asyncio.sleep(1)
+
+            headers = {"Cache-Control": "no-cache", "Connection": "keep-alive"}
+            return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
+
+        @app.get("/a2a/message/stream")
+        async def a2a_message_stream(task_id: Optional[str] = None, request: Request = None):
+            """Alias stream for message/stream: emits DSL and task progress for a given task id (if provided)."""
+            handlers = get_request_handlers()
+
+            async def event_generator():
+                last_sent = {"progress": 0}
+                stream_id = f"message/stream:{task_id or 'all'}"
+                while True:
+                    if await request.is_disconnected():
+                        logger.info(f"A2A SSE message stream disconnect (task_id={task_id})")
+                        break
+                    try:
+                        payload: Dict[str, Any] = {"event": "heartbeat", "ts": datetime.utcnow().isoformat() + "Z"}
+                        if task_id:
+                            task = handlers.tasks.get(task_id)
+                            if task is not None:
+                                payload = {"event": "message.progress", "task": task.dict()}
+                        frame = {"jsonrpc": "2.0", "id": stream_id, "result": payload}
+                        yield f"data: {json.dumps(frame, ensure_ascii=False)}\n\n"
+                    except Exception as e:
+                        err = {"jsonrpc": "2.0", "id": stream_id, "error": {"code": -32000, "message": str(e)}}
+                        yield f"data: {json.dumps(err, ensure_ascii=False)}\n\n"
+                    await asyncio.sleep(2)
+
+            headers = {"Cache-Control": "no-cache", "Connection": "keep-alive"}
+            return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
         
         @app.get("/a2a/tasks")
         async def a2a_tasks_list(
@@ -720,7 +830,8 @@ class PraxisAPIServer:
         
         # Add compatibility fields
         agent_card.version = "1.0.0"
-        agent_card.supported_transports = ["http", "websocket", "p2p"]
+        # Only declare HTTP for external publication and fallback. P2P JSON-RPC goes over libp2p and is not declared.
+        agent_card.supported_transports = ["http"]
         
         # Set agent card in components
         api_gateway.set_agent_card(agent_card)
