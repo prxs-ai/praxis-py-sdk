@@ -1,0 +1,166 @@
+agent:
+  name: "praxis-python-prod"
+  version: "1.0.0"
+  description: "Praxis Python Agent - Production Environment"
+  url: "http://0.0.0.0:8000"
+  shared_dir: "/app/shared"
+  external_mcp_endpoints: []
+  capabilities:
+    - "file_operations"
+    - "python_execution"
+    - "llm_integration"
+    - "p2p_communication"
+  max_concurrent_tasks: 20
+  task_timeout: 300
+  tools:
+    - name: "write_file"
+      description: "Write content to a file"
+      engine: "local"
+      params:
+        - name: "filename"
+          type: "string"
+          required: true
+        - name: "content"
+          type: "string"
+          required: true
+    - name: "read_file"
+      description: "Read content from a file"
+      engine: "local"
+      params:
+        - name: "filename"
+          type: "string"
+          required: true
+    - name: "python_analyzer"
+      description: "Advanced Python data analysis tool"
+      engine: "dagger"
+      params:
+        - name: "input_file"
+          type: "string"
+          required: true
+        - name: "output_format"
+          type: "string"
+          required: false
+          default: "json"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["python", "/shared/analyzer.py"]
+        mounts:
+          /app/shared: /shared
+        resource_limits:
+          cpu: "2000m"
+          memory: "1Gi"
+
+p2p:
+  enabled: true
+  port: 4001
+  host: "0.0.0.0"
+  rendezvous: "praxis-agents-prod"
+  enable_mdns: true
+  enable_dht: true
+  enable_relay: true
+  bootstrap_nodes:
+    - "/ip4/10.0.0.100/tcp/4001/p2p/12D3KooWExample1"
+    - "/ip4/10.0.0.101/tcp/4001/p2p/12D3KooWExample2"
+  security:
+    enabled: true
+    noise_enabled: true
+    private_key_path: "/app/keys/priv.key"
+    public_key_path: "/app/keys/pub.key"
+    max_peer_connections: 200
+    authorized_peers: []
+    blacklisted_peers: []
+  connection_timeout: 60
+  discovery_interval: 120
+  protocol_version: "0.3.0"
+
+http:
+  enabled: true
+  port: 8000
+  host: "0.0.0.0"
+  cors_origins:
+    - "https://app.praxis.example.com"
+    - "https://dashboard.praxis.example.com"
+  max_connections: 1000
+  request_timeout: 60
+  keepalive_timeout: 5
+
+websocket:
+  enabled: true
+  port: 8090
+  host: "0.0.0.0"
+  path: "/ws/workflow"
+  ping_interval: 30
+  ping_timeout: 10
+  max_connections: 500
+  message_size_limit: 2097152  # 2MB
+
+mcp:
+  enabled: true
+  servers: []
+  limits:
+    max_concurrent_requests: 200
+    request_timeout_ms: 60000
+    max_response_size_bytes: 52428800  # 50MB
+    max_servers_per_node: 20
+    connection_pool_size: 10
+    retry_attempts: 5
+    retry_backoff_ms: 2000
+  log_level: "info"
+  discovery_enabled: true
+  discovery_endpoints: []
+  auto_register_tools: true
+
+llm:
+  enabled: true
+  provider: "openai"
+  api_key: "${OPENAI_API_KEY}"
+  model: "gpt-4o"
+  max_tokens: 8192
+  temperature: 0.0
+  timeout: 60
+  function_calling:
+    strict_mode: true
+    max_parallel_calls: 10
+    tool_timeout: 30
+    retry_failed_calls: true
+    max_retries: 3
+  caching:
+    enabled: true
+    ttl: 600
+    max_size: 2000
+    cache_embeddings: true
+  rate_limiting:
+    requests_per_minute: 500
+    tokens_per_minute: 1000000
+    burst_limit: 50
+  always_use_llm_for_dsl: true
+  system_prompt: "You are a highly capable AI assistant specialized in distributed task orchestration and P2P agent coordination."
+
+execution:
+  default_engine: "dagger"
+  dagger:
+    enabled: true
+    session_timeout: 600
+    default_image: "python:3.11-slim"
+    mount_docker_socket: true
+    resource_limits:
+      cpu: "4000m"
+      memory: "2Gi"
+  enable_sandboxing: true
+  max_execution_time: 1200
+  cleanup_temp_files: true
+
+logging:
+  level: "INFO"
+  format: "json"
+  enable_console: true
+  enable_file: true
+  file_path: "/app/logs/praxis-agent.log"
+  max_file_size: "500MB"
+  backup_count: 10
+  structured_logging: true
+  log_requests: false
+  log_p2p_traffic: false
+
+environment: "production"
+debug: false

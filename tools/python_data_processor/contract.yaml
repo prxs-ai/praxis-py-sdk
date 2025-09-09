@@ -1,0 +1,96 @@
+name: python_data_processor
+description: "Advanced Python data processing tool with statistics, text analysis, and file processing capabilities"
+version: "1.0.0"
+engine: dagger
+language: python
+
+# Dagger engine specification
+engine_spec:
+  image: "python:3.11-slim"
+  command:
+    - "python"
+    - "/app/tools/python_data_processor/main.py"
+  working_dir: "/app"
+  timeout: 180
+  mounts:
+    "/app/tools": "/app/tools"
+    "/app/data": "/app/data"
+  env:
+    PYTHONPATH: "/app"
+    PYTHONIOENCODING: "utf-8"
+    PYTHONUNBUFFERED: "1"
+  env_passthrough:
+    - "PATH"
+    - "HOME"
+
+# Tool parameters schema  
+parameters:
+  type: object
+  properties:
+    operation:
+      type: string
+      description: "Processing operation to perform"
+      enum: ["stats", "numbers", "text", "file"]
+      default: "stats"
+    data:
+      type: string
+      description: "Input data (comma-separated numbers or text)"
+      default: ""
+    file:
+      type: string
+      description: "Path to file to analyze (relative to /app/data)"
+      default: ""
+    format:
+      type: string
+      description: "Output format: 'text' or 'json'"
+      enum: ["text", "json"]
+      default: "text"
+  required: []
+
+# Usage examples
+examples:
+  - name: "Numeric statistics"
+    parameters:
+      operation: "numbers"
+      data: "1,2,3,4,5,10,15,20"
+    expected_output_contains: ["mean", "median", "std_dev"]
+    
+  - name: "Text analysis"
+    parameters:
+      operation: "text"
+      data: "The quick brown fox jumps over the lazy dog. This sentence contains all letters."
+    expected_output_contains: ["word_count", "char_count", "unique_words"]
+    
+  - name: "File analysis with JSON output"
+    parameters:
+      operation: "file"
+      file: "sample_data.txt"
+      format: "json"
+    expected_output_contains: ["analysis", "success", "system_info"]
+
+# Sample data for testing
+sample_data_files:
+  - name: "sample_numbers.txt"
+    content: "1.5, 2.3, 4.7, 8.1, 3.9, 6.2, 9.8, 1.2"
+    description: "Comma-separated floating point numbers"
+    
+  - name: "sample_text.txt"
+    content: |
+      Python is a high-level programming language. 
+      It emphasizes code readability and simplicity.
+      Python supports multiple programming paradigms.
+    description: "Sample text for analysis"
+    
+  - name: "sample_json.txt"
+    content: "[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]"
+    description: "JSON array of numbers"
+
+# Integration metadata
+integration:
+  category: "data-processing"
+  tags: ["python", "dagger", "statistics", "text-analysis", "data-processing"]
+  supports_streaming: false
+  supports_cancellation: true
+  estimated_duration: "3-10 seconds"
+  input_types: ["numbers", "text", "files"]
+  output_types: ["statistics", "analysis_report"]

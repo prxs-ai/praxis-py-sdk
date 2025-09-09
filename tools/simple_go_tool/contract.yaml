@@ -1,0 +1,15 @@
+name: "go_analyzer"
+description: "Analyzes files using a Go binary with Go-specific metrics"
+engine: "dagger"
+params:
+  - name: "input_file"
+    type: "string"
+    description: "Path to the file to analyze"
+    required: "true"
+engineSpec:
+  image: "golang:1.21-alpine"
+  command: ["sh", "-c", "cd /shared/tools/simple_go_tool && go run main.go"]
+  mounts:
+    ./shared: /shared
+    ./tools: /shared/tools
+  env_passthrough: []

@@ -1,0 +1,238 @@
+agent:
+  name: "praxis-agent-1"
+  version: "1.0.0"
+  description: "Praxis P2P Agent 1 with Event-Driven Architecture"
+  url: "http://localhost:8000"
+  shared_dir: "./shared"
+  external_mcp_endpoints:
+    - "http://host.docker.internal:3002/mcp"
+    - "http://mcp-filesystem:3002/mcp"
+  tools:
+    - name: "text_analyzer"
+      description: "Analyzes text files and counts letters/characters in Russian and English text"
+      engine: "dagger"
+      params:
+        - name: "input_file"
+          type: "string"
+          description: "Path to the text file to analyze"
+          required: "true"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["python", "/tools/text_analyzer/main.py"]
+        mounts:
+          ./shared: /shared
+          ./tools: /tools
+    - name: "python_analyzer"
+      description: "Analyzes data using an external Python script"
+      engine: "dagger"
+      params:
+        - name: "input_file"
+          type: "string"
+          required: "true"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["python", "/shared/analyzer.py"]
+        mounts:
+          ./shared: /shared
+    - name: "greet_external"
+      description: "Calls a greeting tool on an external MCP server"
+      engine: "remote-mcp"
+      params:
+        - name: "name"
+          type: "string"
+          required: "true"
+      engineSpec:
+        address: "http://host.docker.internal:8080"
+    - name: "twitter_scraper"
+      description: "Scrape tweets from Twitter/X using Apify API - provide username without @ symbol"
+      engine: "dagger"
+      params:
+        - name: "username"
+          type: "string" 
+          description: "Twitter username to scrape (without @ symbol, e.g. 'elonmusk')"
+          required: "true"
+        - name: "tweets_count"
+          type: "number"
+          description: "Number of tweets to scrape (default: 50, max: 100)"
+          required: "false"
+      engineSpec:
+        image: "python:3.11"
+        command: ["sh", "-c", "pip install apify-client==1.6.4 && python /shared/twitter_scraper.py"]
+        mounts:
+          ./shared: /shared
+        env_passthrough: ["APIFY_API_TOKEN"]
+    - name: "word_counter"
+      description: "Counts words, lines, and characters in text files"
+      engine: "dagger"
+      params:
+        - name: "file_path"
+          type: "string"
+          description: "Path to the text file to analyze"
+          required: "true"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["python", "/tools/word_counter/main.py"]
+        mounts:
+          ./shared: /shared
+          ./tools: /tools
+    - name: "json_formatter"
+      description: "Formats and beautifies JSON data"
+      engine: "dagger"
+      params:
+        - name: "json_data"
+          type: "string"
+          description: "JSON string to format or file path"
+          required: "true"
+        - name: "indent"
+          type: "number"
+          description: "Indentation level (default: 2)"
+          required: "false"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["python", "/tools/json_formatter/main.py"]
+        mounts:
+          ./shared: /shared
+          ./tools: /tools
+    - name: "calculator"
+      description: "Performs mathematical calculations"
+      engine: "dagger"
+      params:
+        - name: "expression"
+          type: "string"
+          description: "Mathematical expression to evaluate"
+          required: "true"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["python", "/tools/calculator/main.py"]
+        mounts:
+          ./tools: /tools
+    - name: "file_merger"
+      description: "Merges multiple text files into one"
+      engine: "dagger"
+      params:
+        - name: "files"
+          type: "string"
+          description: "Comma-separated list of file paths to merge"
+          required: "true"
+        - name: "output_path"
+          type: "string"
+          description: "Output file path (optional)"
+          required: "false"
+        - name: "separator"
+          type: "string"
+          description: "Separator between files (default: newline)"
+          required: "false"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["python", "/tools/file_merger/main.py"]
+        mounts:
+          ./shared: /shared
+          ./tools: /tools
+    - name: "system_info"
+      description: "Provides system information about the container environment"
+      engine: "dagger"
+      params:
+        - name: "detailed"
+          type: "boolean"
+          description: "Show detailed system information"
+          required: "false"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["sh", "-c", "pip install psutil && python /tools/system_info/main.py"]
+        mounts:
+          ./tools: /tools
+
+p2p:
+  enabled: true
+  port: 4001
+  secure: true
+  rendezvous: "praxis-agents"
+  enable_mdns: true
+  enable_dht: true
+  bootstrap_nodes:
+    - "/dns4/agent2/tcp/4002/p2p/12D3KooWRWKrqkJtrU3RdXiNnJDDyQkwuQHTCWLNv7VYB68nkPgy"
+  keystore_path: "./keys/agent1"
+  listen_addresses:
+    - "/ip4/0.0.0.0/tcp/4001"
+  # Use DNS-based announce address to avoid stale container IPs
+  announce_addresses:
+    - "/dns4/agent1/tcp/4001"
+  protocols:
+    - "/praxis/mcp/1.0.0"
+    - "/praxis/card/1.0.0"
+    - "/praxis/tool/1.0.0"
+    - "/praxis/a2a/1.0.0"
+
+http:
+  enabled: true
+  port: 8000
+  host: "0.0.0.0"
+
+websocket:
+  enabled: true
+  port: 8090
+  host: "0.0.0.0"
+
+mcp:
+  enabled: true
+  servers:
+    - name: "filesystem"
+      command: ["npx", "@modelcontextprotocol/server-filesystem", "/shared"]
+      args: []
+      env: {}
+  limits:
+    max_concurrent_requests: 100
+    request_timeout_ms: 30000
+    max_response_size_bytes: 10485760
+    max_servers_per_node: 10
+    connection_pool_size: 5
+    retry_attempts: 3
+    retry_backoff_ms: 1000
+  log_level: "info"
+
+llm:
+  enabled: true
+  provider: "openai"
+  model: "gpt-4o-mini"
+  max_tokens: 4096
+  temperature: 0.1
+  timeout: "30s"
+  function_calling:
+    strict_mode: true
+    max_parallel_calls: 5
+    tool_timeout: "15s"
+  caching:
+    enabled: true
+    ttl: "300s"
+    max_size: 1000
+  rate_limiting:
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+
+logging:
+  level: "debug"
+  format: "text"
+  file: "/app/logs/agent1.log"
+  
+a2a:
+  enabled: true
+  card:
+    id: "praxis-agent-1"
+    name: "Praxis Agent 1"
+    description: "Primary agent with full tool suite"
+    capabilities:
+      - "text_analyzer"
+      - "python_analyzer"
+      - "twitter_scraper"
+      - "filesystem_operations"
+    protocols:
+      - "mcp"
+      - "a2a"
+      - "tool-execution"
+    endpoints:
+      - type: "http"
+        url: "http://agent1:8000"
+      - type: "websocket"
+        url: "ws://agent1:8090"
+      - type: "p2p"
+        address: "/dns4/agent1/tcp/4001"

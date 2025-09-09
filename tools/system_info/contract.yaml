@@ -1,0 +1,19 @@
+name: "system_info"
+description: "Provides detailed system information including CPU, memory, disk, and network details"
+engine: "dagger"
+params:
+  - name: "detailed"
+    type: "string"
+    description: "Set to 'false' for simplified output (default: true)"
+    required: "false"
+  - name: "format"
+    type: "string"
+    description: "Output format: 'json' or 'compact' (default: json)"
+    required: "false"
+engineSpec:
+  image: "python:3.11-slim"
+  command: ["sh", "-c", "pip install psutil > /dev/null 2>&1 && python /shared/tools/system_info/main.py"]
+  mounts:
+    ./shared: /shared
+    ./tools: /shared/tools
+  env_passthrough: ["DETAILED", "detailed", "FORMAT", "format"]

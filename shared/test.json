@@ -1,0 +1,1 @@
+{"name":"Test","version":"1.0","features":["dagger","docker","p2p"],"settings":{"debug":true,"timeout":300}}
