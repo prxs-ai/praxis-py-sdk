@@ -1,0 +1,8 @@
+Hello World! This is a sample text file for the Python data processor.
+It contains multiple sentences and various punctuation marks.
+The tool should analyze this text and provide word count, character count, and other statistics.
+
+Here are some numbers mixed in: 42, 3.14, 100, 0.5
+And some special characters: @#$%^&*()!
+
+This file demonstrates the text analysis capabilities of the multi-language tool system.

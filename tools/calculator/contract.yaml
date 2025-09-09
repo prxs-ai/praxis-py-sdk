@@ -1,0 +1,27 @@
+name: "calculator"
+description: "Performs mathematical calculations with support for basic operations and expressions"
+engine: "dagger"
+params:
+  - name: "expression"
+    type: "string"
+    description: "Mathematical expression to evaluate (e.g., '2+2*3', 'sqrt(16)')"
+    required: "false"
+  - name: "operation"
+    type: "string"
+    description: "Basic operation: add, subtract, multiply, divide, power, modulo"
+    required: "false"
+  - name: "num1"
+    type: "string"
+    description: "First number for basic operations"
+    required: "false"
+  - name: "num2"
+    type: "string"
+    description: "Second number for basic operations"
+    required: "false"
+engineSpec:
+  image: "python:3.11-slim"
+  command: ["python", "/shared/tools/calculator/main.py"]
+  mounts:
+    ./shared: /shared
+    ./tools: /shared/tools
+  env_passthrough: ["EXPRESSION", "expression", "OPERATION", "operation", "NUM1", "num1", "NUM2", "num2"]

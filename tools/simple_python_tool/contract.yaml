@@ -1,0 +1,15 @@
+name: "text_analyzer"
+description: "Analyzes text files and generates statistics reports"
+engine: "dagger"
+params:
+  - name: "input_file"
+    type: "string"
+    description: "Path to the text file to analyze"
+    required: "true"
+engineSpec:
+  image: "python:3.11-slim"
+  command: ["python", "/shared/tools/simple_python_tool/main.py"]
+  mounts:
+    ./shared: /shared
+    ./tools: /shared/tools
+  env_passthrough: []

@@ -1,0 +1,6 @@
+Hello World! This is a test file for text analysis.
+Привет мир! Это тестовый файл для анализа текста.
+Let's count all the letters in this file.
+Давайте посчитаем все буквы в этом файле.
+Testing Dagger Engine with Russian and English text.
+Тестируем Dagger Engine с русским и английским текстом.

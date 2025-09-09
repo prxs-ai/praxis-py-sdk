@@ -1,0 +1,137 @@
+agent:
+  name: "praxis-agent-2"
+  version: "1.0.0"
+  description: "Agent 2 with Auto-discovered External MCP Tools"
+  url: "http://localhost:8001"
+  shared_dir: "./shared"
+  
+  # External MCP servers for automatic tool discovery
+  external_mcp_servers:
+    - "http://host.docker.internal:8080"
+    - "http://mcp-filesystem:3002"
+  
+  external_mcp_endpoints:
+    - "http://host.docker.internal:3002/mcp"
+    - "http://mcp-filesystem:3002/mcp"
+  
+  # Tools hosted by agent-2
+  tools:
+    - name: "telegram_poster"
+      description: "Posts messages to Telegram channels using a bot"
+      engine: "dagger"
+      params:
+        - name: "message"
+          type: "string"
+          description: "Message content to post to the Telegram channel"
+          required: "true"
+        - name: "channel"
+          type: "string"
+          description: "Telegram channel ID (optional)"
+          required: "false"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["sh", "-c", "pip install requests && python /shared/telegram_post.py"]
+        mounts:
+          ./shared: /shared
+        env_passthrough: ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHANNEL_ID"]
+
+p2p:
+  enabled: true
+  port: 4002
+  secure: true
+  rendezvous: "praxis-agents"
+  enable_mdns: true
+  enable_dht: true
+  keystore_path: "./keys/agent2"
+  # Bootstrap using agent-1 - DNS will be resolved to IP automatically
+  bootstrap_nodes: 
+    - "/dns4/agent1/tcp/4001/p2p/12D3KooWL5aBsS5hbpV7BaFEDpEhtWdWWgRYSGBcVZNf2g3RHJKR"
+  listen_addresses:
+    - "/ip4/0.0.0.0/tcp/4002"
+  # Use DNS-based announce address to avoid stale container IPs
+  announce_addresses:
+    - "/dns4/agent2/tcp/4002"
+  protocols:
+    - "/praxis/mcp/1.0.0"
+    - "/praxis/card/1.0.0"
+    - "/praxis/tool/1.0.0"
+    - "/praxis/a2a/1.0.0"
+  discovery:
+    bootstrap_timeout: "30s"
+    discovery_interval: "10s"
+    connection_timeout: "15s"
+
+http:
+  enabled: true
+  port: 8001
+  host: "0.0.0.0"
+
+websocket:
+  enabled: true
+  port: 8091
+  host: "0.0.0.0"
+
+mcp:
+  enabled: true
+  external_endpoints:
+    - name: "computer-use"
+      url: "http://host.docker.internal:3030"
+      headers:
+        X-Client: "praxis-agent-2"
+  servers:
+    - name: "filesystem"
+      command: ["npx", "@modelcontextprotocol/server-filesystem", "/shared"]
+      args: []
+      env: {}
+  limits:
+    max_concurrent_requests: 10
+    request_timeout_ms: 30000
+    max_response_size_bytes: 10485760
+    max_servers_per_node: 5
+    connection_pool_size: 10
+    retry_attempts: 3
+    retry_backoff_ms: 1000
+  log_level: "info"
+
+llm:
+  enabled: false
+  provider: ""
+  api_key: ""
+  model: ""
+  max_tokens: 0
+  temperature: 0
+  request_timeout: 0
+  cache_enabled: false
+  cache_ttl: 0
+  tools_enabled: false
+
+logging:
+  level: "debug"
+  format: "text"
+  file: "/app/logs/agent2.log"
+
+a2a:
+  enabled: true
+  card:
+    id: "praxis-agent-2"
+    name: "Praxis Agent 2"
+    description: "Secondary agent with auto-discovered MCP tools"
+    capabilities:
+      - "auto_discovered_tools"
+      - "filesystem_operations"
+      - "mcp_discovery"
+    protocols:
+      - "mcp"
+      - "a2a"
+      - "tool-discovery"
+    endpoints:
+      - type: "http"
+        url: "http://agent2:8001"
+      - type: "websocket"
+        url: "ws://agent2:8091"
+      - type: "p2p"
+        address: "/dns4/agent2/tcp/4002"
+  discovery:
+    enabled: true
+    auto_exchange_cards: true
+    peer_discovery_interval: "30s"

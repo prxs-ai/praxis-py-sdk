@@ -1,0 +1,15 @@
+name: "word_counter"
+description: "Counts words, lines, characters in a text file"
+engine: "dagger"
+params:
+  - name: "file_path"
+    type: "string"
+    description: "Path to the text file to analyze"
+    required: "true"
+engineSpec:
+  image: "python:3.11-slim"
+  command: ["python", "/shared/tools/word_counter/main.py"]
+  mounts:
+    ./shared: /shared
+    ./tools: /shared/tools
+  env_passthrough: ["FILE_PATH", "file_path"]

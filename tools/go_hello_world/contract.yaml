@@ -1,0 +1,65 @@
+name: go_hello_world
+description: "Multi-language Go tool demonstrating Dagger execution with parameter handling and JSON output"
+version: "1.0.0"
+engine: dagger
+language: go
+
+# Dagger engine specification
+engine_spec:
+  image: "golang:1.21-alpine"
+  command:
+    - "sh"
+    - "-c"
+    - "cd /app/tools/go_hello_world && go mod init go_hello_world 2>/dev/null || true && go run main.go"
+  working_dir: "/app"
+  timeout: 120
+  mounts:
+    "/app/tools": "/app/tools"
+  env:
+    GOPROXY: "https://proxy.golang.org,direct"
+    GOSUMDB: "sum.golang.org"
+    CGO_ENABLED: "0"
+  env_passthrough:
+    - "PATH"
+    - "HOME"
+
+# Tool parameters schema
+parameters:
+  type: object
+  properties:
+    name:
+      type: string
+      description: "Name to greet"
+      default: "World"
+    message:
+      type: string  
+      description: "Greeting message"
+      default: "Hello from Go!"
+    format:
+      type: string
+      description: "Output format: 'text' or 'json'"
+      enum: ["text", "json"]
+      default: "text"
+  required: []
+
+# Usage examples
+examples:
+  - name: "Basic greeting"
+    parameters:
+      name: "Alice"
+    expected_output: "Hello from Go!, Alice!"
+    
+  - name: "Custom message with JSON output"
+    parameters:
+      name: "Bob"
+      message: "Greetings"
+      format: "json"
+    expected_output_contains: ["Greetings, Bob!", "go_version", "success"]
+
+# Integration metadata
+integration:
+  category: "demo"
+  tags: ["golang", "dagger", "hello-world", "multi-language"]
+  supports_streaming: false
+  supports_cancellation: true
+  estimated_duration: "2-5 seconds"

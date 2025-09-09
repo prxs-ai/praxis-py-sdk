@@ -1,0 +1,134 @@
+environment: development
+debug: true
+
+# P2P Configuration
+p2p:
+  enabled: true
+  port: 9000
+  host: "0.0.0.0"
+  keystore_path: "./keys/orchestrator"
+  peer_discovery: true
+  mdns_service: "praxis-p2p-mcp"
+  connection_timeout: 30
+  max_peers: 50
+  protocols:
+    - "/praxis/mcp/1.0.0"
+    - "/praxis/card/1.0.0"
+    - "/praxis/tool/1.0.0"
+    - "/praxis/a2a/1.0.0"
+  security:
+    use_noise: false  # Disabled for development
+    noise_key: null
+  # No bootstrap nodes for orchestrator - it will be the bootstrap node for others
+  bootstrap_nodes: []
+
+# MCP Configuration
+mcp:
+  enabled: true
+  port: 3001
+  filesystem_enabled: true
+  filesystem_root: "/shared"
+  auto_discovery: true
+  discovery_ports: [3000, 3001, 3002, 3003]
+  servers:
+    - name: "filesystem-mcp"
+      command: ["npx", "@modelcontextprotocol/server-filesystem", "--port", "3002"]
+      enabled: false  # Will be enabled when external server is running
+
+# LLM Configuration
+llm:
+  provider: "openai"
+  model: "gpt-4"
+  api_key: ${OPENAI_API_KEY}
+  temperature: 0.7
+  max_tokens: 4000
+  timeout: 60
+  max_retries: 3
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8080
+  cors_origins: ["*"]
+  websocket_enabled: true
+  docs_enabled: true
+  health_check_interval: 30
+
+# Logging Configuration
+logging:
+  level: "DEBUG"
+  file_enabled: true
+  file_path: "logs/orchestrator.log"
+  file_rotation: "10 MB"
+  file_retention: "1 week"
+  json_logs: false
+
+# Dagger Configuration
+dagger:
+  enabled: false  # Will enable when Dagger is set up
+  timeout: 600
+  max_concurrent: 5
+
+# Agent Configuration
+agents:
+  - name: "orchestrator"
+    description: "Main orchestrator agent with all capabilities"
+    enabled: true
+    tools:
+      - "read_file"
+      - "write_file"
+      - "list_directory"
+      - "create_directory"
+      - "delete_file"
+      - "move_file"
+      - "get_system_info"
+      - "execute_python"
+    capabilities:
+      - "task_management"
+      - "tool_execution"
+      - "p2p_communication"
+      - "llm_orchestration"
+    max_concurrent_tasks: 10
+    task_timeout: 300
+
+# Tool Configurations
+tools:
+  - name: "read_file"
+    description: "Read content from a file"
+    engine: "mcp"
+    enabled: true
+    
+  - name: "write_file"
+    description: "Write content to a file"
+    engine: "mcp"
+    enabled: true
+    
+  - name: "list_directory"
+    description: "List files in a directory"
+    engine: "mcp"
+    enabled: true
+    
+  - name: "create_directory"
+    description: "Create a new directory"
+    engine: "mcp"
+    enabled: true
+    
+  - name: "delete_file"
+    description: "Delete a file or empty directory"
+    engine: "mcp"
+    enabled: true
+    
+  - name: "move_file"
+    description: "Move or rename a file"
+    engine: "mcp"
+    enabled: true
+    
+  - name: "get_system_info"
+    description: "Get system information"
+    engine: "mcp"
+    enabled: true
+    
+  - name: "execute_python"
+    description: "Execute Python code"
+    engine: "mcp"
+    enabled: true

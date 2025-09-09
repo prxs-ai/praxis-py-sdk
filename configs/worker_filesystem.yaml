@@ -1,0 +1,371 @@
+agent:
+  name: "praxis-worker-filesystem"
+  version: "1.0.0"
+  description: "Praxis Filesystem Worker - Specialized in file operations and data management"
+  url: "http://worker_filesystem:8001"
+  shared_dir: "/app/shared"
+  external_mcp_endpoints:
+    - "http://mcp_filesystem:3000/mcp"
+  tools:
+    # Core file system operations
+    - name: "write_file"
+      description: "Write content to a file in the shared directory with advanced options"
+      engine: "local"
+      params:
+        - name: "filename"
+          type: "string"
+          description: "Target file path relative to shared directory"
+          required: true
+        - name: "content"
+          type: "string"
+          description: "Content to write to the file"
+          required: true
+        - name: "mode"
+          type: "string"
+          description: "Write mode: overwrite, append, create_only"
+          required: false
+          default: "overwrite"
+        - name: "encoding"
+          type: "string"
+          description: "File encoding"
+          required: false
+          default: "utf-8"
+        - name: "create_backup"
+          type: "boolean"
+          description: "Create backup of existing file before writing"
+          required: false
+          default: false
+
+    - name: "read_file"
+      description: "Read content from a file with advanced options"
+      engine: "local"
+      params:
+        - name: "filename"
+          type: "string"
+          description: "Source file path relative to shared directory"
+          required: true
+        - name: "encoding"
+          type: "string"
+          description: "File encoding"
+          required: false
+          default: "utf-8"
+        - name: "max_size"
+          type: "number"
+          description: "Maximum file size to read (bytes)"
+          required: false
+          default: 10485760  # 10MB
+
+    - name: "list_directory"
+      description: "List files and directories with detailed information"
+      engine: "local"
+      params:
+        - name: "path"
+          type: "string"
+          description: "Directory path relative to shared directory"
+          required: false
+          default: "."
+        - name: "include_hidden"
+          type: "boolean"
+          description: "Include hidden files and directories"
+          required: false
+          default: false
+        - name: "recursive"
+          type: "boolean"
+          description: "List files recursively"
+          required: false
+          default: false
+        - name: "filter_pattern"
+          type: "string"
+          description: "Filter files by pattern (glob syntax)"
+          required: false
+
+    - name: "create_directory"
+      description: "Create a new directory with optional parent creation"
+      engine: "local"
+      params:
+        - name: "path"
+          type: "string"
+          description: "Directory path relative to shared directory"
+          required: true
+        - name: "create_parents"
+          type: "boolean"
+          description: "Create parent directories if they don't exist"
+          required: false
+          default: true
+
+    - name: "delete_file"
+      description: "Delete a file with optional backup creation"
+      engine: "local"
+      params:
+        - name: "filename"
+          type: "string"
+          description: "File path relative to shared directory"
+          required: true
+        - name: "create_backup"
+          type: "boolean"
+          description: "Create backup before deletion"
+          required: false
+          default: false
+
+    - name: "copy_file"
+      description: "Copy a file to a new location"
+      engine: "local"
+      params:
+        - name: "source"
+          type: "string"
+          description: "Source file path relative to shared directory"
+          required: true
+        - name: "destination"
+          type: "string"
+          description: "Destination file path relative to shared directory"
+          required: true
+        - name: "overwrite"
+          type: "boolean"
+          description: "Overwrite destination if it exists"
+          required: false
+          default: false
+
+    - name: "move_file"
+      description: "Move a file to a new location"
+      engine: "local"
+      params:
+        - name: "source"
+          type: "string"
+          description: "Source file path relative to shared directory"
+          required: true
+        - name: "destination"
+          type: "string"
+          description: "Destination file path relative to shared directory"
+          required: true
+        - name: "overwrite"
+          type: "boolean"
+          description: "Overwrite destination if it exists"
+          required: false
+          default: false
+
+    - name: "get_file_info"
+      description: "Get detailed information about a file or directory"
+      engine: "local"
+      params:
+        - name: "path"
+          type: "string"
+          description: "File or directory path relative to shared directory"
+          required: true
+
+    - name: "search_files"
+      description: "Search for files by name pattern or content"
+      engine: "local"
+      params:
+        - name: "pattern"
+          type: "string"
+          description: "Search pattern (filename or content)"
+          required: true
+        - name: "search_type"
+          type: "string"
+          description: "Search type: filename, content, both"
+          required: false
+          default: "filename"
+        - name: "search_path"
+          type: "string"
+          description: "Directory to search in"
+          required: false
+          default: "."
+        - name: "case_sensitive"
+          type: "boolean"
+          description: "Case sensitive search"
+          required: false
+          default: false
+
+    # File processing and validation tools
+    - name: "validate_file_format"
+      description: "Validate file format and structure"
+      engine: "local"
+      params:
+        - name: "filename"
+          type: "string"
+          description: "File path relative to shared directory"
+          required: true
+        - name: "expected_format"
+          type: "string"
+          description: "Expected file format: json, csv, xml, yaml, txt"
+          required: true
+        - name: "strict_validation"
+          type: "boolean"
+          description: "Enable strict validation rules"
+          required: false
+          default: true
+
+    - name: "compress_files"
+      description: "Compress files and directories using Dagger"
+      engine: "dagger"
+      params:
+        - name: "files"
+          type: "array"
+          description: "List of files/directories to compress"
+          required: true
+        - name: "archive_name"
+          type: "string"
+          description: "Name of the output archive file"
+          required: true
+        - name: "compression_type"
+          type: "string"
+          description: "Compression type: zip, tar, tar.gz, tar.bz2"
+          required: false
+          default: "zip"
+      engineSpec:
+        image: "alpine:3.18"
+        command: ["sh", "/shared/compress_files.sh"]
+        mounts:
+          /app/shared: /shared
+        env_passthrough: []
+
+    - name: "extract_archive"
+      description: "Extract compressed archives using Dagger"
+      engine: "dagger"
+      params:
+        - name: "archive_file"
+          type: "string"
+          description: "Archive file to extract"
+          required: true
+        - name: "destination"
+          type: "string"
+          description: "Destination directory for extraction"
+          required: false
+          default: "."
+        - name: "overwrite"
+          type: "boolean"
+          description: "Overwrite existing files"
+          required: false
+          default: false
+      engineSpec:
+        image: "alpine:3.18"
+        command: ["sh", "/shared/extract_archive.sh"]
+        mounts:
+          /app/shared: /shared
+        env_passthrough: []
+
+p2p:
+  enabled: true
+  port: 9000
+  host: "0.0.0.0"
+  keystore_path: "./keys/worker-filesystem"
+  peer_discovery: true
+  mdns_service: "praxis-p2p-mcp"
+  connection_timeout: 30
+  max_peers: 50
+  protocols:
+    - "/praxis/mcp/1.0.0"
+    - "/praxis/card/1.0.0"
+    - "/praxis/tool/1.0.0"
+    - "/praxis/a2a/1.0.0"
+  security:
+    use_noise: false  # Disabled for development
+    noise_key: null
+  # Bootstrap nodes to connect to orchestrator
+  # Using container hostname resolution in Docker network
+  bootstrap_nodes:
+    - "/dns4/orchestrator/tcp/9000"
+
+# API Configuration (compatibility with PraxisConfig)
+api:
+  host: "0.0.0.0"
+  port: 8001
+  cors_origins: ["*"]
+  websocket_enabled: true
+  docs_enabled: true
+  health_check_interval: 30
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file_enabled: true
+  file_path: "logs/worker-filesystem.log"
+  file_rotation: "10 MB"
+  file_retention: "1 week"
+  json_logs: false
+
+environment: development
+debug: true
+
+http:
+  enabled: true
+  port: 8001
+  host: "0.0.0.0"
+  cors_origins:
+    - "http://orchestrator:8000"
+    - "http://localhost:3000"
+    - "http://localhost:3001"
+  max_connections: 100
+  request_timeout: 60
+  enable_swagger: true
+  worker_mode: true
+
+websocket:
+  enabled: true
+  port: 8091
+  host: "0.0.0.0"
+  path: "/ws/workflow"
+  ping_interval: 30
+  max_connections: 50
+  worker_mode: true
+
+mcp:
+  enabled: true
+  servers: []
+  limits:
+    max_concurrent_requests: 50
+    request_timeout_ms: 30000
+    max_response_size_bytes: 52428800  # 50MB
+    max_servers_per_node: 5
+    connection_pool_size: 3
+    retry_attempts: 3
+    retry_backoff_ms: 1000
+  log_level: "info"
+  discovery_enabled: true
+  discovery_endpoints:
+    - "http://mcp_filesystem:3000/discovery"
+  auto_register_tools: true
+  health_check_interval: 30
+
+execution:
+  default_engine: "local"
+  dagger:
+    enabled: true
+    session_timeout: 300
+    default_image: "alpine:3.18"
+    mount_docker_socket: true
+    resource_limits:
+      cpu: "500m"
+      memory: "512Mi"
+      disk: "2Gi"
+  enable_sandboxing: true
+  max_execution_time: 300
+  cleanup_temp_files: true
+  concurrent_executions: 10
+
+logging:
+  level: "INFO"
+  format: "json"
+  enable_console: true
+  enable_file: true
+  file_path: "/app/logs/worker-filesystem.log"
+  max_file_size: "100MB"
+  backup_count: 5
+  structured_logging: true
+  log_requests: true
+  log_p2p_traffic: false
+  correlation_id_enabled: true
+
+monitoring:
+  enabled: true
+  metrics:
+    enabled: true
+    port: 9091
+    path: "/metrics"
+  health_checks:
+    enabled: true
+    interval: 30
+    timeout: 10
+
+environment: "production"
+debug: false
