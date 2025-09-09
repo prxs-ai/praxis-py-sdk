@@ -486,7 +486,7 @@ class PraxisAgent:
         capabilities = A2ACapabilities(
             streaming=True,
             push_notifications=True,
-            state_transition=True
+            state_transition_history=True
         )
         
         # Create skills based on available tools and agent capabilities
@@ -538,12 +538,13 @@ class PraxisAgent:
         return A2AAgentCard(
             name=self.agent_config.name,
             version="1.0.0",
-            protocol_version="0.3.0",
+            protocol_version="0.2.9",
+            preferred_transport="JSONRPC",
             url=f"http://{self.config.api.host}:{self.config.api.port}",
             description=self.agent_config.description,
             skills=skills,
             capabilities=capabilities,
-            supported_transports=["http", "websocket"],
+            supported_transports=["http"],
             security_schemes={},  # Empty for now, can be enhanced later
             provider=provider
         )
@@ -634,7 +635,19 @@ class PraxisAgent:
                 }
             }
         
-        return await self.a2a_protocol.handle_request(request)
+        response = await self.a2a_protocol.handle_request(request)
+        # Ensure plain dict for P2P JSON transport
+        try:
+            return response.model_dump(by_alias=True)
+        except Exception:
+            # Fallback in case response is already a dict-like
+            if isinstance(response, dict):
+                return response
+            # Last resort: basic serialization
+            from pydantic import BaseModel
+            if isinstance(response, BaseModel):
+                return response.dict()
+            return response
     
     async def execute_dsl_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute a DSL command."""
@@ -947,7 +960,7 @@ class PraxisAgent:
         """
         try:
             # Only enforce for Dagger tools per requirement
-            if engine is not None and str(engine) != EngineType.DAGGER:
+            if engine is not None and engine != EngineType.DAGGER:
                 return
 
             import json

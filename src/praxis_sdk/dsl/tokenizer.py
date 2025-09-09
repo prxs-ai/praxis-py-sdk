@@ -7,7 +7,7 @@ import re
 from typing import List, Optional, Tuple, Iterator
 from loguru import logger
 
-from .types import Token, TokenType, DSLSyntaxError, DSL_COMMAND_PATTERNS
+from .types import Token, TokenType, DSLSyntaxError
 
 
 class DSLTokenizer:
@@ -188,14 +188,10 @@ class DSLTokenizer:
         command = fields[0].upper()
         args = fields[1:] if len(fields) > 1 else []
         
-        # Determine token type based on command
-        token_type = TokenType.COMMAND
-        
-        # Special handling for operators and values
-        if command in ['|', '&&', '||', ';']:
-            token_type = TokenType.OPERATOR
-        elif not self._is_command(command):
-            token_type = TokenType.VALUE
+        # Determine token type. Avoid hardcoded keyword/pattern checks:
+        # - Treat known operator symbols explicitly
+        # - Otherwise consider it a generic command token (LLM will decide semantics)
+        token_type = TokenType.OPERATOR if command in ['|', '&&', '||', ';'] else TokenType.COMMAND
         
         logger.debug(f"Created token: type={token_type}, command={command}, args={args}")
         
@@ -206,30 +202,8 @@ class DSLTokenizer:
         )
     
     def _is_command(self, text: str) -> bool:
-        """
-        Check if text represents a valid DSL command.
-        
-        Args:
-            text: Text to check
-            
-        Returns:
-            True if text is a valid command
-        """
-        text_lower = text.lower()
-        
-        # Check against defined patterns
-        for pattern_name in DSL_COMMAND_PATTERNS:
-            if text_lower.startswith(pattern_name.lower()):
-                return True
-        
-        # Check for common DSL keywords
-        dsl_keywords = {
-            'CALL', 'PARALLEL', 'SEQUENCE', 'WORKFLOW', 'TASK', 'AGENT',
-            'IF', 'ELSE', 'ENDIF', 'WHILE', 'FOR', 'RETURN', 'BREAK',
-            'CONTINUE', 'TRY', 'CATCH', 'FINALLY'
-        }
-        
-        return text.upper() in dsl_keywords
+        """Deprecated: no hardcoded command detection; LLM handles semantics."""
+        return True
     
     def validate_syntax(self, tokens: List[Token]) -> List[str]:
         """
@@ -241,41 +215,8 @@ class DSLTokenizer:
         Returns:
             List of validation warnings (empty if valid)
         """
-        warnings = []
-        
-        # Basic validation rules
-        if not tokens:
-            warnings.append("Empty DSL")
-            return warnings
-        
-        # Check for balanced PARALLEL/SEQUENCE blocks
-        parallel_count = 0
-        sequence_count = 0
-        
-        for i, token in enumerate(tokens):
-            if token.value == 'PARALLEL':
-                parallel_count += 1
-            elif token.value == 'SEQUENCE':
-                sequence_count += 1
-            elif token.value == 'CALL':
-                if not token.args:
-                    warnings.append(f"Token {i}: CALL command missing tool name")
-                elif len(token.args) < 1:
-                    warnings.append(f"Token {i}: CALL command has no tool specified")
-            
-            # Validate argument structure
-            if token.type == TokenType.COMMAND and token.value == 'CALL':
-                if not self._validate_call_args(token.args):
-                    warnings.append(f"Token {i}: Invalid CALL arguments: {token.args}")
-        
-        # Check for unbalanced blocks
-        if parallel_count > 0 and parallel_count % 2 != 0:
-            warnings.append("Unbalanced PARALLEL blocks")
-        
-        if sequence_count > 0 and sequence_count % 2 != 0:
-            warnings.append("Unbalanced SEQUENCE blocks")
-        
-        return warnings
+        # Minimal validation: leave semantics to LLM and higher-level validator
+        return ["Empty DSL"] if not tokens else []
     
     def _validate_call_args(self, args: List[str]) -> bool:
         """

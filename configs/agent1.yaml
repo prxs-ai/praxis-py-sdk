@@ -61,6 +61,46 @@ agent:
         mounts:
           ./shared: /shared
         env_passthrough: ["APIFY_API_TOKEN"]
+    - name: "gpt_rewriter"
+      description: "Rewrite English text in a specified tone/length using GPT-4o"
+      engine: "dagger"
+      params:
+        - name: "text"
+          type: "string"
+          description: "Input text to rewrite (English output)"
+          required: "true"
+        - name: "tone"
+          type: "string"
+          description: "Target tone, e.g., 'confident, friendly'"
+          required: "false"
+        - name: "length"
+          type: "string"
+          description: "short | medium | long"
+          required: "false"
+        - name: "audience"
+          type: "string"
+          description: "Audience description"
+          required: "false"
+        - name: "model"
+          type: "string"
+          description: "OpenAI model (default: gpt-4o)"
+          required: "false"
+      engineSpec:
+        image: "python:3.11-slim"
+        command: ["sh", "-c", "pip install --no-cache-dir openai==1.51.2 httpx==0.27.2 && python /tools/gpt_rewriter/main.py"]
+        mounts:
+          ./shared: /shared
+          ./tools: /tools
+        env_passthrough: [
+          "OPENAI_API_KEY",
+          "OPENAI_BASE_URL",
+          "OPENAI_MODEL",
+          "OPENAI_ORG_ID",
+          "OPENAI_API_VERSION",
+          "AZURE_OPENAI_API_KEY",
+          "AZURE_OPENAI_ENDPOINT",
+          "AZURE_OPENAI_API_VERSION"
+        ]
     - name: "word_counter"
       description: "Counts words, lines, and characters in text files"
       engine: "dagger"

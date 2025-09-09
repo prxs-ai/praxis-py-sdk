@@ -239,14 +239,13 @@ class A2AProvider(BaseModel):
 
 
 class A2AAgentCard(BaseModel):
-    """Complete A2A agent card according to specification."""
+    """Complete A2A agent card according to specification (v0.2.9)."""
     
-    protocol_version: str = Field(alias="protocolVersion", default="0.3.0")
+    protocol_version: str = Field(alias="protocolVersion", default="0.2.9")
     name: str
     description: str
     url: str
     preferred_transport: str = Field(alias="preferredTransport", default="JSONRPC")
-    additional_interfaces: List[str] = Field(alias="additionalInterfaces", default_factory=list)
     capabilities: A2ACapabilities = Field(default_factory=A2ACapabilities)
     skills: List[A2ASkill] = Field(default_factory=list)
     default_input_modes: List[str] = Field(alias="defaultInputModes", default_factory=lambda: ["application/json", "text/plain"])

@@ -123,6 +123,13 @@ class RequestHandlers:
         self.stats["jsonrpc_requests"] += 1
         
         try:
+            # Structured A2A HTTP log
+            try:
+                params = request.params if isinstance(request.params, dict) else {}
+                p = json.dumps(params, ensure_ascii=False)[:512]
+            except Exception:
+                p = str(request.params)[:256]
+            logger.info(f"A2A HTTP REQUEST id={request.id} method={request.method} params={p}")
             if request.method == "message/send":
                 return await self._handle_message_send(request, background_tasks)
             elif request.method == "tasks/get":
@@ -134,7 +141,9 @@ class RequestHandlers:
                     A2AErrorCode.METHOD_NOT_FOUND,
                     f"Method '{request.method}' not found"
                 )
-                return create_jsonrpc_error_response(request.id, error)
+                resp = create_jsonrpc_error_response(request.id, error)
+                logger.info(f"A2A HTTP RESPONSE id={request.id} method={request.method} status=error code={error.code}")
+                return resp
                 
         except Exception as e:
             logger.error(f"Error handling JSON-RPC request: {e}")
@@ -143,7 +152,9 @@ class RequestHandlers:
                 "Internal server error",
                 data=str(e)
             )
-            return create_jsonrpc_error_response(request.id, error)
+            resp = create_jsonrpc_error_response(request.id, error)
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method={request.method} status=error code={A2AErrorCode.INTERNAL_ERROR}")
+            return resp
     
     async def _handle_message_send(
         self, 
@@ -152,6 +163,7 @@ class RequestHandlers:
     ) -> JSONRPCResponse:
         """Handle message/send A2A method."""
         try:
+            logger.info(f"A2A HTTP REQUEST id={request.id} method=message/send")
             params = MessageSendParams(**(request.params or {}))
             message = params.message
             
@@ -189,18 +201,23 @@ class RequestHandlers:
             )
             
             self.stats["successful_requests"] += 1
-            return create_jsonrpc_response(request.id, task.dict())
+            resp = create_jsonrpc_response(request.id, task.dict())
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method=message/send status=ok task_id={task.id}")
+            return resp
             
         except Exception as e:
             error = create_rpc_error(
                 A2AErrorCode.INVALID_PARAMS,
                 f"Invalid message parameters: {e}"
             )
-            return create_jsonrpc_error_response(request.id, error)
+            resp = create_jsonrpc_error_response(request.id, error)
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method=message/send status=error code={error.code}")
+            return resp
     
     async def _handle_tasks_get(self, request: JSONRPCRequest) -> JSONRPCResponse:
         """Handle tasks/get A2A method."""
         try:
+            logger.info(f"A2A HTTP REQUEST id={request.id} method=tasks/get")
             params = TasksGetParams(**(request.params or {}))
             task_id = params.id
             
@@ -213,18 +230,23 @@ class RequestHandlers:
                 return create_jsonrpc_error_response(request.id, error)
             
             self.stats["successful_requests"] += 1
-            return create_jsonrpc_response(request.id, task.dict())
+            resp = create_jsonrpc_response(request.id, task.dict())
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method=tasks/get status=ok task_id={task_id}")
+            return resp
             
         except Exception as e:
             error = create_rpc_error(
                 A2AErrorCode.INVALID_PARAMS,
                 f"Invalid parameters: {e}"
             )
-            return create_jsonrpc_error_response(request.id, error)
+            resp = create_jsonrpc_error_response(request.id, error)
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method=tasks/get status=error code={error.code}")
+            return resp
     
     async def _handle_tasks_list(self, request: JSONRPCRequest) -> JSONRPCResponse:
         """Handle tasks/list A2A method."""
         try:
+            logger.info(f"A2A HTTP REQUEST id={request.id} method=tasks/list")
             params = TasksListParams(**(request.params or {}))
             
             filtered_tasks = list(self.tasks.values())
@@ -245,14 +267,18 @@ class RequestHandlers:
             }
             
             self.stats["successful_requests"] += 1
-            return create_jsonrpc_response(request.id, result)
+            resp = create_jsonrpc_response(request.id, result)
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method=tasks/list status=ok count={len(result['tasks'])}")
+            return resp
             
         except Exception as e:
             error = create_rpc_error(
                 A2AErrorCode.INVALID_PARAMS,
                 f"Invalid parameters: {e}"
             )
-            return create_jsonrpc_error_response(request.id, error)
+            resp = create_jsonrpc_error_response(request.id, error)
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method=tasks/list status=error code={error.code}")
+            return resp
     
     async def _handle_legacy_dsl_request(
         self, 

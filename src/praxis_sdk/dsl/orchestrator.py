@@ -15,7 +15,6 @@ from pydantic import BaseModel
 
 from ..bus import EventBus, EventType
 from ..config import PraxisConfig
-from .parser import AdvancedDSLParser, AgentInterface
 from .planner import TaskPlanner, NetworkContext
 from .types import ExecutionContext, ExecutionResult
 
@@ -49,15 +48,10 @@ class DSLOrchestrator:
             base_url=config.llm.base_url
         )
         
-        # Advanced DSL Parser with new engine
-        agent_interface = AgentInterface(agent)
-        self.advanced_parser = AdvancedDSLParser(agent_interface)
-        
-        # Task Planner for natural language processing
+        # Task Planner for natural language processing (kept for planning context only)
         self.task_planner = TaskPlanner(self.llm_client, config.llm.model)
-        self.advanced_parser.set_planner(self.task_planner)
         
-        # REMOVED: No more hardcoded patterns - everything goes through LLM
+        # No AST/DSL parsing path: all commands go through LLM orchestration and tool-calling
         
         self._running = False
         

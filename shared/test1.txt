@@ -1,3 +1,0 @@
-This is the first test file.
-It contains some English text.
-Let's see how the tools work!
