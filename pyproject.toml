@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "praxis-python-sdk"
+name = "praxis-py-sdk"
 version = "0.1.0"
 description = "Python implementation of Praxis SDK with P2P agent communication"
 authors = ["Praxis Team <team@praxis.ai>"]
