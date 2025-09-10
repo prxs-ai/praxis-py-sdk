@@ -84,6 +84,7 @@ class SimplifiedP2PService:
         self.peer_tools: Dict[str, List[Dict[str, Any]]] = {}
         self.persistent_streams: Dict[str, INetStream] = {}
         self.connection_states: Dict[str, str] = {}
+        self._pause_keepalive: Dict[str, bool] = {}
         
         # Initialize persistent keypair using keystore
         self.keypair: "KeyPair" = self._load_or_create_keypair()
@@ -462,12 +463,23 @@ class SimplifiedP2PService:
         
         try:
             while peer_id in self.persistent_streams and self.running:
+                if self._pause_keepalive.get(peer_id):
+                    await trio.sleep(0.1)
+                    continue
                 # Send periodic heartbeat
                 heartbeat_message = {
                     "type": "heartbeat",
                     "timestamp": trio.current_time()
                 }
-                await stream.write(json.dumps(heartbeat_message).encode("utf-8"))
+                try:
+                    await stream.write(json.dumps(heartbeat_message).encode("utf-8"))
+                except Exception as e:
+                    msg = str(e).lower()
+                    if "closed" in msg and "write" in msg:
+                        logger.info(f"Heartbeat write failed; stream closed by peer {peer_id}")
+                    else:
+                        logger.error(f"Heartbeat write error with {peer_id}: {e}")
+                    break
                 
                 # Wait for response or timeout
                 with trio.move_on_after(30) as cancel_scope:  # 30 second timeout
@@ -496,6 +508,8 @@ class SimplifiedP2PService:
     async def _handle_persistent_tool_request(self, stream: INetStream, request: Dict[str, Any], peer_id: str):
         """Handle tool request via persistent stream."""
         try:
+            # Avoid concurrent writes from keepalive
+            self._pause_keepalive[peer_id] = True
             payload = request.get("payload", {})
             tool_name = payload.get("tool")
             arguments = payload.get("arguments", {})
@@ -530,6 +544,9 @@ class SimplifiedP2PService:
                 }
             }
             await stream.write(json.dumps(error_response).encode("utf-8"))
+        finally:
+            # Resume keepalive
+            self._pause_keepalive[peer_id] = False
 
     async def _exchange_cards_initiator(self, stream: INetStream):
         """Initiator side of card exchange: WRITE then read."""
@@ -642,9 +659,11 @@ class SimplifiedP2PService:
             # Mark as ready
             self.connection_states[peer_id_str] = ConnectionState.READY
             
-            # Start background task to keep stream alive
-            async with trio.open_nursery() as nursery:
-                nursery.start_soon(self._keep_stream_alive_initiator, stream, peer_id_str)
+            # Start background task to keep stream alive (run trio task via asyncio bridge)
+            import asyncio
+            asyncio.create_task(
+                trio_asyncio.trio_as_aio(self._keep_stream_alive_initiator)(stream, peer_id_str)
+            )
             
             return True
             
@@ -777,6 +796,9 @@ class SimplifiedP2PService:
         
         try:
             while peer_id in self.persistent_streams and self.running:
+                if self._pause_keepalive.get(peer_id):
+                    await trio.sleep(0.1)
+                    continue
                 # Wait for heartbeat from responder
                 with trio.move_on_after(60) as cancel_scope:  # 60 second timeout
                     data = await stream.read(MAX_READ_LEN)
@@ -786,15 +808,23 @@ class SimplifiedP2PService:
                         if msg_type == "heartbeat":
                             # Respond to heartbeat
                             response = {"type": "heartbeat_ack"}
-                            await stream.write(json.dumps(response).encode("utf-8"))
+                            try:
+                                await stream.write(json.dumps(response).encode("utf-8"))
+                            except Exception as e:
+                                msg = str(e).lower()
+                                if "closed" in msg and "write" in msg:
+                                    logger.info(f"Heartbeat ack write failed; stream closed by peer {peer_id}")
+                                else:
+                                    logger.error(f"Heartbeat ack write error with {peer_id}: {e}")
+                                break
                         elif msg_type == "tool_request":
                             # Support tool invocation initiated by responder over persistent stream
                             await self._handle_persistent_tool_request(stream, message, peer_id)
                 
                 if cancel_scope.cancelled_caught:
-                    logger.debug(f"Heartbeat timeout with {peer_id}, checking connection...")
-                    # Connection might be lost
-                    break
+                    logger.debug(f"Heartbeat timeout with {peer_id}, continuing to wait...")
+                    # Do not close stream aggressively on a single timeout; continue waiting
+                    continue
                 
         except Exception as e:
             logger.error(f"Error in initiator stream with {peer_id}: {e}")
@@ -835,7 +865,8 @@ class SimplifiedP2PService:
         
         # Initiate persistent exchange after connection
         try:
-            success = await self._initiate_persistent_exchange(peer_info.peer_id)
+            # Run trio coroutine via trio-asyncio bridge to avoid cross-loop errors
+            success = await trio_asyncio.trio_as_aio(self._initiate_persistent_exchange)(peer_info.peer_id)
             if not success:
                 logger.warning(f"Failed to establish persistent exchange with {peer_info.peer_id}")
         except Exception as e:
@@ -850,30 +881,75 @@ class SimplifiedP2PService:
         """Send A2A request to peer."""
         if not self.running:
             raise RuntimeError("P2P service is not running")
-        
-        peer_id = PeerID.from_base58(peer_id_str)
-        
-        stream = await self.host.new_stream(peer_id, [A2A_PROTOCOL])
-        try:
-            # Send request
-            request_bytes = json.dumps(request).encode('utf-8')
-            await stream.write(request_bytes)
-            
-            # Read response
-            response_bytes = await stream.read(MAX_READ_LEN)
-            return json.loads(response_bytes.decode('utf-8'))
-            
-        finally:
-            await stream.close()
+
+        async def _trio_invoke() -> Dict[str, Any]:
+            peer_id = PeerID.from_base58(peer_id_str)
+            stream = await self.host.new_stream(peer_id, [A2A_PROTOCOL])
+            try:
+                # Send request
+                request_bytes = json.dumps(request).encode('utf-8')
+                await stream.write(request_bytes)
+                
+                # Read response
+                response_bytes = await stream.read(MAX_READ_LEN)
+                return json.loads(response_bytes.decode('utf-8'))
+            finally:
+                await stream.close()
+
+        # Bridge trio call from asyncio context
+        return await trio_asyncio.trio_as_aio(_trio_invoke)()
 
     async def invoke_remote_tool(self, peer_id_str: str, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Invoke tool on remote peer from asyncio context via trio bridge using one-time TOOL protocol stream."""
         if not self.running:
             raise RuntimeError("P2P service is not running")
 
+        async def _ensure_connected_trio() -> bool:
+            """Ensure we have a live connection and (re)established exchange with peer."""
+            try:
+                # Fast path
+                if self.connection_states.get(peer_id_str) == ConnectionState.READY:
+                    return True
+
+                # Try reconnect using known address
+                addr = None
+                if peer_id_str in self.connected_peers:
+                    addr = self.connected_peers[peer_id_str].get("addr")
+
+                # If not known, try to find bootstrap entry that matches peer id
+                if not addr:
+                    for baddr in (self.config.bootstrap_nodes or []):
+                        if peer_id_str in baddr:
+                            addr = baddr
+                            break
+
+                if addr:
+                    await self.connect_to_peer(addr)
+                    return self.connection_states.get(peer_id_str) in (ConnectionState.READY, ConnectionState.CONNECTED)
+                return False
+            except Exception as e:
+                logger.warning(f"Ensure-connected failed for {peer_id_str}: {e}")
+                return False
+
+        # If we have a persistent exchange stream, use it to avoid address issues
+        if peer_id_str in self.persistent_streams and self.connection_states.get(peer_id_str) == ConnectionState.READY:
+            try:
+                # Run trio coroutine from asyncio via trio-asyncio bridge to avoid scheduler traps
+                return await trio_asyncio.trio_as_aio(self._invoke_tool_persistent)(peer_id_str, tool_name, arguments)
+            except Exception as e:
+                logger.warning(f"Persistent tool call failed with {peer_id_str}: {e}. Falling back to on-demand stream.")
+
         async def _trio_invoke() -> Dict[str, Any]:
             peer_id = PeerID.from_base58(peer_id_str)
-            stream = await self.host.new_stream(peer_id, [TOOL_PROTOCOL])
+            # Try to ensure connection first
+            if not await _ensure_connected_trio():
+                logger.debug(f"Could not ensure connection to {peer_id_str} before opening TOOL stream")
+            try:
+                stream = await self.host.new_stream(peer_id, [TOOL_PROTOCOL])
+            except Exception:
+                # Reconnect and retry once
+                await _ensure_connected_trio()
+                stream = await self.host.new_stream(peer_id, [TOOL_PROTOCOL])
             try:
                 request = {"tool": tool_name, "arguments": arguments}
                 await stream.write(json.dumps(request).encode('utf-8'))
@@ -891,6 +967,8 @@ class SimplifiedP2PService:
         request_id = f"tool_req_{trio.current_time()}_{tool_name}"
         
         try:
+            # Pause keepalive for this peer to avoid concurrent access
+            self._pause_keepalive[peer_id_str] = True
             # Send tool request via persistent stream
             request_message = {
                 "type": "tool_request",
@@ -903,7 +981,7 @@ class SimplifiedP2PService:
             await stream.write(json.dumps(request_message).encode('utf-8'))
             
             # Wait for response with timeout
-            with trio.move_on_after(60) as cancel_scope:  # 60 second timeout
+            with trio.move_on_after(180) as cancel_scope:  # extend timeout to accommodate long-running tool
                 while True:
                     data = await stream.read(MAX_READ_LEN)
                     if data:
@@ -916,6 +994,9 @@ class SimplifiedP2PService:
                                 return payload.get("result", {})
                             else:
                                 raise Exception(payload.get("error", "Unknown error"))
+                        # Ignore heartbeat and other message types
+                        else:
+                            continue
             
             if cancel_scope.cancelled_caught:
                 raise Exception("Tool invocation timeout")
@@ -923,6 +1004,9 @@ class SimplifiedP2PService:
         except Exception as e:
             logger.error(f"Error in persistent tool call to {peer_id_str}: {e}")
             raise
+        finally:
+            # Resume keepalive
+            self._pause_keepalive[peer_id_str] = False
 
     async def _connect_bootstrap_nodes(self):
         """Connect to bootstrap nodes."""

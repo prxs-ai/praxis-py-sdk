@@ -1,0 +1,52 @@
+# Simple Dockerfile for development
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    libgmp-dev \
+    libssl-dev \
+    libffi-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory and non-root user
+RUN groupadd --gid 1000 praxis && \
+    useradd --uid 1000 --gid praxis --shell /bin/bash --create-home praxis
+
+WORKDIR /app
+
+# Install Poetry
+RUN pip install poetry==1.7.1
+
+# Configure Poetry
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VENV_IN_PROJECT=0 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache \
+    POETRY_INSTALLER_PARALLEL=true
+
+# Copy dependency files and source code
+COPY pyproject.toml ./
+COPY src/ ./src/
+COPY configs/ ./configs/
+COPY tests/ ./tests/
+COPY shared/ ./shared/
+
+# Install dependencies directly without virtual environment
+RUN poetry config virtualenvs.create false && \
+    poetry install --with dev --no-interaction --no-ansi && \
+    rm -rf $POETRY_CACHE_DIR
+
+# Create required directories
+RUN mkdir -p logs data keys && chown -R praxis:praxis /app
+
+USER praxis
+
+# Default command
+CMD ["python", "-m", "praxis_sdk.agent"]
