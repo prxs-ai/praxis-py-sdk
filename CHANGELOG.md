@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.0...praxis-py-sdk-v0.2.0) (2025-09-10)
+
+
+### Documentation
+
+* changelog 020 ([#9](https://github.com/prxs-ai/praxis-py-sdk/issues/9)) ([c254309](https://github.com/prxs-ai/praxis-py-sdk/commit/c2543099aec9966b15b2eba920c7be7baeb078d1))
+
 ## [0.2.0](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.1.0...praxis-py-sdk-v0.2.0) (2025-09-10)
 
 ### Major New Features
