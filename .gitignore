@@ -1,0 +1,25 @@
+# Environment and secrets
+.env
+keys/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Runtime artifacts
+logs/
+shared/*
+!shared/.gitkeep
+data/*
+!data/.gitkeep
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Node/other
+node_modules/

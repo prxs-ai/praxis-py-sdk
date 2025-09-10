@@ -1,0 +1,29 @@
+# Docker Compose override for development
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  orchestrator:
+    volumes:
+      - ./src:/app/src:ro  # Mount source code for live updates
+      - ./configs:/app/configs:ro
+      - ./shared:/shared:rw
+      - ./logs:/app/logs:rw
+      - ./keys:/app/keys:rw
+      - ./data:/app/data:rw  # Add data directory
+    environment:
+      - PRAXIS_ENV=development
+      - PRAXIS_DEBUG=true
+      - PRAXIS_LOG_LEVEL=DEBUG
+
+  worker-filesystem:
+    volumes:
+      - ./src:/app/src:ro  # Mount source code for live updates
+      - ./configs:/app/configs:ro
+      - ./shared:/shared:rw
+      - ./logs:/app/logs:rw
+      - ./keys:/app/keys:rw
+      - ./data:/app/data:rw  # Add data directory
+    environment:
+      - PRAXIS_ENV=development
+      - PRAXIS_DEBUG=true
+      - PRAXIS_LOG_LEVEL=DEBUG
