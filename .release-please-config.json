@@ -3,7 +3,9 @@
   "packages": {
     ".": {
       "release-type": "python",
+      "package-name": "praxis-py-sdk",
       "changelog-path": "CHANGELOG.md",
+      "pull-request-header": "🚀 Release PR",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "release-as": "0.2.0",
