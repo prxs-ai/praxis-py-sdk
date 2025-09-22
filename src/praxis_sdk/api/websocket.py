@@ -3,6 +3,12 @@ WebSocket Manager for Praxis Python SDK.
 
 Provides comprehensive WebSocket connection management, event streaming,
 and real-time communication capabilities with trio_asyncio integration.
+
+Go Backend Compatibility:
+- Simplified message format: {type, payload} (core fields)
+- Optional fields (id, timestamp, correlation_id) for backward compatibility
+- Go-compatible event types: DSL_COMMAND, EXECUTE_WORKFLOW, CHAT_MESSAGE
+- Server event types: dslProgress, dslResult, workflowStart, nodeStatusUpdate, etc.
 """
 
 import json
@@ -77,12 +83,19 @@ class WebSocketConnection:
 
 
 class WebSocketMessage(BaseModel):
-    """WebSocket message structure."""
+    """
+    WebSocket message structure - Go-compatible format.
+    
+    Simplified to {type, payload} format for compatibility with Go backend.
+    Optional fields (id, timestamp, correlation_id) maintained for backward compatibility.
+    """
     
     type: str
     payload: Dict[str, Any] = Field(default_factory=dict)
-    id: Optional[str] = Field(default_factory=lambda: str(uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Optional fields for backward compatibility
+    id: Optional[str] = None
+    timestamp: Optional[datetime] = None
     correlation_id: Optional[str] = None
 
 
@@ -199,6 +212,11 @@ class WebSocketManager:
                     EventType.WORKFLOW_STARTED,
                     EventType.WORKFLOW_PROGRESS,
                     EventType.WORKFLOW_COMPLETED,
+                    EventType.NODE_STATUS_UPDATE,
+                    EventType.LOG_ENTRY,
+                    EventType.LOG_STREAM,
+                    EventType.TOOL_EXECUTED,
+                    EventType.TOOL_FAILED,
                     EventType.P2P_TOOL_RESPONSE
                 }
             )
@@ -239,6 +257,13 @@ class WebSocketManager:
                 
                 try:
                     message_data = json.loads(data)
+                    
+                    # Ensure backward compatibility: handle both simplified and full formats
+                    if "id" not in message_data and "timestamp" not in message_data:
+                        # New simplified format from Go backend - add defaults for backward compatibility
+                        message_data.setdefault("id", str(uuid4()))
+                        message_data.setdefault("timestamp", datetime.utcnow().isoformat())
+                    
                     message = WebSocketMessage(**message_data)
                     
                     # Handle message
@@ -279,11 +304,11 @@ class WebSocketManager:
     def _transform_event_for_frontend(self, event: Event) -> Optional[WebSocketMessage]:
         """Transform backend events to frontend-compatible WebSocket messages."""
         try:
-            # Map backend event types to frontend message types (exact match with websocket-client.ts)
+            # Map backend event types to frontend message types (Go parity)
             frontend_type_map = {
                 EventType.DSL_COMMAND_PROGRESS: "dslProgress",
-                EventType.DSL_COMMAND_RESULT: "dslResult",
-                EventType.TASK_STARTED: "workflowStart", 
+                EventType.DSL_COMMAND_COMPLETED: "dslResult",
+                EventType.TASK_STARTED: "workflowStart",
                 EventType.TASK_PROGRESS: "workflowProgress",
                 EventType.TASK_COMPLETED: "workflowComplete",
                 EventType.TASK_FAILED: "workflowError",
@@ -291,44 +316,39 @@ class WebSocketManager:
                 EventType.WORKFLOW_STARTED: "workflowStart",
                 EventType.WORKFLOW_PROGRESS: "workflowProgress",
                 EventType.WORKFLOW_COMPLETED: "workflowComplete",
-                EventType.WORKFLOW_FAILED: "workflowError",
-                EventType.CHAT_MESSAGE_RECEIVED: "chatMessage",
-                EventType.TOOL_EXECUTION_STARTED: "toolInvocation",
-                EventType.TOOL_EXECUTION_COMPLETED: "tool_result",
-                EventType.P2P_TOOL_RESPONSE: "tool_result"
+                EventType.LOG_ENTRY: "workflowLog",
+                EventType.LOG_STREAM: "workflowLog",
+                EventType.TOOL_EXECUTED: "tool_result",
+                EventType.TOOL_FAILED: "tool_result",
+                EventType.P2P_TOOL_RESPONSE: "tool_result",
             }
-            
-            frontend_type = frontend_type_map.get(event.type)
-            if not frontend_type:
-                # For unknown events, use generic event stream
-                frontend_type = "eventStream"
-            
+
+            frontend_type = frontend_type_map.get(event.type, "eventStream")
+
             # Handle special transformations for specific event types
-            if event.type in [EventType.DSL_COMMAND_PROGRESS]:
+            if event.type == EventType.DSL_COMMAND_PROGRESS:
                 return self._create_dsl_progress_message(event, frontend_type)
-            elif event.type in [EventType.DSL_COMMAND_RESULT]:
+            elif event.type == EventType.DSL_COMMAND_COMPLETED:
                 return self._create_dsl_result_message(event, frontend_type)
-            elif event.type in [EventType.TASK_STARTED, EventType.WORKFLOW_STARTED]:
+            elif event.type in (EventType.TASK_STARTED, EventType.WORKFLOW_STARTED):
                 return self._create_workflow_start_message(event, frontend_type)
-            elif event.type in [EventType.TASK_PROGRESS, EventType.WORKFLOW_PROGRESS]:
+            elif event.type in (EventType.TASK_PROGRESS, EventType.WORKFLOW_PROGRESS):
                 return self._create_workflow_progress_message(event, frontend_type)
-            elif event.type in [EventType.TASK_COMPLETED, EventType.WORKFLOW_COMPLETED]:
+            elif event.type in (EventType.TASK_COMPLETED, EventType.WORKFLOW_COMPLETED):
                 return self._create_workflow_complete_message(event, frontend_type)
-            elif event.type in [EventType.TASK_FAILED, EventType.WORKFLOW_FAILED]:
+            elif event.type in (EventType.TASK_FAILED,):
                 return self._create_workflow_error_message(event, frontend_type)
-            elif event.type in [EventType.NODE_STATUS_UPDATE]:
+            elif event.type == EventType.NODE_STATUS_UPDATE:
                 return self._create_node_status_update_message(event, frontend_type)
-            elif event.type in [EventType.CHAT_MESSAGE_RECEIVED]:
-                return self._create_chat_message(event, frontend_type)
-            elif event.type in [EventType.TOOL_EXECUTION_COMPLETED, EventType.P2P_TOOL_RESPONSE]:
+            elif event.type in (EventType.LOG_ENTRY, EventType.LOG_STREAM):
+                return self._create_log_message(event, frontend_type)
+            elif event.type in (EventType.TOOL_EXECUTED, EventType.TOOL_FAILED, EventType.P2P_TOOL_RESPONSE):
                 return self._create_tool_result_message(event, frontend_type)
             else:
                 # Generic event transformation
                 return WebSocketMessage(
                     type=frontend_type,
-                    payload=event.data or {},
-                    timestamp=event.metadata.timestamp,
-                    correlation_id=event.metadata.correlation_id
+                    payload=event.data or {}
                 )
                 
         except Exception as e:
@@ -344,9 +364,7 @@ class WebSocketManager:
                 "stage": data.get("stage", "analyzing"),
                 "message": data.get("message", "Processing DSL command..."),
                 "details": data
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
     
     def _create_dsl_result_message(self, event: Event, message_type: str) -> WebSocketMessage:
@@ -361,9 +379,7 @@ class WebSocketManager:
                 "requiredMCPTools": data.get("required_tools", []),
                 "workflowSuggestion": data.get("workflow", {}),
                 "processTime": data.get("process_time", 0)
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
     
     def _create_workflow_start_message(self, event: Event, message_type: str) -> WebSocketMessage:
@@ -378,9 +394,7 @@ class WebSocketManager:
                 "edges": data.get("edges", []),
                 "metadata": data.get("metadata", {}),
                 "startTime": event.metadata.timestamp.isoformat() + "Z"
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
     
     def _create_workflow_progress_message(self, event: Event, message_type: str) -> WebSocketMessage:
@@ -396,9 +410,7 @@ class WebSocketManager:
                 "progress": data.get("progress", 0),
                 "message": data.get("message", "Processing..."),
                 "timestamp": event.metadata.timestamp.isoformat() + "Z"
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
     
     def _create_workflow_complete_message(self, event: Event, message_type: str) -> WebSocketMessage:
@@ -413,9 +425,7 @@ class WebSocketManager:
                 "results": data.get("results", ""),
                 "duration": data.get("duration", 0),
                 "timestamp": event.metadata.timestamp.isoformat() + "Z"
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
     
     def _create_workflow_error_message(self, event: Event, message_type: str) -> WebSocketMessage:
@@ -429,9 +439,7 @@ class WebSocketManager:
                 "nodeId": data.get("node_id"),
                 "error": data.get("error", "Workflow execution failed"),
                 "timestamp": event.metadata.timestamp.isoformat() + "Z"
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
     
     def _create_node_status_update_message(self, event: Event, message_type: str) -> WebSocketMessage:
@@ -444,9 +452,7 @@ class WebSocketManager:
                 "nodeId": data.get("node_id", ""),
                 "status": data.get("status", "idle"),
                 "timestamp": event.metadata.timestamp.isoformat() + "Z"
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
     
     def _create_chat_message(self, event: Event, message_type: str) -> WebSocketMessage:
@@ -459,11 +465,23 @@ class WebSocketManager:
                 "sender": data.get("sender", "assistant"),
                 "type": data.get("message_type", "text"),
                 "metadata": data.get("metadata")
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
-    
+
+    def _create_log_message(self, event: Event, message_type: str) -> WebSocketMessage:
+        """Create workflow log message for frontend."""
+        data = event.data or {}
+        return WebSocketMessage(
+            type=message_type,
+            payload={
+                "workflowId": data.get("workflowId") or data.get("workflow_id"),
+                "level": data.get("level", "info"),
+                "message": data.get("message", ""),
+                "source": data.get("source"),
+                "nodeId": data.get("nodeId") or data.get("node_id"),
+            }
+        )
+
     def _create_tool_result_message(self, event: Event, message_type: str) -> WebSocketMessage:
         """Create tool result message for frontend."""
         data = event.data or {}
@@ -475,9 +493,7 @@ class WebSocketManager:
                 "result": data.get("result"),
                 "error": data.get("error"),
                 "metadata": data.get("metadata")
-            },
-            timestamp=event.metadata.timestamp,
-            correlation_id=event.metadata.correlation_id
+            }
         )
     
     async def send_message(self, connection_id: str, message: WebSocketMessage):
@@ -507,17 +523,23 @@ class WebSocketManager:
             ))()
     
     async def _send_message_direct(self, connection: WebSocketConnection, message: WebSocketMessage) -> bool:
-        """Send message directly to connection in frontend-compatible format."""
+        """Send message directly to connection in Go-compatible simplified format."""
         try:
-            # Transform to frontend format: {type: string, payload: any, timestamp?: string, id?: string}
+            # Go-compatible simplified format: {type: string, payload: any}
             frontend_message = {
                 "type": message.type,
-                "payload": message.payload,
-                "timestamp": message.timestamp.isoformat() + "Z" if hasattr(message.timestamp, 'isoformat') else message.timestamp,
-                "id": message.id
+                "payload": message.payload
             }
             
-            # Add correlation_id if present
+            # Add optional fields only if present (backward compatibility)
+            if message.id:
+                frontend_message["id"] = message.id
+            if message.timestamp:
+                frontend_message["timestamp"] = (
+                    message.timestamp.isoformat() + "Z" 
+                    if hasattr(message.timestamp, 'isoformat') 
+                    else message.timestamp
+                )
             if message.correlation_id:
                 frontend_message["correlation_id"] = message.correlation_id
             
@@ -564,22 +586,30 @@ class WebSocketManager:
                 "websocket_source": True
             },
             source="websocket_manager",
-            correlation_id=message.id
+            correlation_id=message.correlation_id or message.id
         )
     
     async def _handle_execute_workflow(self, connection_id: str, message: WebSocketMessage):
-        """Handle workflow execution message."""
-        workflow_id = message.payload.get("workflowId", str(uuid4()))
-        nodes = message.payload.get("nodes", [])
-        edges = message.payload.get("edges", [])
-        
+        """Handle workflow execution message (Go-compatible contract)."""
+        payload = message.payload or {}
+        workflow = payload.get("workflow")
+
+        workflow_id = payload.get("workflowId") or str(uuid4())
+        nodes = payload.get("nodes", [])
+        edges = payload.get("edges", [])
+
+        if isinstance(workflow, dict):
+            workflow_id = workflow.get("id") or workflow_id
+            nodes = workflow.get("nodes", nodes)
+            edges = workflow.get("edges", edges)
+
         await event_bus.publish_data(
             EventType.WORKFLOW_STARTED,
             {
                 "workflow_id": workflow_id,
                 "nodes": nodes,
                 "edges": edges,
-                "connection_id": connection_id
+                "connection_id": connection_id,
             },
             source="websocket_manager",
             correlation_id=workflow_id
@@ -589,9 +619,17 @@ class WebSocketManager:
         """Handle chat message."""
         content = message.payload.get("content", "")
         sender = message.payload.get("sender", "user")
-        
-        # Treat user chat messages as DSL commands
+
         if sender == "user":
+            if content:
+                await self.send_message(connection_id, WebSocketMessage(
+                    type=MessageType.CHAT_RESPONSE.value,
+                    payload={
+                        "content": f"Processing: {content}",
+                        "sender": "assistant",
+                    },
+                ))
+
             await self._handle_dsl_command(connection_id, WebSocketMessage(
                 type=MessageType.DSL_COMMAND.value,
                 payload={"command": content},

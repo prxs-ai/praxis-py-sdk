@@ -15,13 +15,17 @@ from pydantic import BaseModel, Field, field_validator, ValidationInfo
 
 
 class TaskState(str, Enum):
-    """Task execution states according to A2A specification."""
-    
+    """Task execution states according to A2A specification v0.3.0."""
+
     SUBMITTED = "submitted"
     WORKING = "working"
     COMPLETED = "completed"
     FAILED = "failed"
     INPUT_REQUIRED = "input-required"
+    CANCELED = "canceled"
+    REJECTED = "rejected"
+    AUTH_REQUIRED = "auth-required"
+    UNKNOWN = "unknown"
 
 
 class MessageRole(str, Enum):
@@ -178,6 +182,7 @@ class JSONRPCResponse(BaseModel):
 # A2A JSON-RPC Error Codes (matching Go SDK)
 class A2AErrorCode:
     TASK_NOT_FOUND = -32001
+    TASK_NOT_CANCELABLE = -32002
     INVALID_PARAMS = -32602
     METHOD_NOT_FOUND = -32601
     INTERNAL_ERROR = -32603
@@ -206,6 +211,12 @@ class TasksListParams(BaseModel):
     offset: Optional[int] = Field(default=0, ge=0)
 
 
+class TasksCancelParams(BaseModel):
+    """Parameters for tasks/cancel method."""
+
+    id: str
+
+
 # A2A Agent Card Models (Full Specification Compliance)
 
 class A2ASkill(BaseModel):
@@ -219,11 +230,12 @@ class A2ASkill(BaseModel):
 
 class A2ACapabilities(BaseModel):
     """Agent capabilities."""
-    
+
     streaming: Optional[bool] = None
     push_notifications: Optional[bool] = Field(None, alias="pushNotifications")
     state_transition_history: Optional[bool] = Field(None, alias="stateTransitionHistory")
-    
+    extensions: Optional[List[Dict[str, Any]]] = None
+
     model_config = {
         "populate_by_name": True
     }
@@ -238,26 +250,55 @@ class A2AProvider(BaseModel):
     url: Optional[str] = None
 
 
+class TransportProtocol(str, Enum):
+    """Supported transport protocols for A2A interfaces."""
+
+    JSONRPC = "JSONRPC"
+    GRPC = "GRPC"
+    HTTP_JSON = "HTTP+JSON"
+
+
+class AgentInterface(BaseModel):
+    """Mapping between a transport protocol and concrete URL."""
+
+    url: str
+    transport: Union[TransportProtocol, str]
+
+
+class ERC8004Registration(BaseModel):
+    """ERC-8004 registration record exposed in agent card."""
+
+    agent_id: Optional[int] = Field(None, alias="agentId")
+    agent_address: Optional[str] = Field(None, alias="agentAddress")
+    signature: Optional[str]
+    registry: Optional[str] = Field(None, alias="registry")
+
+
 class A2AAgentCard(BaseModel):
-    """Complete A2A agent card according to specification (v0.2.9)."""
-    
-    protocol_version: str = Field(alias="protocolVersion", default="0.2.9")
+    """Complete A2A agent card according to specification (v0.3.0)."""
+
+    protocol_version: str = Field(alias="protocolVersion", default="0.3.0")
     name: str
     description: str
     url: str
-    preferred_transport: str = Field(alias="preferredTransport", default="JSONRPC")
+    preferred_transport: Union[TransportProtocol, str] = Field(alias="preferredTransport", default=TransportProtocol.JSONRPC)
     capabilities: A2ACapabilities = Field(default_factory=A2ACapabilities)
     skills: List[A2ASkill] = Field(default_factory=list)
     default_input_modes: List[str] = Field(alias="defaultInputModes", default_factory=lambda: ["application/json", "text/plain"])
     default_output_modes: List[str] = Field(alias="defaultOutputModes", default_factory=lambda: ["application/json", "text/plain"])
     provider: Optional[A2AProvider] = None
     security_schemes: Optional[Dict[str, Any]] = Field(None, alias="securitySchemes")
+    security: Optional[List[Dict[str, List[str]]]] = None
+    additional_interfaces: Optional[List[AgentInterface]] = Field(None, alias="additionalInterfaces")
     metadata: Optional[Dict[str, Any]] = None
-    
+
     # Compatibility fields
     version: Optional[str] = None
     supported_transports: Optional[List[str]] = Field(None, alias="supportedTransports")
-    
+    supports_authenticated_extended_card: Optional[bool] = Field(None, alias="supportsAuthenticatedExtendedCard")
+    registrations: Optional[List[ERC8004Registration]] = None
+    signatures: Optional[List[Dict[str, Any]]] = None
+
     model_config = {
         "populate_by_name": True
     }
@@ -479,15 +520,20 @@ def create_dynamic_agent_card(
     if not provider:
         provider = A2AProvider(
             name="Praxis",
-            url="https://praxis.ai",
+            url="https://prxs.ai",
             description="Advanced AI agent framework with P2P networking and MCP integration"
         )
     
-    return A2AAgentCard(
+    card = A2AAgentCard(
         name=name,
         description=description,
         url=url,
         skills=list(unique_skills.values()),
         capabilities=create_default_capabilities(),
-        provider=provider
+        provider=provider,
+        supported_transports=[TransportProtocol.JSONRPC.value],
+        additional_interfaces=[AgentInterface(url=url, transport=TransportProtocol.JSONRPC)],
+        supports_authenticated_extended_card=True
     )
+
+    return card

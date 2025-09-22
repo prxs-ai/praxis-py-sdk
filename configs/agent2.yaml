@@ -11,6 +11,8 @@ agent:
     - "http://mcp-filesystem:3002"
   
   external_mcp_endpoints:
+    - name: "context7"
+      url: "http://host.docker.internal:3040"
     - "http://host.docker.internal:3002/mcp"
     - "http://mcp-filesystem:3002/mcp"
   
@@ -91,6 +93,7 @@ p2p:
     - "/praxis/card/1.0.0"
     - "/praxis/tool/1.0.0"
     - "/praxis/a2a/1.0.0"
+    - "/praxis/exchange/1.0.0"
   discovery:
     bootstrap_timeout: "30s"
     discovery_interval: "10s"

@@ -6,6 +6,7 @@ Based on p2p.md instructions and working example from ai-registry.
 import json
 import os
 import threading
+from datetime import datetime
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import trio
@@ -13,6 +14,7 @@ import trio_asyncio
 from libp2p import new_host
 from libp2p.crypto.ed25519 import create_new_key_pair
 from libp2p.peer.id import ID as PeerID
+from libp2p.peer.peerinfo import info_from_p2p_addr
 from libp2p.security.noise.transport import Transport as NoiseTransport, PROTOCOL_ID as NOISE_PROTOCOL_ID
 from libp2p.security.insecure.transport import InsecureTransport, PLAINTEXT_PROTOCOL_ID
 from libp2p.custom_types import TProtocol
@@ -55,6 +57,7 @@ class P2PService:
         # Peer management
         self.connected_peers: Dict[str, Dict[str, Any]] = {}
         self.peer_cards: Dict[str, Dict[str, Any]] = {}
+        self.peer_addresses: Dict[str, str] = {}
         
         # Initialize keypair
         self.keypair: KeyPair = self._load_or_create_keypair()
@@ -477,9 +480,12 @@ class P2PService:
                         continue
 
                     logger.success(f"Connected to bootstrap node: {peer_info.peer_id}")
+                    timestamp = datetime.utcnow().isoformat() + "Z"
                     self.connected_peers[str(peer_info.peer_id)] = {
                         "addr": addr_str,
                         "connected": True,
+                        "found_at": timestamp,
+                        "last_seen": timestamp,
                     }
 
                     # Exchange cards after successful connection (initiator flow)
@@ -546,7 +552,10 @@ class P2PService:
             # Exchange cards after connection (initiator flow)
             stream = await self.host.new_stream(peer_info.peer_id, [CARD_PROTOCOL])
             await self._exchange_cards_initiator(stream)
-            
+
+            # Remember address for future dials
+            self.peer_addresses[str(peer_info.peer_id)] = peer_multiaddr
+
             return {
                 "status": "connected",
                 "peer_id": str(peer_info.peer_id)
@@ -565,6 +574,14 @@ class P2PService:
         async def _send_in_trio():
             """Execute in trio context."""
             peer_id = PeerID.from_base58(peer_id_str)
+
+            addr = self.peer_addresses.get(peer_id_str)
+            if addr:
+                try:
+                    peer_info = info_from_p2p_addr(Multiaddr(addr))
+                    await self.host.connect(peer_info)
+                except Exception as e:
+                    logger.debug(f"Peer {peer_id_str} connect attempt failed: {e}")
             
             stream = await self.host.new_stream(peer_id, [A2A_PROTOCOL])
             try:
@@ -592,6 +609,14 @@ class P2PService:
         async def _invoke_in_trio():
             """Execute in trio context."""
             peer_id = PeerID.from_base58(peer_id_str)
+
+            addr = self.peer_addresses.get(peer_id_str)
+            if addr:
+                try:
+                    peer_info = info_from_p2p_addr(Multiaddr(addr))
+                    await self.host.connect(peer_info)
+                except Exception as e:
+                    logger.debug(f"Peer {peer_id_str} connect attempt failed: {e}")
             
             stream = await self.host.new_stream(peer_id, [TOOL_PROTOCOL])
             try:

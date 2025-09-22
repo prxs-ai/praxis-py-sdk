@@ -18,11 +18,13 @@ from contextlib import asynccontextmanager
 import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
 import trio
 import trio_asyncio
 import uvicorn
 from fastapi import FastAPI, WebSocket, BackgroundTasks, Depends, UploadFile, File, Request
+from fastapi.websockets import WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
@@ -30,9 +32,15 @@ from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 from praxis_sdk.a2a.models import (
-    A2AAgentCard, Task, Message, create_praxis_skills, 
-    create_default_capabilities, A2AProvider, create_dynamic_agent_card,
-    JSONRPCRequest
+    A2AAgentCard,
+    Task,
+    Message,
+    JSONRPCRequest,
+    create_rpc_error,
+    create_jsonrpc_error_response,
+    A2AErrorCode,
+    A2AProvider,
+    create_dynamic_agent_card,
 )
 from praxis_sdk.api.gateway import api_gateway, ToolInfo
 from praxis_sdk.api.handlers import initialize_request_handlers, get_request_handlers
@@ -87,15 +95,7 @@ class PraxisAPIServer:
 
         # Ensure Agent Card is re-applied to API gateway and handlers after re-init
         try:
-            # Use agent’s A2A card for HTTP publication
-            card_dict = agent.get_agent_card()  # dict with aliases
-            from praxis_sdk.a2a.models import A2AAgentCard
-            agent_card = A2AAgentCard(**card_dict)
-
-            # Compatibility fields for HTTP publication
-            agent_card.version = agent_card.version or "1.0.0"
-            agent_card.supported_transports = ["http"]
-
+            agent_card = agent.get_agent_card_model()
             api_gateway.set_agent_card(agent_card)
             get_request_handlers().set_agent_card(agent_card)
             logger.info("Agent card re-applied to API handlers after context attach")
@@ -178,7 +178,15 @@ class PraxisAPIServer:
         @app.get("/health")
         async def health_check():
             return await get_request_handlers().handle_health_check()
-        
+
+        @app.post("/a2a/v1")
+        async def a2a_jsonrpc_endpoint(request: Dict[str, Any]):
+            return await self._dispatch_a2a_jsonrpc(request)
+
+        @app.post("/")
+        async def root_jsonrpc_endpoint(request: Dict[str, Any]):
+            return await self._dispatch_a2a_jsonrpc(request)
+
         # Agent card endpoint
         @app.get("/agent/card", response_model=A2AAgentCard)
         async def get_agent_card():
@@ -235,63 +243,45 @@ class PraxisAPIServer:
         # P2P endpoints
         @app.get("/p2p/info")
         async def p2p_info():
-            """Return local peer_id and suggested multiaddrs.
+            """Return details about the running libp2p host (Go compatibility)."""
 
-            This does not depend on the running P2PService; it derives peer_id
-            from the local keystore seed if present.
-            """
-            import os
-            from libp2p.crypto.ed25519 import create_new_key_pair
-            from libp2p.peer.id import ID as PeerID
+            if not self._agent or not self._agent.p2p_service:
+                return JSONResponse(status_code=503, content={"error": "P2P service not available"})
 
-            # Attempt to read seed from configured keystore
-            keystore_dir = self.config.p2p.keystore_path
-            seed_path = os.path.join(keystore_dir, "node.key")
-            peer_id = None
-            try:
-                if os.path.exists(seed_path):
-                    with open(seed_path, "rb") as f:
-                        seed = f.read()
-                    kp = create_new_key_pair(seed)
-                    pid = PeerID.from_pubkey(kp.public_key)
-                    peer_id = pid.to_base58()
-            except Exception as e:
-                logger.warning(f"Failed to derive peer id from seed: {e}")
+            peer_id = self._agent.p2p_service.get_peer_id()
+            if not peer_id:
+                return JSONResponse(status_code=503, content={"error": "P2P host not initialized"})
 
-            hostname = socket.gethostname()
-            port = self.config.p2p.port
-            addrs = []
-            if peer_id:
-                addrs = [
-                    f"/dns4/{hostname}/tcp/{port}/p2p/{peer_id}",
-                    f"/ip4/0.0.0.0/tcp/{port}/p2p/{peer_id}",
-                ]
-
+            addresses = self._agent.p2p_service.get_listen_addresses()
             return {
                 "peer_id": peer_id,
-                "listen_port": port,
-                "suggested_multiaddrs": addrs,
+                "addresses": addresses,
+                "protocol": "libp2p",
+                "agent": self._agent.agent_name,
             }
 
         @app.get("/p2p/cards")
         async def list_peer_cards():
             if not self._agent or not self._agent.p2p_service:
-                return {"cards": {}, "count": 0}
+                return {"cards": {}, "count": 0, "agent": None}
             cards = self._agent.p2p_service.peer_cards
-            return {"cards": cards, "count": len(cards)}
+            return {
+                "cards": cards,
+                "count": len(cards),
+                "agent": self._agent.agent_name,
+            }
 
         @app.get("/p2p/tools")
         async def list_peer_tools():
             """List visible tools from connected peers (for debugging)."""
             if not self._agent or not self._agent.p2p_service:
-                return {"tools": {}, "count": 0}
+                return {"tools": {}, "count": 0, "agent": None}
             tools_map = self._agent.p2p_service.get_all_peer_tools()
-            # Convert peer_id keys to peer names when available for readability
-            pretty = {}
-            for peer_id, tools in tools_map.items():
-                name = self._agent.p2p_service.peer_cards.get(peer_id, {}).get("name", peer_id)
-                pretty[f"{name} ({peer_id[:8]}...)"] = tools
-            return {"tools": pretty, "count": len(tools_map)}
+            return {
+                "tools": tools_map,
+                "count": len(tools_map),
+                "agent": self._agent.agent_name,
+            }
 
         @app.post("/p2p/connect")
         async def p2p_connect(request: Dict[str, Any]):
@@ -320,7 +310,7 @@ class PraxisAPIServer:
                 return JSONResponse(status_code=400, content={"error": "peer_id and request are required"})
             try:
                 result = await self._agent.p2p_service.send_a2a_request(peer_id, req)
-                return result
+                return {"result": result}
             except Exception as e:
                 return JSONResponse(status_code=500, content={"error": str(e)})
 
@@ -331,8 +321,8 @@ class PraxisAPIServer:
                 return JSONResponse(status_code=503, content={"error": "P2P service not available"})
             
             peer_id = payload.get("peer_id")
-            tool = payload.get("tool") or payload.get("name")
-            args = payload.get("arguments", {})
+            tool = payload.get("tool") or payload.get("name") or payload.get("tool_name")
+            args = payload.get("arguments") or payload.get("args") or {}
             
             if not peer_id:
                 return JSONResponse(status_code=400, content={"error": "peer_id is required"})
@@ -341,7 +331,7 @@ class PraxisAPIServer:
             
             try:
                 result = await self._agent.p2p_service.invoke_remote_tool(peer_id, tool, args)
-                return result
+                return {"result": result}
             except Exception as e:
                 return JSONResponse(status_code=500, content={"error": str(e)})
         
@@ -351,54 +341,79 @@ class PraxisAPIServer:
             """Legacy P2P tool invocation endpoint (deprecated, use /p2p/tool)"""
             if not self._agent or not self._agent.p2p_service:
                 return JSONResponse(status_code=503, content={"error": "P2P service not available"})
-            tool = payload.get("tool") or payload.get("name")
-            args = payload.get("arguments", {})
+            tool = payload.get("tool") or payload.get("name") or payload.get("tool_name")
+            args = payload.get("arguments") or payload.get("args") or {}
             if not tool:
                 return JSONResponse(status_code=400, content={"error": "tool is required"})
             try:
                 result = await self._agent.p2p_service.invoke_remote_tool(peer_id, tool, args)
-                return result
+                return {"result": result}
             except Exception as e:
                 return JSONResponse(status_code=500, content={"error": str(e)})
         @app.get("/p2p/peers")
         async def list_p2p_peers():
             if not self._agent or not self._agent.p2p_service:
-                return {"peers": [], "count": 0}
-            peers = self._agent.p2p_service.get_connected_peers()
-            return {"peers": peers, "count": len(peers)}
+                return {"peers": [], "count": 0, "agent": None}
+
+            connected = getattr(self._agent.p2p_service, "connected_peers", {})
+            peers = [
+                {
+                    "id": peer_id,
+                    "connected": info.get("connected", False),
+                    "addr": info.get("addr"),
+                }
+                for peer_id, info in connected.items()
+            ]
+
+            return {
+                "peers": peers,
+                "count": len(peers),
+                "agent": self._agent.agent_name,
+            }
         
         @app.get("/peers")
         async def get_discovered_peers():
-            """Get all discovered peers and local peer info"""
-            result = {
-                "local_peer_id": None,
-                "peers": [],
-                "count": 0
-            }
-            
-            # Get local peer ID
-            if self._agent and hasattr(self._agent, 'p2p_service') and self._agent.p2p_service:
+            """Get discovered peers (Go-compatible shape)."""
+
+            def _format_timestamp(value: Optional[Any]) -> Optional[str]:
+                if value is None:
+                    return None
                 try:
-                    local_peer_id = self._agent.p2p_service.get_peer_id()
-                    result["local_peer_id"] = local_peer_id
-                    
-                    # Get connected peers from P2P service
-                    connected_peers = self._agent.p2p_service.get_connected_peers()
-                    result["peers"] = connected_peers
-                    result["count"] = len(connected_peers)
-                except Exception as e:
-                    logger.debug(f"Could not get P2P info: {e}")
-            
-            # Fallback to mDNS discovery if available
-            if not result["peers"] and self._agent and hasattr(self._agent, 'p2p_discovery') and self._agent.p2p_discovery:
-                try:
-                    peers = await self._agent.p2p_discovery.get_peers()
-                    result["peers"] = peers
-                    result["count"] = len(peers)
-                except Exception as e:
-                    logger.error(f"Error getting discovered peers: {e}")
-            
-            return result
+                    if isinstance(value, (int, float)):
+                        return datetime.utcfromtimestamp(value).isoformat() + "Z"
+                    if isinstance(value, str):
+                        return value
+                except Exception as exc:
+                    logger.debug(f"Failed to format peer timestamp {value}: {exc}")
+                return None
+
+            peers: List[Dict[str, Any]] = []
+
+            if self._agent:
+                if getattr(self._agent, "p2p_discovery", None):
+                    try:
+                        discovered = await self._agent.p2p_discovery.get_peers()
+                        for peer in discovered:
+                            peers.append({
+                                "id": peer.get("id"),
+                                "connected": bool(peer.get("is_connected")),
+                                "foundAt": _format_timestamp(peer.get("found_at")),
+                                "lastSeen": _format_timestamp(peer.get("last_seen")),
+                            })
+                    except Exception as exc:
+                        logger.error(f"Error getting discovered peers: {exc}")
+
+                if not peers and getattr(self._agent, "p2p_service", None):
+                    connected = getattr(self._agent.p2p_service, "connected_peers", {})
+                    for peer_id, info in connected.items():
+                        peers.append({
+                            "id": peer_id,
+                            "connected": bool(info.get("connected")),
+                            "foundAt": info.get("found_at"),
+                            "lastSeen": info.get("last_seen"),
+                        })
+
+            return {"peers": peers}
         
         @app.get("/card")
         async def get_agent_card_simple():
@@ -438,6 +453,54 @@ class PraxisAPIServer:
         async def get_well_known_agent_card():
             """Get the agent card at A2A standard location"""
             return await get_request_handlers().handle_get_agent_card()
+
+        @app.get("/v1/card")
+        async def get_authenticated_card():
+            if not self._agent:
+                return JSONResponse(status_code=503, content={"error": "Agent not available"})
+            return self._agent.get_authenticated_agent_card()
+
+        @app.get("/.well-known/feedback.json")
+        async def well_known_feedback():
+            if not self._agent:
+                return []
+            return self._agent.get_feedback_entries()
+
+        @app.get("/.well-known/validation-requests.json")
+        async def well_known_validation_requests():
+            if not self._agent:
+                return {}
+            return self._agent.get_validation_requests()
+
+        @app.get("/.well-known/validation-responses.json")
+        async def well_known_validation_responses():
+            if not self._agent:
+                return {}
+            return self._agent.get_validation_responses()
+
+        @app.post("/admin/erc8004/register")
+        async def admin_register_erc8004(payload: Dict[str, Any]):
+            if not self._agent:
+                return JSONResponse(status_code=503, content={"error": "Agent not available"})
+
+            try:
+                chain_id = int(payload.get("chainId"))
+                agent_id = int(payload.get("agentId"))
+            except (TypeError, ValueError):
+                return JSONResponse(status_code=400, content={"error": "chainId and agentId are required"})
+
+            agent_address = payload.get("agentAddress") or payload.get("addressCaip10")
+            if not agent_address:
+                return JSONResponse(status_code=400, content={"error": "agentAddress or addressCaip10 required"})
+
+            if agent_address.startswith("eip155:"):
+                agent_address = agent_address.split(":")[-1]
+
+            signature = payload.get("signature")
+            registry = payload.get("registryAddr") or payload.get("registry")
+
+            self._agent.set_erc8004_registration(chain_id, agent_id, agent_address, signature, registry)
+            return {"status": "ok"}
         
         # Statistics endpoint
         @app.get("/stats")
@@ -464,14 +527,20 @@ class PraxisAPIServer:
         async def a2a_message_send(request: dict, background_tasks: BackgroundTasks):
             """Direct A2A message/send endpoint - handles JSON-RPC 2.0 format only"""
             try:
-                # Ensure this is a proper JSON-RPC request
-                jsonrpc_request = JSONRPCRequest(**request)
-                if jsonrpc_request.method != "message/send":
-                    return JSONResponse(
-                        status_code=400, 
-                        content={"error": "Invalid method for this endpoint"}
+                if request.get("jsonrpc") == "2.0":
+                    jsonrpc_request = JSONRPCRequest(**request)
+                else:
+                    jsonrpc_request = JSONRPCRequest(
+                        id=str(uuid4()),
+                        method="message/send",
+                        params=request
                     )
-                return await get_request_handlers()._handle_message_send(jsonrpc_request, background_tasks)
+
+                if jsonrpc_request.method != "message/send":
+                    return JSONResponse(status_code=400, content={"error": "Invalid method for this endpoint"})
+
+                response = await get_request_handlers()._handle_message_send(jsonrpc_request, background_tasks)
+                return response.model_dump(by_alias=True)
             except Exception as e:
                 logger.error(f"Error in A2A message/send endpoint: {e}")
                 return JSONResponse(status_code=400, content={"error": str(e)})
@@ -480,14 +549,20 @@ class PraxisAPIServer:
         async def a2a_tasks_get(request: dict):
             """Direct A2A tasks/get endpoint - handles JSON-RPC 2.0 format only"""
             try:
-                # Ensure this is a proper JSON-RPC request
-                jsonrpc_request = JSONRPCRequest(**request)
-                if jsonrpc_request.method != "tasks/get":
-                    return JSONResponse(
-                        status_code=400,
-                        content={"error": "Invalid method for this endpoint"}
+                if request.get("jsonrpc") == "2.0":
+                    jsonrpc_request = JSONRPCRequest(**request)
+                else:
+                    jsonrpc_request = JSONRPCRequest(
+                        id=str(uuid4()),
+                        method="tasks/get",
+                        params=request
                     )
-                return await get_request_handlers()._handle_tasks_get(jsonrpc_request)
+
+                if jsonrpc_request.method != "tasks/get":
+                    return JSONResponse(status_code=400, content={"error": "Invalid method for this endpoint"})
+
+                response = await get_request_handlers()._handle_tasks_get(jsonrpc_request)
+                return response.model_dump(by_alias=True)
             except Exception as e:
                 logger.error(f"Error in A2A tasks/get endpoint: {e}")
                 return JSONResponse(status_code=400, content={"error": str(e)})
@@ -577,10 +652,23 @@ class PraxisAPIServer:
                 task_state = TaskState(state) if state else None
                 
                 # Get tasks using existing handler
-                result = await get_request_handlers().handle_list_tasks(task_state, limit, offset)
-                
-                # Convert to A2A format (already compatible)
-                return result
+                handlers = get_request_handlers()
+                result = await handlers.handle_list_tasks(task_state, limit, offset)
+
+                counts: Dict[str, int] = {}
+                if self._agent and hasattr(self._agent, "task_manager"):
+                    counts_map = await self._agent.task_manager.get_task_count_by_state()
+                    counts = {state.value: count for state, count in counts_map.items()}
+                else:
+                    for task in handlers.tasks.values():
+                        key = task.status.state.value
+                        counts[key] = counts.get(key, 0) + 1
+
+                return {
+                    "tasks": result.get("tasks", []),
+                    "counts": counts,
+                    "agent": getattr(self._agent, "agent_name", self.config.agents[0].name if self.config.agents else "Praxis Agent"),
+                }
             except Exception as e:
                 logger.error(f"Error in A2A tasks list endpoint: {e}")
                 return JSONResponse(status_code=500, content={"error": str(e)})
@@ -590,10 +678,16 @@ class PraxisAPIServer:
         async def get_mcp_tools():
             """Get all available MCP tools (Go compatibility format)"""
             try:
+                if self._agent:
+                    tools = self._agent.get_available_tools()
+                    return {
+                        "tools": tools,
+                        "count": len(tools),
+                        "agent": self._agent.agent_name
+                    }
+
                 from praxis_sdk.mcp.service import mcp_service
                 tools = mcp_service.get_tools()
-                
-                # Convert to Go-compatible format
                 return {
                     "tools": tools,
                     "count": len(tools),
@@ -607,9 +701,23 @@ class PraxisAPIServer:
         async def get_mcp_tool_schemas():
             """Get JSON schemas for all MCP tools"""
             try:
+                if self._agent:
+                    tools = self._agent.get_available_tools()
+                    schemas = []
+                    for tool in tools:
+                        schemas.append({
+                            "name": tool.get("name"),
+                            "description": tool.get("description"),
+                            "inputSchema": tool.get("parameters", {})
+                        })
+                    return {
+                        "schemas": schemas,
+                        "total": len(schemas),
+                        "timestamp": datetime.utcnow().isoformat() + "Z"
+                    }
+
                 from praxis_sdk.mcp.service import mcp_service
                 schemas = mcp_service.get_tool_schemas()
-                
                 return {
                     "schemas": schemas,
                     "total": len(schemas),
@@ -637,31 +745,26 @@ class PraxisAPIServer:
             try:
                 from praxis_sdk.cache.service import cache_service
                 stats = cache_service.get_stats()
-                
-                # Convert to Go-compatible format (cache.size and enabled fields)
-                cache_info = stats.get("cache_info", {})
+                agent_name = getattr(self._agent, "agent_name", self.config.agents[0].name if self.config.agents else "Praxis Agent")
                 return {
-                    "cache": {
-                        "size": cache_info.get("total_items", 0),
-                        "enabled": True
-                    },
-                    "agent": self.config.agents[0].name if self.config.agents else "Praxis Agent"
+                    "cache": stats,
+                    "agent": agent_name,
                 }
             except Exception as e:
                 logger.error(f"Error getting cache statistics: {e}")
                 return JSONResponse(status_code=500, content={"error": str(e)})
-        
+
         @app.delete("/cache")
         async def clear_cache():
             """Clear cache entries (Go compatibility format)"""
             try:
                 from praxis_sdk.cache.service import cache_service
-                result = cache_service.clear()
-                
+                cache_service.clear()
+                agent_name = getattr(self._agent, "agent_name", self.config.agents[0].name if self.config.agents else "Praxis Agent")
                 # Return Go-compatible format
                 return {
                     "status": "cache cleared",
-                    "agent": self.config.agents[0].name if self.config.agents else "Praxis Agent"
+                    "agent": agent_name
                 }
             except Exception as e:
                 logger.error(f"Error clearing cache: {e}")
@@ -815,6 +918,7 @@ class PraxisAPIServer:
             agent_url = f"http://{self.config.api.host}:{self.config.api.port}"
         
         # Create dynamic agent card with tools
+        agent_url = f"{agent_url}/a2a/v1"
         agent_card = create_dynamic_agent_card(
             name=agent_name,
             description="Advanced AI agent with P2P networking, MCP integration, and tool execution capabilities",
@@ -830,26 +934,52 @@ class PraxisAPIServer:
         
         # Add compatibility fields
         agent_card.version = "1.0.0"
-        # Only declare HTTP for external publication and fallback. P2P JSON-RPC goes over libp2p and is not declared.
-        agent_card.supported_transports = ["http"]
+        agent_card.supported_transports = ["JSONRPC"]
         
         # Set agent card in components
         api_gateway.set_agent_card(agent_card)
         get_request_handlers().set_agent_card(agent_card)
         
         logger.info(f"Agent card configured: {agent_name} at {agent_url}")
-    
+
     def _get_available_tools_for_card(self):
         """Get tools that will be used for agent card generation."""
         # Get tools from API gateway if available
         if hasattr(api_gateway, 'available_tools') and api_gateway.available_tools:
             return api_gateway.available_tools
-        
+
         # Get tools from request handlers if available
         if hasattr(get_request_handlers(), 'available_tools') and get_request_handlers().available_tools:
             return get_request_handlers().available_tools
             
         return []
+
+    async def _dispatch_a2a_jsonrpc(self, payload: Dict[str, Any]) -> JSONResponse:
+        """Forward JSON-RPC payload to the agent's dispatcher."""
+
+        if not isinstance(payload, dict):
+            return JSONResponse(status_code=400, content={"error": "Invalid JSON payload"})
+
+        if not self._agent or not hasattr(self._agent, "dispatch_a2a_request"):
+            return JSONResponse(status_code=503, content={"error": "A2A protocol not available"})
+
+        try:
+            response = await self._agent.dispatch_a2a_request(payload)
+            if hasattr(response, "model_dump"):
+                body = response.model_dump(by_alias=True)
+            else:
+                body = response
+            return JSONResponse(status_code=200, content=body)
+        except Exception as e:
+            logger.error(f"Error processing A2A JSON-RPC request: {e}")
+            req_id = payload.get("id") if isinstance(payload, dict) else None
+            error = create_rpc_error(
+                A2AErrorCode.INTERNAL_ERROR,
+                "Internal server error",
+                data=str(e)
+            )
+            resp = create_jsonrpc_error_response(req_id, error)
+            return JSONResponse(status_code=200, content=resp.model_dump(by_alias=True))
     
     def _setup_tools(self):
         """Setup default tools."""
@@ -939,23 +1069,211 @@ class PraxisAPIServer:
     
     async def _handle_websocket_connection(self, websocket: WebSocket):
         """Handle WebSocket connections with full integration."""
+        connection_id = None
         try:
-            # Handle connection through websocket manager
-            connection_id = await websocket_manager.handle_connection(websocket)
+            # Accept the WebSocket connection
+            await websocket.accept()
+            connection_id = str(uuid4())
             
-            # Start message handling and event streaming
-            async with trio.open_nursery() as nursery:
-                nursery.start_soon(
-                    trio_asyncio.aio_as_trio(websocket_manager.handle_client_messages),
-                    connection_id
-                )
-                nursery.start_soon(
-                    trio_asyncio.aio_as_trio(websocket_manager.handle_event_streaming),
-                    connection_id
-                )
-        
+            logger.info(f"WebSocket client connected: {connection_id}")
+            
+            # Simple message handling loop
+            while True:
+                try:
+                    # Receive message from client
+                    data = await websocket.receive_text()
+                    logger.info(f"Received WebSocket message: {data[:100]}...")
+                    
+                    # Parse and handle message
+                    try:
+                        message_data = json.loads(data)
+                        message_type = message_data.get("type", "")
+                        payload = message_data.get("payload", {})
+                        
+                        # Handle different message types
+                        if message_type == "DSL_COMMAND":
+                            command = payload.get("command", "")
+                            
+                            # Send progress message
+                            await websocket.send_text(json.dumps({
+                                "type": "dslProgress",
+                                "payload": {
+                                    "stage": "analyzing",
+                                    "message": f"Processing DSL command: {command}",
+                                    "details": {"command": command}
+                                }
+                            }))
+                            
+                            try:
+                                # Use real DSL Orchestrator if agent is available
+                                if hasattr(self, '_agent') and self._agent and hasattr(self._agent, 'dsl_orchestrator'):
+                                    # Real LLM-based DSL processing
+                                    start_time = asyncio.get_event_loop().time()
+                                    result = await self._agent.dsl_orchestrator.execute_command(
+                                        command, 
+                                        {"connection_id": connection_id, "source": "websocket"}
+                                    )
+                                    process_time = asyncio.get_event_loop().time() - start_time
+                                    
+                                    # Send real result
+                                    await websocket.send_text(json.dumps({
+                                        "type": "dslResult",
+                                        "payload": {
+                                            "success": result.get("success", True),
+                                            "command": command,
+                                            "matchedAgents": result.get("matched_agents", []),
+                                            "requiredMCPTools": result.get("required_tools", []),
+                                            "workflowSuggestion": result.get("workflow", {}),
+                                            "processTime": process_time,
+                                            "llm_analysis": result.get("llm_analysis", ""),
+                                            "tool_calls": result.get("tool_calls", [])
+                                        }
+                                    }))
+                                else:
+                                    # Fallback: Basic processing without LLM
+                                    await asyncio.sleep(0.1)  # Brief processing time
+                                    await websocket.send_text(json.dumps({
+                                        "type": "dslResult", 
+                                        "payload": {
+                                            "success": True,
+                                            "command": command,
+                                            "matchedAgents": ["praxis-agent-1"],
+                                            "requiredMCPTools": ["read_file", "write_file"],
+                                            "workflowSuggestion": {
+                                                "nodes": [{"id": "agent1", "type": "agent", "label": "Process Command"}],
+                                                "edges": []
+                                            },
+                                            "processTime": 0.1,
+                                            "fallback": True
+                                        }
+                                    }))
+                                    
+                            except Exception as e:
+                                logger.error(f"Error processing DSL command: {e}")
+                                await websocket.send_text(json.dumps({
+                                    "type": "dslResult",
+                                    "payload": {
+                                        "success": False,
+                                        "command": command,
+                                        "error": str(e),
+                                        "processTime": 0.0
+                                    }
+                                }))
+                            
+                        elif message_type == "CHAT_MESSAGE":
+                            content = payload.get("content", "")
+                            
+                            # Check if this looks like a DSL command
+                            command_keywords = ["send", "create", "execute", "run", "call", "invoke", "make", "build", 
+                                              "start", "stop", "deploy", "install", "setup", "configure", "telegram", 
+                                              "создай", "отправ", "выполни", "запусти", "установи", "настрой"]
+                            is_command = any(keyword in content.lower() for keyword in command_keywords)
+                            
+                            if is_command and hasattr(self, '_agent') and self._agent and hasattr(self._agent, 'dsl_orchestrator'):
+                                # Process as DSL command
+                                await websocket.send_text(json.dumps({
+                                    "type": "dslProgress",
+                                    "payload": {
+                                        "stage": "analyzing",
+                                        "message": f"Processing command: {content}",
+                                        "details": {"command": content}
+                                    }
+                                }))
+                                
+                                try:
+                                    start_time = asyncio.get_event_loop().time()
+                                    result = await self._agent.dsl_orchestrator.execute_command(
+                                        content, 
+                                        {"connection_id": connection_id, "source": "chat"}
+                                    )
+                                    process_time = asyncio.get_event_loop().time() - start_time
+                                    
+                                    # Send DSL result
+                                    await websocket.send_text(json.dumps({
+                                        "type": "dslResult",
+                                        "payload": {
+                                            "success": result.get("success", True),
+                                            "command": content,
+                                            "matchedAgents": result.get("matched_agents", []),
+                                            "requiredMCPTools": result.get("required_tools", []),
+                                            "workflowSuggestion": result.get("workflow", {}),
+                                            "processTime": process_time,
+                                            "llm_analysis": result.get("llm_analysis", ""),
+                                            "tool_calls": result.get("tool_calls", [])
+                                        }
+                                    }))
+                                except Exception as e:
+                                    logger.error(f"Error processing DSL command from chat: {e}")
+                                    await websocket.send_text(json.dumps({
+                                        "type": "chatMessage",
+                                        "payload": {
+                                            "content": f"Error processing command: {str(e)}",
+                                            "sender": "assistant",
+                                            "type": "error"
+                                        }
+                                    }))
+                            else:
+                                # Regular chat response
+                                await websocket.send_text(json.dumps({
+                                    "type": "chatMessage",
+                                    "payload": {
+                                        "content": f"I received your message: {content}",
+                                        "sender": "assistant",
+                                        "type": "text"
+                                    }
+                                }))
+                            
+                        elif message_type == "EXECUTE_WORKFLOW":
+                            workflow = payload.get("workflow", {})
+                            await websocket.send_text(json.dumps({
+                                "type": "workflowStart",
+                                "payload": {
+                                    "workflowId": workflow.get("id", "test-workflow"),
+                                    "executionId": str(uuid4()),
+                                    "nodes": workflow.get("nodes", []),
+                                    "edges": workflow.get("edges", []),
+                                    "startTime": datetime.utcnow().isoformat() + "Z"
+                                }
+                            }))
+                            
+                        # Send welcome message if first connection
+                        else:
+                            await websocket.send_text(json.dumps({
+                                "type": "chatMessage",
+                                "payload": {
+                                    "content": "Connected to Praxis Agent",
+                                    "sender": "system",
+                                    "type": "system"
+                                }
+                            }))
+                            
+                    except json.JSONDecodeError:
+                        await websocket.send_text(json.dumps({
+                            "type": "error",
+                            "payload": {
+                                "message": "Invalid JSON format",
+                                "code": "PARSE_ERROR"
+                            }
+                        }))
+                        
+                except WebSocketDisconnect:
+                    logger.info(f"WebSocket client disconnected: {connection_id}")
+                    break
+                except Exception as e:
+                    logger.error(f"Error in WebSocket message handling: {e}")
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "payload": {
+                            "message": str(e),
+                            "code": "INTERNAL_ERROR"
+                        }
+                    }))
+                    
         except Exception as e:
             logger.error(f"Error handling WebSocket connection: {e}")
+        finally:
+            if connection_id:
+                logger.info(f"WebSocket connection {connection_id} closed")
     
     async def _startup(self):
         """Startup sequence."""

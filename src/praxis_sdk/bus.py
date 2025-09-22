@@ -47,6 +47,7 @@ class EventType(Enum):
     WORKFLOW_STARTED = "workflow.started"
     WORKFLOW_PROGRESS = "workflow.progress"
     WORKFLOW_COMPLETED = "workflow.completed"
+    NODE_STATUS_UPDATE = "workflow.node_status_update"
     
     # Tool execution events
     TOOL_EXECUTED = "tool.executed"

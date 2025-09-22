@@ -248,7 +248,7 @@ class AgentLevelConfig(BaseModel):
     url: Optional[str] = None
     shared_dir: Optional[str] = None
     tools: List[ToolConfigNew] = Field(default_factory=list)
-    external_mcp_endpoints: List[str] = Field(default_factory=list)
+    external_mcp_endpoints: List[Union[str, Dict[str, Any]]] = Field(default_factory=list)
     external_mcp_servers: List[str] = Field(default_factory=list)
 
 class AgentConfig(BaseModel):
