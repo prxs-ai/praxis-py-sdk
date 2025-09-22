@@ -2,15 +2,87 @@
 
 ## [0.2.1](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.0...praxis-py-sdk-v0.2.1) (2025-09-22)
 
-
 ### Features
 
-* fix websockets / add mcp server streamble ([#11](https://github.com/prxs-ai/praxis-py-sdk/issues/11)) ([802fac7](https://github.com/prxs-ai/praxis-py-sdk/commit/802fac7f7e0a2650dfae59998fbadb7930556d19))
+#### **WebSocket Communication Enhancements**
+* **Improved WebSocket Handling**: Enhanced WebSocket communication layer with better connection management
+  - Fixed WebSocket server integration with FastAPI
+  - Better error handling and connection lifecycle management
+  - Improved real-time communication between agents and clients
+  - Enhanced message routing and event broadcasting
 
+#### **MCP Server Streamable Support**
+* **Enhanced MCP Integration**: Added streamable support for Model Context Protocol servers
+  - Improved MCP server lifecycle management
+  - Better integration with external MCP filesystem servers
+  - Enhanced tool registry with dynamic server discovery
+  - Streamable data processing support for large datasets
+
+#### **Agent-to-Agent Protocol Improvements**
+* **Enhanced A2A Communication**: Significant improvements to Agent-to-Agent protocol implementation
+  - Better task delegation and management between agents
+  - Improved agent capability broadcasting and discovery
+  - Enhanced peer-to-peer communication reliability
+  - Better error handling and fault tolerance in multi-agent scenarios
+
+#### **API Server Architecture Enhancements**
+* **Robust API Layer**: Major improvements to the HTTP API server implementation
+  - Better request handling and response formatting
+  - Enhanced endpoint security and validation
+  - Improved server startup and shutdown procedures
+  - Better integration with WebSocket and SSE endpoints
+
+### Improvements
+
+#### **Configuration Management**
+* **Enhanced Config System**: Improved configuration handling across all components
+  - Better environment variable management
+  - Enhanced YAML configuration validation
+  - Improved agent-specific configuration support
+  - Better default value handling and overrides
+
+#### **Event Bus System**
+* **Event Handling Improvements**: Enhanced event bus for better component communication
+  - Improved event routing and dispatching
+  - Better error handling in event processing
+  - Enhanced debugging and monitoring capabilities
+
+#### **P2P Service Enhancements**
+* **Peer-to-Peer Networking**: Improvements to libp2p service integration
+  - Better peer discovery and connection management
+  - Enhanced protocol handling and message routing
+  - Improved service lifecycle management
+  - Better integration with agent communication layer
+
+### Bug Fixes
+
+* **Tool Execution**: Fixed issues with GPT rewriter tool implementation
+* **Docker Configuration**: Updated Docker Compose configuration for better multi-agent deployment
+* **File Structure**: Cleaned up project structure by removing unnecessary placeholder files
+
+### Technical Improvements
+
+* **Code Quality**: Significant refactoring with improved code organization and structure
+  - Better separation of concerns across modules
+  - Enhanced error handling and logging
+  - Improved type hints and documentation
+  - Better async/await patterns implementation
+
+### Infrastructure Changes
+
+* **Release Process**: Removed hardcoded release-please configuration for better automation
+* **Project Structure**: Cleaned up data and shared directories for better organization
 
 ### Documentation
 
 * changelog 020 ([#9](https://github.com/prxs-ai/praxis-py-sdk/issues/9)) ([c254309](https://github.com/prxs-ai/praxis-py-sdk/commit/c2543099aec9966b15b2eba920c7be7baeb078d1))
+
+---
+
+**Technical Details:**
+- **Key Components Modified**: API server, WebSocket handler, A2A protocol, MCP integration, agent core
+- **Performance**: Improved WebSocket connection handling and MCP server communication
+- **Reliability**: Enhanced error handling and fault tolerance across all communication layers
 
 ## [0.2.0](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.0...praxis-py-sdk-v0.2.0) (2025-09-10)
 
