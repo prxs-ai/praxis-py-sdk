@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.0...praxis-py-sdk-v0.2.0) (2025-09-22)
+
+
+### Features
+
+* fix websockets / add mcp server streamble ([#11](https://github.com/prxs-ai/praxis-py-sdk/issues/11)) ([802fac7](https://github.com/prxs-ai/praxis-py-sdk/commit/802fac7f7e0a2650dfae59998fbadb7930556d19))
+
+
+### Documentation
+
+* changelog 020 ([#9](https://github.com/prxs-ai/praxis-py-sdk/issues/9)) ([c254309](https://github.com/prxs-ai/praxis-py-sdk/commit/c2543099aec9966b15b2eba920c7be7baeb078d1))
+
 ## [0.2.0](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.0...praxis-py-sdk-v0.2.0) (2025-09-10)
 
 
