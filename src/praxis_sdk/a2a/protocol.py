@@ -26,6 +26,7 @@ from .models import (
     TaskState,
     TasksGetParams,
     TasksListParams,
+    TasksCancelParams,
     create_jsonrpc_error_response,
     create_jsonrpc_response,
     create_message,
@@ -33,7 +34,7 @@ from .models import (
     create_task,
     create_text_part,
 )
-from .task_manager import TaskManager
+from .task_manager import TaskManager, TaskManagerError
 
 
 class A2AProtocolError(Exception):
@@ -63,23 +64,32 @@ class A2AProtocolHandler:
         task_manager: TaskManager,
         agent_card: A2AAgentCard,
         event_bus: Optional[EventBus] = None,
+        card_provider: Optional[Any] = None,
     ):
         self.task_manager = task_manager
         self.agent_card = agent_card
         self.event_bus = event_bus or event_bus
+        self._card_provider = card_provider
         
         # Method handlers
         self._method_handlers = {
             "message/send": self._handle_message_send,
             "tasks/get": self._handle_tasks_get,
             "tasks/list": self._handle_tasks_list,
+            "tasks/cancel": self._handle_tasks_cancel,
             "capabilities/get": self._handle_capabilities_get,
             "agent/card": self._handle_agent_card,
+            "agent/getAuthenticatedExtendedCard": self._handle_agent_authenticated_card,
             "agent/status": self._handle_agent_status,
         }
         
         logger.info("A2A Protocol Handler initialized")
-    
+
+    def set_agent_card(self, card: A2AAgentCard) -> None:
+        """Update the agent card served by protocol handler."""
+
+        self.agent_card = card
+
     async def handle_request(self, request_data: Union[str, Dict[str, Any]]) -> JSONRPCResponse:
         """
         Handle an incoming A2A JSON-RPC request.
@@ -292,7 +302,7 @@ class A2AProtocolHandler:
     async def _handle_tasks_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle tasks/list method.
-        
+
         Lists tasks with optional filtering and pagination.
         """
         
@@ -334,11 +344,31 @@ class A2AProtocolHandler:
                 A2AErrorCode.INVALID_PARAMS,
                 f"Invalid tasks/list parameters: {e}"
             )
-    
+
+    async def _handle_tasks_cancel(self, params: Dict[str, Any]) -> Task:
+        """Handle tasks/cancel method."""
+
+        try:
+            cancel_params = TasksCancelParams(**params)
+            task = await self.task_manager.cancel_task(cancel_params.id)
+            return task
+        except TaskManagerError as tme:
+            rpc_err = tme.rpc_error
+            raise A2AProtocolError(rpc_err.code, rpc_err.message, rpc_err.data)
+        except RPCError as e:
+            raise A2AProtocolError(e.code, e.message, e.data)
+        except Exception as e:
+            if isinstance(e, A2AProtocolError):
+                raise
+            raise A2AProtocolError(
+                A2AErrorCode.INVALID_PARAMS,
+                f"Invalid tasks/cancel parameters: {e}"
+            )
+
     async def _handle_capabilities_get(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle capabilities/get method.
-        
+
         Returns agent capabilities.
         """
         
@@ -352,12 +382,29 @@ class A2AProtocolHandler:
     async def _handle_agent_card(self, params: Dict[str, Any]) -> A2AAgentCard:
         """
         Handle agent/card method.
-        
+
         Returns the complete agent card.
         """
-        
+
         return self.agent_card
-    
+
+    async def _handle_agent_authenticated_card(self, params: Dict[str, Any]) -> A2AAgentCard:
+        """Handle agent/getAuthenticatedExtendedCard method."""
+
+        if self._card_provider:
+            card = self._card_provider()
+            if card:
+                self.agent_card = card
+                return card
+
+        if not self.agent_card:
+            raise A2AProtocolError(
+                A2AErrorCode.INTERNAL_ERROR,
+                "A2A card not initialized"
+            )
+
+        return self.agent_card
+
     async def _handle_agent_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle agent/status method.

@@ -13,7 +13,7 @@ services:
     hostname: agent1
     ports:
       - "8000:8000"  # HTTP API (fixed port mapping)
-      - "8090:8090"  # WebSocket
+      - "8090:8000"  # WebSocket (mapped to API port for shared server)
       - "4001:4001"  # P2P TCP
       - "9000:9000"  # SSE (fixed port mapping)
       # mDNS uses internal network, no port mapping needed
@@ -67,7 +67,7 @@ services:
     hostname: agent2
     ports:
       - "8001:8001"  # HTTP API (fixed port mapping)
-      - "8091:8091"  # WebSocket
+      - "8091:8001"  # WebSocket (mapped to API port for shared server)
       - "4002:4002"  # P2P TCP
       - "9001:9001"  # SSE (fixed port mapping)
       # mDNS uses internal network, no port mapping needed

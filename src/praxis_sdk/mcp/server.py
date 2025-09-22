@@ -32,17 +32,25 @@ class MCPTransport:
 class HTTPTransport(MCPTransport):
     """HTTP transport for MCP communication"""
     
-    def __init__(self, endpoint: str):
+    def __init__(self, endpoint: str, headers: Optional[Dict[str, str]] = None):
+        endpoint = endpoint.rstrip('/')
+        if not endpoint.endswith('/mcp'):
+            endpoint = f"{endpoint}/mcp"
         self.endpoint = endpoint
-        self.client = httpx.AsyncClient()
+        default_headers = {"Accept": "application/json, text/event-stream"}
+        self.headers = headers.copy() if headers else {}
+        default_headers.update(self.headers)
+        self.client = httpx.AsyncClient(headers=default_headers)
     
     async def send_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Send HTTP request"""
         try:
+            merged_headers = {"Content-Type": "application/json"}
+            merged_headers.update(self.headers)
             response = await self.client.post(
                 self.endpoint,
                 json=request,
-                headers={"Content-Type": "application/json"}
+                headers=merged_headers
             )
             response.raise_for_status()
             return response.json()
@@ -58,19 +66,27 @@ class HTTPTransport(MCPTransport):
 class SSETransport(MCPTransport):
     """Server-Sent Events transport for MCP communication"""
     
-    def __init__(self, endpoint: str):
+    def __init__(self, endpoint: str, headers: Optional[Dict[str, str]] = None):
+        endpoint = endpoint.rstrip('/')
+        if not endpoint.endswith('/mcp'):
+            endpoint = f"{endpoint}/mcp"
         self.endpoint = endpoint
-        self.client = httpx.AsyncClient()
+        default_headers = {"Accept": "application/json, text/event-stream"}
+        self.headers = headers.copy() if headers else {}
+        default_headers.update(self.headers)
+        self.client = httpx.AsyncClient(headers=default_headers)
     
     async def send_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Send request via SSE"""
         try:
             # For now, fallback to HTTP POST
             # TODO: Implement proper SSE communication
+            merged_headers = {"Content-Type": "application/json"}
+            merged_headers.update(self.headers)
             response = await self.client.post(
                 self.endpoint,
                 json=request,
-                headers={"Content-Type": "application/json"}
+                headers=merged_headers
             )
             response.raise_for_status()
             return response.json()
@@ -108,6 +124,7 @@ class MCPServer:
         # External MCP clients
         self.external_clients: Dict[str, httpx.AsyncClient] = {}
         self.external_tools: Dict[str, Dict[str, Any]] = {}
+        self.external_server_info: Dict[str, Dict[str, Any]] = {}
         
         # Setup built-in tools
         self._setup_builtin_tools()
@@ -342,6 +359,38 @@ class MCPServer:
         # Register system tools
         self.builtin_tools["get_system_info"] = get_system_info
         self.builtin_tools["execute_python"] = execute_python
+
+    async def register_dynamic_tool(
+        self,
+        name: str,
+        description: str,
+        input_schema: Dict[str, Any],
+        handler
+    ) -> None:
+        """Register a dynamic in-process tool for MCP invocation."""
+
+        self.builtin_tools[name] = handler
+
+        if not hasattr(self, 'tool_metadata'):
+            self.tool_metadata = {}
+
+        self.tool_metadata[name] = {
+            "description": description,
+            "parameters": input_schema
+        }
+
+        logger.info(f"Registered dynamic MCP tool: {name}")
+
+    async def unregister_tool(self, name: str) -> None:
+        """Unregister a dynamic MCP tool."""
+
+        if name in self.builtin_tools:
+            del self.builtin_tools[name]
+
+        if hasattr(self, 'tool_metadata') and name in self.tool_metadata:
+            del self.tool_metadata[name]
+
+        logger.info(f"Unregistered MCP tool: {name}")
     
     def _validate_path(self, root: Path, user_path: str) -> Path:
         """Validate and resolve path with security checks."""
@@ -427,7 +476,7 @@ class MCPServer:
                             
                             # Initialize
                             info_response = await client.post(
-                                f"{base}/",
+                                f"{base}/mcp",
                                 json={
                                     "jsonrpc": "2.0",
                                     "method": "initialize",
@@ -442,7 +491,7 @@ class MCPServer:
                                     "id": 1
                                 }
                             )
-                            
+
                             if info_response.status_code == 200:
                                 server_info = info_response.json()
                                 logger.info(f"MCP server info: {server_info}")
@@ -454,6 +503,59 @@ class MCPServer:
                                 break
                 except Exception as e:
                     logger.debug(f"No MCP server at {sse_url}: {e}")
+
+    async def _call_mcp(self, client: httpx.AsyncClient, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Send MCP JSON-RPC request handling SSE responses."""
+
+        headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+
+        async with client.stream("POST", "/mcp", json=payload, headers=headers) as response:
+            if response.status_code != 200:
+                body = await response.aread()
+                raise RuntimeError(f"HTTP {response.status_code}: {body.decode() if body else ''}")
+
+            content_type = response.headers.get("content-type", "")
+            if "text/event-stream" in content_type:
+                result = await self._parse_sse_response(response)
+                if result is None:
+                    raise RuntimeError("Empty SSE response from MCP server")
+                return result
+
+            data = await response.aread()
+            if not data:
+                return {}
+            return json.loads(data.decode())
+
+    async def _parse_sse_response(self, response: httpx.Response) -> Optional[Dict[str, Any]]:
+        """Parse SSE stream and return the last JSON payload."""
+
+        buffer = ""
+        result = None
+
+        async for raw_line in response.aiter_lines():
+            if raw_line is None:
+                continue
+            line = raw_line.strip()
+
+            if not line:
+                if buffer:
+                    try:
+                        result = json.loads(buffer)
+                    except Exception as parse_err:
+                        logger.debug(f"Failed to parse SSE chunk: {parse_err}")
+                    buffer = ""
+                continue
+
+            if line.startswith("data:"):
+                buffer += line[len("data:"):].strip()
+
+        if buffer:
+            try:
+                result = json.loads(buffer)
+            except Exception as parse_err:
+                logger.debug(f"Failed to parse trailing SSE chunk: {parse_err}")
+
+        return result
 
     async def _connect_to_external_endpoint(self, endpoint: Union[str, Dict[str, Any]]):
         """Connect to a user-specified external MCP endpoint.
@@ -467,7 +569,7 @@ class MCPServer:
             # Parse endpoint into url + headers
             if isinstance(endpoint, dict):
                 base_url = endpoint.get("url") or endpoint.get("endpoint") or endpoint.get("address")
-                headers = endpoint.get("headers", {})
+                headers = endpoint.get("headers", {}).copy()
                 name = endpoint.get("name") or base_url
             else:
                 base_url = str(endpoint)
@@ -482,16 +584,17 @@ class MCPServer:
             async with httpx.AsyncClient() as client:
                 # Probe SSE
                 try:
-                    resp = await client.get(sse_url, timeout=2.0, headers={"Accept": "text/event-stream"})
+                    probe_headers = {"Accept": "text/event-stream"}
+                    probe_headers.update(headers)
+                    resp = await client.get(sse_url, timeout=2.0, headers=probe_headers)
                     if resp.status_code != 200:
                         logger.debug(f"Endpoint {name} SSE probe returned {resp.status_code}")
                 except Exception as e:
                     logger.debug(f"Endpoint {name} SSE probe failed: {e}")
 
-                # Initialize JSON-RPC
-                init = await client.post(
-                    f"{base}/",
-                    json={
+            async with httpx.AsyncClient(base_url=base) as init_client:
+                try:
+                    init_response = await self._call_mcp(init_client, {
                         "jsonrpc": "2.0",
                         "method": "initialize",
                         "params": {
@@ -500,17 +603,22 @@ class MCPServer:
                             "clientInfo": {"name": "Praxis Agent", "version": "0.1.0"}
                         },
                         "id": 1
-                    }
-                )
+                    })
+                    logger.debug(f"Initialization response from {name}: {init_response}")
 
-                if init.status_code == 200:
                     server_id = f"external_{name}"
-                    # Create persistent client with default headers if provided
-                    self.external_clients[server_id] = httpx.AsyncClient(base_url=base, headers=headers)
+                    default_headers = {"Accept": "application/json, text/event-stream"}
+                    default_headers.update(headers)
+                    self.external_clients[server_id] = httpx.AsyncClient(base_url=base, headers=default_headers)
+                    self.external_server_info[server_id] = {
+                        "baseUrl": base,
+                        "config": endpoint if isinstance(endpoint, dict) else {"url": base_url},
+                        "info": init_response.get("result", {})
+                    }
                     await self._fetch_server_tools(server_id)
                     logger.success(f"Connected to external MCP: {base}")
-                else:
-                    logger.warning(f"Failed to initialize external MCP at {base}: HTTP {init.status_code}")
+                except Exception as init_err:
+                    logger.warning(f"Failed to initialize external MCP at {base}: {init_err}")
         except Exception as e:
             logger.warning(f"Error connecting to external endpoint {endpoint}: {e}")
     
@@ -530,16 +638,15 @@ class MCPServer:
                         port = int(server_config.command[i + 1])
                         break
                 
-                base_url = f"http://localhost:{port}"
+                base_url = f"http://localhost:{port}".rstrip('/')
                 
                 # Create client
-                client = httpx.AsyncClient(base_url=base_url)
+                default_headers = {"Accept": "application/json, text/event-stream"}
+                client = httpx.AsyncClient(base_url=base_url, headers=default_headers)
                 self.external_clients[server_name] = client
-                
-                # Initialize connection
-                init_response = await client.post(
-                    "/",
-                    json={
+
+                try:
+                    init_response = await self._call_mcp(client, {
                         "jsonrpc": "2.0",
                         "method": "initialize",
                         "params": {
@@ -551,16 +658,23 @@ class MCPServer:
                             }
                         },
                         "id": 1
-                    }
-                )
-                
-                if init_response.status_code == 200:
+                    })
+                    logger.debug(f"Initialization response from {server_name}: {init_response}")
                     logger.success(f"Connected to MCP server: {server_name}")
-                    
-                    # Fetch available tools
+
                     await self._fetch_server_tools(server_name)
-                else:
-                    logger.error(f"Failed to initialize MCP server {server_name}")
+                    self.external_server_info[server_name] = {
+                        "baseUrl": base_url,
+                        "config": {
+                            "name": server_name,
+                            "command": server_config.command,
+                            "args": server_config.args,
+                            "env": server_config.env
+                        },
+                        "info": init_response.get("result", {})
+                    }
+                except Exception as init_err:
+                    logger.error(f"Failed to initialize MCP server {server_name}: {init_err}")
                     
         except Exception as e:
             logger.error(f"Error connecting to MCP server {server_name}: {e}")
@@ -572,28 +686,17 @@ class MCPServer:
             return
         
         try:
-            # List available tools
-            response = await client.post(
-                "/",
-                json={
-                    "jsonrpc": "2.0",
-                    "method": "tools/list",
-                    "params": {},
-                    "id": 2
-                }
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                tools = result.get("result", {}).get("tools", [])
-                
-                # Store tools for this server
-                self.external_tools[server_id] = {
-                    tool["name"]: tool for tool in tools
-                }
-                
-                logger.info(f"Found {len(tools)} tools on {server_id}: {[t['name'] for t in tools]}")
-                
+            result = await self._call_mcp(client, {
+                "jsonrpc": "2.0",
+                "method": "tools/list",
+                "params": {},
+                "id": 2
+            })
+
+            tools = result.get("result", {}).get("tools", [])
+            self.external_tools[server_id] = {tool["name"]: tool for tool in tools}
+            logger.info(f"Found {len(tools)} tools on {server_id}: {[t['name'] for t in tools]}")
+
         except Exception as e:
             logger.error(f"Error fetching tools from {server_id}: {e}")
     
@@ -649,30 +752,22 @@ class MCPServer:
                 },
                 "id": 3
             }
-            
+
             logger.info(f"   📤 SENDING MCP REQUEST:")
-            logger.info(f"      🔗 Endpoint: POST /")
+            logger.info(f"      🔗 Endpoint: POST /mcp")
             logger.info(f"      📦 Payload: {request_payload}")
-            
-            response = await client.post("/", json=request_payload)
-            
-            logger.info(f"   📥 MCP RESPONSE:")
-            logger.info(f"      🌟 Status: {response.status_code}")
-            
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"      📄 Response Body: {result}")
-                
-                if "error" in result:
-                    error_msg = result["error"]["message"]
-                    logger.error(f"   ❌ MCP TOOL ERROR: {error_msg}")
-                    return {"success": False, "error": error_msg}
-                
-                logger.info(f"   ✅ EXTERNAL TOOL SUCCESS: {tool_name}")
-                return {"success": True, "result": result.get("result")}
-            else:
-                return {"success": False, "error": f"HTTP {response.status_code}"}
-                
+
+            result = await self._call_mcp(client, request_payload)
+            logger.info(f"   📥 MCP RESPONSE BODY: {result}")
+
+            if "error" in result:
+                error_msg = result["error"].get("message", str(result["error"]))
+                logger.error(f"   ❌ MCP TOOL ERROR: {error_msg}")
+                return {"success": False, "error": error_msg}
+
+            logger.info(f"   ✅ EXTERNAL TOOL SUCCESS: {tool_name}")
+            return {"success": True, "result": result.get("result")}
+
         except Exception as e:
             logger.error(f"Error invoking external tool {tool_name}: {e}")
             return {"success": False, "error": str(e)}
@@ -701,13 +796,49 @@ class MCPServer:
                     "name": tool_name,
                     "description": tool_info.get("description", ""),
                     "source": server_id,
+                    "server": server_id,
                     "parameters": tool_info.get("inputSchema", {}),
                     "agent_id": server_id,
                     "agent_name": f"external-{server_id}",
                     "agent_type": "external"
                 })
-        
+
         return tools
+
+    def get_external_server_summary(self) -> List[Dict[str, Any]]:
+        """Get a summary of external MCP servers and their tools."""
+
+        summary = []
+        for server_id, tools in self.external_tools.items():
+            tool_entries = []
+            for tool_name, info in tools.items():
+                tool_entries.append({
+                    "name": tool_name,
+                    "description": info.get("description", ""),
+                    "inputSchema": info.get("inputSchema", {})
+                })
+
+            server_info = self.external_server_info.get(server_id, {})
+            config_data = server_info.get("config") or {}
+            external_info = server_info.get("info") or {}
+            display_name = None
+
+            if isinstance(config_data, dict):
+                display_name = config_data.get("name") or config_data.get("title")
+            if not display_name:
+                display_name = external_info.get("serverInfo", {}).get("name")
+
+            summary.append({
+                "server": server_id,
+                "displayName": display_name or server_id,
+                "baseUrl": server_info.get("baseUrl"),
+                "config": config_data,
+                "info": external_info,
+                "toolCount": len(tool_entries),
+                "tools": tool_entries
+            })
+
+        return summary
     
     async def register_dagger_tool(
         self,

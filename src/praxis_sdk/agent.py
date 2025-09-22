@@ -17,7 +17,13 @@ import trio_asyncio
 from loguru import logger
 
 from .a2a.protocol import A2AProtocolHandler
-from .a2a.models import A2AAgentCard, A2ACapabilities, A2ASkill
+from .a2a.models import (
+    A2AAgentCard,
+    A2ASkill,
+    A2AProvider,
+    ERC8004Registration,
+    create_dynamic_agent_card,
+)
 from .a2a.task_manager import TaskManager
 from .api.server import PraxisAPIServer
 from .bus import Event, EventBus, EventType, event_bus
@@ -63,7 +69,11 @@ class PraxisAgent:
         self.mcp_server: Optional[MCPServer] = None
         self.api_server: Optional[PraxisAPIServer] = None
         self.a2a_protocol: Optional[A2AProtocolHandler] = None
-        
+        self._agent_card: Optional[A2AAgentCard] = None
+        self._feedback_entries: List[Dict[str, Any]] = []
+        self._validation_requests: Dict[str, str] = {}
+        self._validation_responses: Dict[str, str] = {}
+
         # Execution engines and tool contracts
         self.execution_engines: Dict[EngineType, ExecutionEngine] = {}
         self.tool_contracts: Dict[str, ToolContract] = {}
@@ -353,7 +363,12 @@ class PraxisAgent:
         
         # Initialize A2A protocol
         agent_card = self._create_agent_card()
-        self.a2a_protocol = A2AProtocolHandler(self.task_manager, agent_card, self.event_bus)
+        self.a2a_protocol = A2AProtocolHandler(
+            self.task_manager,
+            agent_card,
+            self.event_bus,
+            card_provider=self.get_agent_card_model
+        )
         self._health_status["a2a_protocol"] = True
         logger.info("A2A protocol initialized")
         
@@ -481,79 +496,145 @@ class PraxisAgent:
     # Public API methods for external access
     
     def _create_agent_card(self) -> A2AAgentCard:
-        """Create an A2A agent card for protocol use."""
-        # Create A2A specification-compliant capabilities
-        capabilities = A2ACapabilities(
-            streaming=True,
-            push_notifications=True,
-            state_transition_history=True
-        )
-        
-        # Create skills based on available tools and agent capabilities
-        skills = []
-        
-        # File operations skill
-        skills.append(A2ASkill(
-            id="file-operations",
-            name="File Operations",
-            description="Read, write, and manipulate files in shared workspace",
-            tags=["filesystem", "io", "files"]
-        ))
-        
-        # Code execution skill
-        skills.append(A2ASkill(
-            id="code-execution", 
-            name="Python Code Execution",
-            description="Execute Python code and scripts in isolated Dagger containers",
-            tags=["python", "execution", "dagger", "code"]
-        ))
-        
-        # Data processing skill
-        skills.append(A2ASkill(
-            id="data-processing",
-            name="Data Processing",
-            description="Process and analyze data using various tools",
-            tags=["data", "analysis", "processing"]
-        ))
-        
-        # Workflow orchestration skill (for orchestrator agents)
-        if self.agent_name == "orchestrator":
-            skills.append(A2ASkill(
-                id="workflow-orchestration",
-                name="Workflow Orchestration",
-                description="Coordinate complex multi-step workflows across agents using DSL and LLM",
-                tags=["orchestration", "workflow", "dsl", "llm"]
-            ))
-        
-        # Create provider information
-        from .a2a.models import A2AProvider
+        """Create or refresh the A2A agent card."""
+
+        base_url = f"http://{self.config.api.host}:{self.config.api.port}"
+        a2a_url = f"{base_url}/a2a/v1"
+
         provider = A2AProvider(
             name="Praxis SDK",
-            version="1.0.0", 
+            version="1.0.0",
             description="Python implementation of Praxis agent framework with P2P networking",
             url="https://github.com/praxis-ai/praxis-python"
         )
-        
-        # Create agent card
-        return A2AAgentCard(
+
+        additional_skills: List[A2ASkill] = []
+        if self.agent_name == "orchestrator":
+            additional_skills.append(
+                A2ASkill(
+                    id="workflow-orchestration",
+                    name="Workflow Orchestration",
+                    description="Coordinate complex multi-step workflows across agents using DSL and LLM",
+                    tags=["orchestration", "workflow", "dsl", "llm"]
+                )
+            )
+
+        mcp_summary: List[Dict[str, Any]] = []
+        if self.mcp_server:
+            mcp_summary = self.mcp_server.get_external_server_summary()
+            for entry in mcp_summary:
+                summary_name = entry.get("displayName") or entry.get("server")
+                tool_count = entry.get("toolCount", 0)
+                additional_skills.append(
+                    A2ASkill(
+                        id=f"mcp-{entry.get('server')}",
+                        name=f"MCP: {summary_name}",
+                        description=f"External MCP server providing {tool_count} tools",
+                        tags=["mcp", "external", summary_name or "mcp"]
+                    )
+                )
+
+        card = create_dynamic_agent_card(
             name=self.agent_config.name,
-            version="1.0.0",
-            protocol_version="0.2.9",
-            preferred_transport="JSONRPC",
-            url=f"http://{self.config.api.host}:{self.config.api.port}",
             description=self.agent_config.description,
-            skills=skills,
-            capabilities=capabilities,
-            supported_transports=["http"],
-            security_schemes={},  # Empty for now, can be enhanced later
+            url=a2a_url,
+            tools=list(self.tool_contracts.values()),
+            additional_skills=additional_skills,
             provider=provider
         )
-    
+
+        card.version = getattr(self.agent_config, "version", None) or "1.0.0"
+        card.security_schemes = card.security_schemes or {}
+        card.metadata = card.metadata or {}
+        card.metadata.update({
+            "agent": self.agent_name,
+            "timestamp": time.time()
+        })
+
+        if self.config.agent and self.config.agent.external_mcp_endpoints:
+            configured_eps: List[Dict[str, Any]] = []
+            for ep in self.config.agent.external_mcp_endpoints:
+                if isinstance(ep, dict):
+                    configured_eps.append(ep.copy())
+                else:
+                    configured_eps.append({"url": ep})
+            if configured_eps:
+                card.metadata["mcpConfiguredEndpoints"] = configured_eps
+
+        if mcp_summary:
+            card.metadata["mcpServers"] = mcp_summary
+
+        if self._agent_card and self._agent_card.registrations:
+            card.registrations = list(self._agent_card.registrations)
+
+        self._agent_card = card
+
+        if self.a2a_protocol:
+            self.a2a_protocol.set_agent_card(card)
+
+        return card
+
     def get_agent_card(self) -> Dict[str, Any]:
         """Get the agent's A2A-compliant capability card."""
-        # Return the A2A-compliant card as a dictionary
-        a2a_card = self._create_agent_card()
-        return a2a_card.model_dump(by_alias=True)
+        if not self._agent_card:
+            self._create_agent_card()
+        return self._agent_card.model_dump(by_alias=True)
+
+    def get_agent_card_model(self) -> A2AAgentCard:
+        """Return the underlying agent card model."""
+
+        if not self._agent_card:
+            self._create_agent_card()
+        return self._agent_card
+
+    def get_authenticated_agent_card(self) -> Dict[str, Any]:
+        """Return authenticated/extended agent card information."""
+
+        card = self.get_agent_card_model()
+        return card.model_dump(by_alias=True)
+
+    def get_feedback_entries(self) -> List[Dict[str, Any]]:
+        """Return recorded ERC-8004 feedback entries."""
+
+        return list(self._feedback_entries)
+
+    def get_validation_requests(self) -> Dict[str, str]:
+        """Return validation requests mapping."""
+
+        return dict(self._validation_requests)
+
+    def get_validation_responses(self) -> Dict[str, str]:
+        """Return validation responses mapping."""
+
+        return dict(self._validation_responses)
+
+    def set_erc8004_registration(
+        self,
+        chain_id: int,
+        agent_id: int,
+        agent_address: str,
+        signature: Optional[str] = None,
+        registry: Optional[str] = None,
+    ) -> None:
+        """Attach ERC-8004 registration metadata to the agent card."""
+
+        card = self.get_agent_card_model()
+        registrations = list(card.registrations or [])
+
+        registrations.append(
+            ERC8004Registration(
+                agentId=agent_id,
+                agentAddress=f"eip155:{chain_id}:{agent_address.lower()}",
+                signature=signature,
+                registry=registry,
+            )
+        )
+
+        card.registrations = registrations
+        self._agent_card = card
+
+        if self.a2a_protocol:
+            self.a2a_protocol.set_agent_card(card)
     
     def get_available_tools(self) -> List[Dict[str, Any]]:
         """Get list of available tools from registered contracts and MCP, with valid JSON Schema.
@@ -596,6 +677,7 @@ class PraxisAgent:
         # MCP server tools (already shaped as JSON Schema)
         if self.mcp_server:
             mcp_tools = self.mcp_server.get_available_tools()
+            logger.debug(f"MCP tools discovered for {self.agent_name}: {len(mcp_tools)}")
             tools.extend(mcp_tools)
 
         return tools

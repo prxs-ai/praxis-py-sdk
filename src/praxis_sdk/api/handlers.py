@@ -6,6 +6,8 @@ for all API endpoints with full integration to A2A protocol and P2P services.
 """
 
 import asyncio
+import json
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
@@ -18,9 +20,10 @@ from praxis_sdk.a2a.models import (
     Task, TaskState, TaskStatus, Message, MessageRole, Part, PartKind,
     create_task, create_message, create_text_part, create_jsonrpc_response,
     create_jsonrpc_error_response, create_rpc_error, A2AAgentCard,
-    MessageSendParams, TasksGetParams, TasksListParams
+    MessageSendParams, TasksGetParams, TasksListParams, TasksCancelParams
 )
 from praxis_sdk.bus import event_bus, EventType
+from praxis_sdk.a2a.task_manager import TaskManagerError
 from praxis_sdk.config import load_config
 from praxis_sdk.api.gateway import ToolInfo
 
@@ -52,22 +55,27 @@ class RequestHandlers:
         }
     
     async def handle_health_check(self) -> Dict[str, Any]:
-        """Handle health check requests."""
+        """Handle health check requests (Go-compatible shape)."""
         self.stats["total_requests"] += 1
         self.stats["successful_requests"] += 1
-        
+
+        agent_name = None
+        agent_version = None
+
+        if self.agent:
+            agent_name = getattr(self.agent, "agent_name", None)
+            agent_version = getattr(self.agent, "agent_version", None)
+
+        if not agent_name:
+            agent_name = self.config.agents[0].name if self.config.agents else "praxis-agent"
+
+        if not agent_version:
+            agent_version = os.getenv("AGENT_VERSION", "1.0.0")
+
         return {
             "status": "healthy",
-            "agent": self.config.agents[0].name if self.config.agents else "praxis-agent",
-            "version": "1.0.0",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
-            "uptime_seconds": 0.0,  # TODO: Implement actual uptime tracking
-            "config": {
-                "p2p_enabled": self.config.p2p.enabled,
-                "llm_enabled": self.config.llm.api_key is not None,
-                "tools_available": len(self.available_tools),
-                "active_tasks": len([t for t in self.tasks.values() if t.status.state in [TaskState.SUBMITTED, TaskState.WORKING]])
-            }
+            "agent": agent_name,
+            "version": agent_version,
         }
     
     async def handle_get_agent_card(self) -> A2AAgentCard:
@@ -132,18 +140,22 @@ class RequestHandlers:
             logger.info(f"A2A HTTP REQUEST id={request.id} method={request.method} params={p}")
             if request.method == "message/send":
                 return await self._handle_message_send(request, background_tasks)
-            elif request.method == "tasks/get":
+            if request.method == "tasks/get":
                 return await self._handle_tasks_get(request)
-            elif request.method == "tasks/list":
+            if request.method == "tasks/list":
                 return await self._handle_tasks_list(request)
-            else:
-                error = create_rpc_error(
-                    A2AErrorCode.METHOD_NOT_FOUND,
-                    f"Method '{request.method}' not found"
-                )
-                resp = create_jsonrpc_error_response(request.id, error)
-                logger.info(f"A2A HTTP RESPONSE id={request.id} method={request.method} status=error code={error.code}")
-                return resp
+            if request.method == "tasks/cancel":
+                return await self._handle_tasks_cancel(request)
+            if request.method == "agent/getAuthenticatedExtendedCard":
+                return await self._handle_get_authenticated_card(request)
+
+            error = create_rpc_error(
+                A2AErrorCode.METHOD_NOT_FOUND,
+                f"Method '{request.method}' not found"
+            )
+            resp = create_jsonrpc_error_response(request.id, error)
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method={request.method} status=error code={error.code}")
+            return resp
                 
         except Exception as e:
             logger.error(f"Error handling JSON-RPC request: {e}")
@@ -279,54 +291,115 @@ class RequestHandlers:
             resp = create_jsonrpc_error_response(request.id, error)
             logger.info(f"A2A HTTP RESPONSE id={request.id} method=tasks/list status=error code={error.code}")
             return resp
+
+    async def _handle_tasks_cancel(self, request: JSONRPCRequest) -> JSONRPCResponse:
+        """Handle tasks/cancel A2A method."""
+
+        try:
+            logger.info(f"A2A HTTP REQUEST id={request.id} method=tasks/cancel")
+            params = TasksCancelParams(**(request.params or {}))
+
+            cancelled_task: Optional[Task] = None
+
+            if self.agent and hasattr(self.agent, "task_manager"):
+                try:
+                    cancelled_task = await self.agent.task_manager.cancel_task(params.id)
+                except TaskManagerError as tme:
+                    rpc_err = tme.rpc_error
+                    error = create_rpc_error(rpc_err.code, rpc_err.message, rpc_err.data)
+                    return create_jsonrpc_error_response(request.id, error)
+                except RPCError as rpc_err:
+                    error = create_rpc_error(rpc_err.code, rpc_err.message, rpc_err.data)
+                    return create_jsonrpc_error_response(request.id, error)
+
+            if cancelled_task is None:
+                task = self.tasks.get(params.id)
+                if not task:
+                    error = create_rpc_error(
+                        A2AErrorCode.TASK_NOT_FOUND,
+                        f"Task not found: {params.id}"
+                    )
+                    return create_jsonrpc_error_response(request.id, error)
+
+                task.status.state = TaskState.CANCELED
+                task.status.timestamp = datetime.utcnow().isoformat() + "Z"
+                cancelled_task = task
+
+            self.tasks[cancelled_task.id] = cancelled_task
+
+            await event_bus.publish_data(
+                EventType.TASK_CANCELLED,
+                {
+                    "task_id": cancelled_task.id,
+                    "status": cancelled_task.status.dict(),
+                },
+                source="request_handlers",
+                correlation_id=cancelled_task.id
+            )
+
+            self.stats["successful_requests"] += 1
+            return create_jsonrpc_response(request.id, cancelled_task.dict())
+
+        except Exception as e:
+            error = create_rpc_error(
+                A2AErrorCode.INVALID_PARAMS,
+                f"Invalid tasks/cancel parameters: {e}"
+            )
+            resp = create_jsonrpc_error_response(request.id, error)
+            logger.info(f"A2A HTTP RESPONSE id={request.id} method=tasks/cancel status=error code={error.code}")
+            return resp
+
+    async def _handle_get_authenticated_card(self, request: JSONRPCRequest) -> JSONRPCResponse:
+        """Return authenticated agent card."""
+
+        try:
+            if not self.agent:
+                raise ValueError("Agent context not attached")
+            card = self.agent.get_authenticated_agent_card()
+            return create_jsonrpc_response(request.id, card)
+        except Exception as e:
+            error = create_rpc_error(
+                A2AErrorCode.INTERNAL_ERROR,
+                f"Failed to fetch authenticated card: {e}"
+            )
+            return create_jsonrpc_error_response(request.id, error)
     
     async def _handle_legacy_dsl_request(
-        self, 
+        self,
         dsl_command: str,
         background_tasks: BackgroundTasks
     ) -> Dict[str, Any]:
-        """Handle legacy DSL command requests."""
+        """Handle legacy DSL command requests by converting to A2A JSON-RPC."""
+
         self.stats["dsl_commands"] += 1
-        
+
         try:
-            # Create message from DSL command
             message = create_message(
                 role=MessageRole.USER,
                 parts=[create_text_part(dsl_command)]
             )
-            
-            # Create task
-            task = create_task(initial_message=message)
-            self.tasks[task.id] = task
-            self.stats["task_creations"] += 1
-            
-            # Process command asynchronously
-            background_tasks.add_task(
-                self._process_command_async,
-                task.id,
-                dsl_command,
-                task.context_id
+
+            jsonrpc_request = JSONRPCRequest(
+                id=str(uuid4()),
+                method="message/send",
+                params={"message": message.model_dump(by_alias=True)},
             )
-            
-            # Publish DSL command event
+
+            response = await self._handle_message_send(jsonrpc_request, background_tasks)
+
             await event_bus.publish_data(
                 EventType.DSL_COMMAND_RECEIVED,
                 {
-                    "task_id": task.id,
+                    "task_id": response.result.get("id") if response.result else None,
                     "command": dsl_command,
-                    "legacy_format": True
+                    "legacy_format": True,
                 },
                 source="request_handlers",
-                correlation_id=task.id
+                correlation_id=response.result.get("id") if response.result else None
             )
-            
-            self.stats["successful_requests"] += 1
-            return {
-                "status": "submitted",
-                "task_id": task.id,
-                "message": "DSL command submitted for processing"
-            }
-            
+
+            return response.model_dump(by_alias=True)
+
         except Exception as e:
             logger.error(f"Error handling legacy DSL request: {e}")
             raise

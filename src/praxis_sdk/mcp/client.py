@@ -28,6 +28,7 @@ class MCPServerConfig:
     enabled: bool = True
     reconnect_interval: int = 30
     max_retries: int = 3
+    headers: Optional[Dict[str, str]] = None
 
 
 class SubprocessTransport(MCPTransport):
@@ -196,10 +197,10 @@ class MCPClient:
     async def _create_transport(self, config: MCPServerConfig) -> MCPTransport:
         """Create appropriate transport based on configuration"""
         if config.transport_type == "http":
-            return HTTPTransport(config.endpoint)
-        
+            return HTTPTransport(config.endpoint, headers=config.headers)
+
         elif config.transport_type == "sse":
-            return SSETransport(config.endpoint)
+            return SSETransport(config.endpoint, headers=config.headers)
         
         elif config.transport_type == "subprocess":
             # Parse command from endpoint

@@ -34,9 +34,25 @@ from .models import (
 )
 
 
+TERMINAL_STATES: Set[TaskState] = {
+    TaskState.COMPLETED,
+    TaskState.FAILED,
+    TaskState.CANCELED,
+    TaskState.REJECTED,
+}
+
+
 class TaskExecutionTimeout(Exception):
     """Raised when task execution exceeds timeout."""
     pass
+
+
+class TaskManagerError(Exception):
+    """Wrap A2A RPC errors produced by the task manager."""
+
+    def __init__(self, rpc_error: RPCError):
+        self.rpc_error = rpc_error
+        super().__init__(rpc_error.message)
 
 
 class TaskManager:
@@ -68,8 +84,8 @@ class TaskManager:
         self._tasks: Dict[str, Task] = {}
         self._task_timeouts: Dict[str, float] = {}
         
-        # Synchronization
-        self._lock = trio.Lock()
+        # Synchronization (asyncio lock to avoid re-entrant trio lock issues in mixed contexts)
+        self._lock = asyncio.Lock()
         
         # Background cleanup task
         self._cleanup_task: Optional[trio.lowlevel.Task] = None
@@ -80,6 +96,7 @@ class TaskManager:
             "tasks_created": 0,
             "tasks_completed": 0,
             "tasks_failed": 0,
+            "tasks_cancelled": 0,
             "tasks_timeout": 0,
             "artifacts_created": 0,
             "cleanup_runs": 0,
@@ -248,9 +265,11 @@ class TaskManager:
                 self.stats["tasks_completed"] += 1
             elif new_state == TaskState.FAILED:
                 self.stats["tasks_failed"] += 1
-            
+            elif new_state == TaskState.CANCELED:
+                self.stats["tasks_cancelled"] += 1
+
             logger.info(f"[TaskID: {task_id}] Status updated: {old_state} -> {new_state}")
-            
+
             # Publish event
             await self.event_bus.publish_data(
                 EventType.TASK_PROGRESS,
@@ -265,9 +284,14 @@ class TaskManager:
             )
             
             # Publish completion event if task is done
-            if new_state in [TaskState.COMPLETED, TaskState.FAILED]:
+            if new_state in [TaskState.COMPLETED, TaskState.FAILED, TaskState.CANCELED]:
+                event_type = (
+                    EventType.TASK_COMPLETED if new_state == TaskState.COMPLETED
+                    else EventType.TASK_FAILED if new_state == TaskState.FAILED
+                    else EventType.TASK_CANCELLED
+                )
                 await self.event_bus.publish_data(
-                    EventType.TASK_COMPLETED if new_state == TaskState.COMPLETED else EventType.TASK_FAILED,
+                    event_type,
                     {
                         "task_id": task_id,
                         "task": task.dict(),
@@ -277,7 +301,40 @@ class TaskManager:
                 )
             
             return True
-    
+
+    async def cancel_task(self, task_id: str, reason: Optional[str] = None) -> Task:
+        """Cancel a task if it is not in a terminal state."""
+
+        async with self._lock:
+            task = self._tasks.get(task_id)
+            if not task:
+                raise TaskManagerError(create_rpc_error(A2AErrorCode.TASK_NOT_FOUND, f"Task not found: {task_id}"))
+
+            if task.status.state in TERMINAL_STATES:
+                raise TaskManagerError(
+                    create_rpc_error(
+                        A2AErrorCode.TASK_NOT_CANCELABLE,
+                        f"Task {task_id} is already in terminal state {task.status.state.value}"
+                    )
+                )
+
+            context_id = task.context_id
+
+        cancel_message: Optional[Message] = None
+        if reason:
+            cancel_message = create_message(
+                MessageRole.AGENT,
+                [create_text_part(reason)],
+                task_id=task_id,
+                context_id=context_id
+            )
+
+        await self.update_task_status(task_id, TaskState.CANCELED, cancel_message, reason)
+
+        async with self._lock:
+            self._task_timeouts.pop(task_id, None)
+            return self._tasks[task_id]
+
     async def add_artifact(
         self, 
         task_id: str, 
@@ -454,13 +511,38 @@ class TaskManager:
         
         # Valid transitions according to A2A specification
         valid_transitions = {
-            TaskState.SUBMITTED: [TaskState.WORKING, TaskState.FAILED],
-            TaskState.WORKING: [TaskState.COMPLETED, TaskState.FAILED, TaskState.INPUT_REQUIRED],
-            TaskState.INPUT_REQUIRED: [TaskState.WORKING, TaskState.FAILED],
+            TaskState.SUBMITTED: [
+                TaskState.WORKING,
+                TaskState.INPUT_REQUIRED,
+                TaskState.AUTH_REQUIRED,
+                TaskState.REJECTED,
+                TaskState.CANCELED,
+                TaskState.FAILED,
+            ],
+            TaskState.WORKING: [
+                TaskState.COMPLETED,
+                TaskState.FAILED,
+                TaskState.INPUT_REQUIRED,
+                TaskState.AUTH_REQUIRED,
+                TaskState.CANCELED,
+            ],
+            TaskState.INPUT_REQUIRED: [
+                TaskState.WORKING,
+                TaskState.FAILED,
+                TaskState.CANCELED,
+            ],
+            TaskState.AUTH_REQUIRED: [
+                TaskState.WORKING,
+                TaskState.FAILED,
+                TaskState.CANCELED,
+            ],
+            TaskState.UNKNOWN: [TaskState.WORKING, TaskState.FAILED, TaskState.CANCELED],
             TaskState.COMPLETED: [],  # Terminal state
             TaskState.FAILED: [],     # Terminal state
+            TaskState.CANCELED: [],   # Terminal state
+            TaskState.REJECTED: [],   # Terminal state
         }
-        
+
         return to_state in valid_transitions.get(from_state, [])
     
     async def _cleanup_loop(self) -> None:

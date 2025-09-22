@@ -85,6 +85,7 @@ class SimplifiedP2PService:
         self.persistent_streams: Dict[str, INetStream] = {}
         self.connection_states: Dict[str, str] = {}
         self._pause_keepalive: Dict[str, bool] = {}
+        self.peer_addresses: Dict[str, str] = {}
         
         # Initialize persistent keypair using keystore
         self.keypair: "KeyPair" = self._load_or_create_keypair()
@@ -182,6 +183,14 @@ class SimplifiedP2PService:
     async def _handle_card_stream(self, stream: INetStream):
         """Handle card exchange (responder side - READ first, then WRITE)."""
         peer_id = str(stream.muxed_conn.peer_id)
+
+        try:
+            remote_addr = getattr(getattr(stream.muxed_conn.muxed_conn.conn, "transport_conn", None), "remote_multiaddr", None)
+            if remote_addr:
+                self.peer_addresses[peer_id] = str(remote_addr)
+                logger.debug(f"Responder recorded peer address for {peer_id}: {remote_addr}")
+        except Exception:
+            pass
         
         try:
             logger.info(f"🔄 Starting card exchange with {peer_id} (responder)")
@@ -659,9 +668,10 @@ class SimplifiedP2PService:
             # Mark as ready
             self.connection_states[peer_id_str] = ConnectionState.READY
             
-            # Start background task to keep stream alive (run trio task via asyncio bridge)
+            # Start background task to keep stream alive.
+            # trio_asyncio.trio_as_aio returns an asyncio.Future, so schedule it with ensure_future
             import asyncio
-            asyncio.create_task(
+            asyncio.ensure_future(
                 trio_asyncio.trio_as_aio(self._keep_stream_alive_initiator)(stream, peer_id_str)
             )
             
@@ -675,6 +685,14 @@ class SimplifiedP2PService:
     async def _perform_full_exchange_initiator(self, stream: INetStream, peer_id: str):
         """Perform full exchange as initiator."""
         try:
+            try:
+                remote_addr = getattr(getattr(stream.muxed_conn.muxed_conn.conn, "transport_conn", None), "remote_multiaddr", None)
+                if remote_addr:
+                    self.peer_addresses[peer_id] = str(remote_addr)
+                    logger.debug(f"Initiator recorded peer address for {peer_id}: {remote_addr}")
+            except Exception:
+                pass
+
             # Step 1: Send our card
             logger.info(f"🔄 Starting card exchange with {peer_id} (initiator)")
             
@@ -865,13 +883,15 @@ class SimplifiedP2PService:
         
         # Initiate persistent exchange after connection
         try:
-            # Run trio coroutine via trio-asyncio bridge to avoid cross-loop errors
-            success = await trio_asyncio.trio_as_aio(self._initiate_persistent_exchange)(peer_info.peer_id)
+            # We are already in trio context; call trio coroutine directly
+            success = await self._initiate_persistent_exchange(peer_info.peer_id)
             if not success:
                 logger.warning(f"Failed to establish persistent exchange with {peer_info.peer_id}")
         except Exception as e:
             logger.warning(f"Failed to initiate persistent exchange: {e}")
         
+        self.peer_addresses[str(peer_info.peer_id)] = peer_multiaddr
+        logger.debug(f"Recorded peer address for {peer_info.peer_id}: {peer_multiaddr}")
         return {
             "status": "connected",
             "peer_id": str(peer_info.peer_id)
@@ -884,13 +904,26 @@ class SimplifiedP2PService:
 
         async def _trio_invoke() -> Dict[str, Any]:
             peer_id = PeerID.from_base58(peer_id_str)
-            stream = await self.host.new_stream(peer_id, [A2A_PROTOCOL])
+
+            addr = self.peer_addresses.get(peer_id_str)
+            if not addr and peer_id_str in self.connected_peers:
+                addr = self.connected_peers[peer_id_str].get("addr")
+            if addr:
+                try:
+                    peer_info = info_from_p2p_addr(Multiaddr(addr))
+                    await self.host.connect(peer_info)
+                except Exception as e:
+                    logger.debug(f"Ensure connection to {peer_id_str} failed: {e}")
+
             try:
-                # Send request
+                stream = await self.host.new_stream(peer_id, [A2A_PROTOCOL])
+            except Exception as e:
+                logger.error(f"Failed to open A2A stream to {peer_id_str}: {e}")
+                raise
+            try:
                 request_bytes = json.dumps(request).encode('utf-8')
                 await stream.write(request_bytes)
-                
-                # Read response
+
                 response_bytes = await stream.read(MAX_READ_LEN)
                 return json.loads(response_bytes.decode('utf-8'))
             finally:
@@ -915,6 +948,8 @@ class SimplifiedP2PService:
                 addr = None
                 if peer_id_str in self.connected_peers:
                     addr = self.connected_peers[peer_id_str].get("addr")
+                if not addr:
+                    addr = self.peer_addresses.get(peer_id_str)
 
                 # If not known, try to find bootstrap entry that matches peer id
                 if not addr:
@@ -946,8 +981,8 @@ class SimplifiedP2PService:
                 logger.debug(f"Could not ensure connection to {peer_id_str} before opening TOOL stream")
             try:
                 stream = await self.host.new_stream(peer_id, [TOOL_PROTOCOL])
-            except Exception:
-                # Reconnect and retry once
+            except Exception as e:
+                logger.error(f"Failed to open TOOL stream to {peer_id_str}: {e}")
                 await _ensure_connected_trio()
                 stream = await self.host.new_stream(peer_id, [TOOL_PROTOCOL])
             try:

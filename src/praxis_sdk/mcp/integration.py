@@ -6,7 +6,7 @@ and event bus for seamless tool invocation across the agent network.
 """
 
 import trio
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable, Union
 from loguru import logger
 import json
 
@@ -73,28 +73,40 @@ class MCPIntegration:
             logger.error(f"Failed to initialize MCP integration: {e}")
             raise
     
-    def _create_server_config(self, endpoint: str, index: int) -> MCPServerConfig:
+    def _create_server_config(self, endpoint: Union[str, Dict[str, Any]], index: int) -> MCPServerConfig:
         """Create MCP server configuration from endpoint"""
-        if endpoint.startswith("http"):
-            return MCPServerConfig(
-                name=f"external_http_{index}",
-                transport_type="http",
-                endpoint=endpoint
-            )
-        elif endpoint.startswith("subprocess:"):
-            command = endpoint[11:]  # Remove "subprocess:" prefix
+        headers: Optional[Dict[str, Any]] = None
+        name = f"external_http_{index}"
+        transport_type = "http"
+        endpoint_value: str
+
+        if isinstance(endpoint, dict):
+            endpoint_value = endpoint.get("url") or endpoint.get("endpoint") or endpoint.get("address")
+            headers = endpoint.get("headers")
+            name = endpoint.get("name", name)
+            transport_type = endpoint.get("transport", endpoint.get("type", "http"))
+        else:
+            endpoint_value = endpoint
+
+        if endpoint_value.startswith("subprocess:"):
+            command = endpoint_value[11:]
             return MCPServerConfig(
                 name=f"external_subprocess_{index}",
                 transport_type="subprocess",
-                endpoint=command
+                endpoint=command,
+                headers=None
             )
-        else:
-            # Default to HTTP
-            return MCPServerConfig(
-                name=f"external_default_{index}",
-                transport_type="http",
-                endpoint=endpoint
-            )
+
+        if endpoint_value.startswith("sse:"):
+            endpoint_value = endpoint_value[4:]
+            transport_type = "sse"
+
+        return MCPServerConfig(
+            name=name,
+            transport_type=transport_type,
+            endpoint=endpoint_value,
+            headers=headers
+        )
     
     async def _register_external_tools(self):
         """Register tools from external MCP servers with the main server"""
@@ -105,20 +117,31 @@ class MCPIntegration:
         
         for server_name, tools in available_tools.items():
             for tool in tools:
-                tool_name = f"external_{tool['name']}"
-                
-                # Create handler for external tool
-                async def external_tool_handler(**kwargs):
-                    return await self.mcp_client.call_tool(
-                        server_name, tool["name"], kwargs
-                    )
-                
-                # Register with MCP server
+                original_name = tool.get("name")
+                if not original_name:
+                    continue
+
+                tool_key = f"{server_name}:{original_name}"
+
+                async def make_handler(server: str, remote_tool: str):
+                    async def handler(**kwargs):
+                        return await self.mcp_client.call_tool(server, remote_tool, kwargs)
+                    return handler
+
+                handler = await make_handler(server_name, original_name)
+
+                if hasattr(self.mcp_server, 'external_tools'):
+                    server_tools = self.mcp_server.external_tools.setdefault(server_name, {})
+                    server_tools[original_name] = {
+                        "description": tool.get("description", ""),
+                        "inputSchema": tool.get("inputSchema", {"type": "object"})
+                    }
+
                 await self.mcp_server.register_dynamic_tool(
-                    name=tool_name,
-                    description=f"External tool: {tool.get('description', '')}",
+                    name=tool_key,
+                    description=f"External tool from {server_name}: {tool.get('description', '')}",
                     input_schema=tool.get("inputSchema", {"type": "object"}),
-                    handler=external_tool_handler
+                    handler=handler
                 )
     
     def _setup_event_handlers(self):
