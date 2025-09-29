@@ -60,6 +60,7 @@ RUN pip install --no-cache-dir \
     aiofiles \
     jinja2 \
     click \
+    keyring==25.5.0 \
     python-multipart \
     docker \
     gql[all]==3.5.0 \
