@@ -11,15 +11,29 @@ from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from loguru import logger
 
+from praxis_sdk.keyring_manager import get_keyring_manager
+
 
 class SecurityConfig(BaseModel):
     """Security configuration for P2P and API."""
-    
+
     use_noise: bool = True
     noise_key: Optional[str] = None
     tls_cert_path: Optional[str] = None
     tls_key_path: Optional[str] = None
     api_key: Optional[str] = None
+
+    def model_post_init(self, __context):
+        """Post-initialization hook to load sensitive values from keyring."""
+        keyring_mgr = get_keyring_manager()
+
+        if self.noise_key is None:
+            self.noise_key = keyring_mgr.get_credential('NOISE_KEY', fallback_env='NOISE_KEY')
+
+        if self.api_key is None:
+            self.api_key = keyring_mgr.get_credential('API_KEY', fallback_env='API_KEY')
+
+        super().model_post_init(__context) if hasattr(super(), 'model_post_init') else None
 
 
 class P2PConfig(BaseModel):
@@ -115,13 +129,15 @@ class LLMConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v):
         if v is None or v == "":
-            v = os.getenv('OPENAI_API_KEY')
+            keyring_mgr = get_keyring_manager()
+            v = keyring_mgr.get_credential('OPENAI_API_KEY', fallback_env='OPENAI_API_KEY')
         return v
 
     def model_post_init(self, __context):
-        """Post-initialization hook to ensure API key is loaded from environment."""
+        """Post-initialization hook to ensure API key is loaded from keyring or environment."""
         if self.api_key is None or self.api_key == "":
-            self.api_key = os.getenv('OPENAI_API_KEY')
+            keyring_mgr = get_keyring_manager()
+            self.api_key = keyring_mgr.get_credential('OPENAI_API_KEY', fallback_env='OPENAI_API_KEY')
         super().model_post_init(__context) if hasattr(super(), 'model_post_init') else None
 
 

@@ -36,6 +36,7 @@ from .p2p.discovery import P2PDiscovery
 from .execution import ExecutionEngine, DaggerExecutionEngine, LocalExecutionEngine, DockerSDKExecutionEngine, ToolContract, EngineType
 from .execution.engine import test_dagger_availability
 from .execution.contracts import ExecutionResult
+from .keyring_manager import get_keyring_manager
 
 
 class PraxisAgent:
@@ -50,19 +51,21 @@ class PraxisAgent:
         self.config = config or load_config()
         self.agent_name = agent_name
         self.agent_config = self._get_agent_config(agent_name)
-        
+
+        self.keyring_manager = get_keyring_manager()
+
         # Component state
         self._running = False
         self._startup_complete = False
         self._shutdown_in_progress = False
         self._health_status: Dict[str, bool] = {}
-        
+
         # Core components
         self.event_bus = event_bus
         self.task_manager = TaskManager(self.event_bus)
         self.llm_client = LLMClient(self.config.llm)
         self.dsl_orchestrator = DSLOrchestrator(self, self.config)
-        
+
         # Optional components (initialized in start())
         self.p2p_service: Optional[SimplifiedP2PService] = None
         self.p2p_discovery: Optional[P2PDiscovery] = None
@@ -77,13 +80,13 @@ class PraxisAgent:
         # Execution engines and tool contracts
         self.execution_engines: Dict[EngineType, ExecutionEngine] = {}
         self.tool_contracts: Dict[str, ToolContract] = {}
-        
+
         # Setup logging
         self._setup_logging()
-        
+
         # Signal handling for graceful shutdown
         self._setup_signal_handlers()
-        
+
         logger.info(f"Praxis Agent '{agent_name}' initialized")
     
     def _get_agent_config(self, agent_name: str) -> AgentConfig:

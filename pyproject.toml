@@ -34,6 +34,7 @@ zeroconf = "^0.47.1"
 python-multipart = "^0.0.20"
 opentelemetry-exporter-otlp-proto-grpc = "^1.36.0"
 gql = "3.5.0"
+keyring = "^25.5.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
