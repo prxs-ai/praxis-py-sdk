@@ -1,3 +1,6 @@
+# IMPORTANT: For encrypted storage persistence, set PRAXIS_MASTER_KEY in .env
+# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
 version: '3.8'
 
 services:
@@ -31,6 +34,7 @@ services:
       - PRAXIS_LOGGING__LEVEL=debug
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - APIFY_API_TOKEN=${APIFY_API_TOKEN:-}
+      - PRAXIS_MASTER_KEY=${PRAXIS_MASTER_KEY:-}
       - PRAXIS_ENVIRONMENT=development
       - PRAXIS_DEBUG=true
     volumes:
@@ -85,6 +89,7 @@ services:
       - PRAXIS_LOGGING__LEVEL=debug
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - APIFY_API_TOKEN=${APIFY_API_TOKEN:-}
+      - PRAXIS_MASTER_KEY=${PRAXIS_MASTER_KEY:-}
       - PRAXIS_ENVIRONMENT=development
       - PRAXIS_DEBUG=true
     volumes:

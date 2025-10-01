@@ -37,6 +37,7 @@ from .execution import ExecutionEngine, DaggerExecutionEngine, LocalExecutionEng
 from .execution.engine import test_dagger_availability
 from .execution.contracts import ExecutionResult
 from .keyring_manager import get_keyring_manager
+from .storage import EncryptedKVStore
 
 
 class PraxisAgent:
@@ -53,6 +54,9 @@ class PraxisAgent:
         self.agent_config = self._get_agent_config(agent_name)
 
         self.keyring_manager = get_keyring_manager()
+
+        self.kv_stores: Dict[str, EncryptedKVStore] = {}
+        self._init_kv_stores()
 
         # Component state
         self._running = False
@@ -104,7 +108,39 @@ class PraxisAgent:
             self.config.add_agent(agent_config)
         
         return agent_config
-    
+
+    def _init_kv_stores(self):
+        """Initialize encrypted KV stores for different namespaces."""
+        # Create default namespaces
+        default_namespaces = [
+            "agent_state",
+            "p2p_peers",
+            "a2a_capabilities",
+            "task_history",
+            "metrics",
+        ]
+
+        for namespace in default_namespaces:
+            self.kv_stores[namespace] = EncryptedKVStore(
+                agent_name=self.agent_name,
+                namespace=namespace
+            )
+
+        logger.debug(f"Initialized {len(self.kv_stores)} KV store namespaces")
+
+    def get_kv_store(self, namespace: str) -> EncryptedKVStore:
+        """
+        Get or create KV store for a namespace.
+        """
+        if namespace not in self.kv_stores:
+            self.kv_stores[namespace] = EncryptedKVStore(
+                agent_name=self.agent_name,
+                namespace=namespace
+            )
+            logger.debug(f"Created new KV store namespace: {namespace}")
+
+        return self.kv_stores[namespace]
+
     def _setup_logging(self):
         """Configure logging based on configuration."""
         log_config = self.config.logging
