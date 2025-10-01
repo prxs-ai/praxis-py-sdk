@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.1...praxis-py-sdk-v0.2.2) (2025-10-01)
+
+
+### Features
+
+* : [PRXS-34] :: Implement KV Store ([#16](https://github.com/prxs-ai/praxis-py-sdk/issues/16)) ([25f38e8](https://github.com/prxs-ai/praxis-py-sdk/commit/25f38e853018fce65bbec1f2d4978b1f5d807e8a))
+
 ## [0.2.1](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.0...praxis-py-sdk-v0.2.1) (2025-09-22)
 
 ### Features
