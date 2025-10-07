@@ -56,6 +56,9 @@ class RequestHandlers:
     
     async def handle_health_check(self) -> Dict[str, Any]:
         """Handle health check requests (Go-compatible shape)."""
+        import time
+        start_time = time.time()
+
         self.stats["total_requests"] += 1
         self.stats["successful_requests"] += 1
 
@@ -71,6 +74,11 @@ class RequestHandlers:
 
         if not agent_version:
             agent_version = os.getenv("AGENT_VERSION", "1.0.0")
+
+        # Record health check metrics
+        if self.agent and hasattr(self.agent, 'metrics_collector'):
+            duration = time.time() - start_time
+            self.agent.metrics_collector.record_health_check("healthy", duration)
 
         return {
             "status": "healthy",
