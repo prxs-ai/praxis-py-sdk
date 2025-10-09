@@ -72,6 +72,7 @@ class RequestHandlers:
     async def handle_health_check(self) -> dict[str, Any]:
         """Handle health check requests (Go-compatible shape)."""
         import time
+
         start_time = time.time()
 
         self.stats["total_requests"] += 1

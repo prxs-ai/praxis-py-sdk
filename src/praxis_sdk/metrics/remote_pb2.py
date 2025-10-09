@@ -28,10 +28,10 @@ class Label:
     def _encode_varint(value: int) -> bytes:
         """Encode integer as varint."""
         result = b""
-        while value > 0x7f:
-            result += bytes([0x80 | (value & 0x7f)])
+        while value > 0x7F:
+            result += bytes([0x80 | (value & 0x7F)])
             value >>= 7
-        result += bytes([value & 0x7f])
+        result += bytes([value & 0x7F])
         return result
 
 
@@ -45,6 +45,7 @@ class Sample:
     def SerializeToString(self) -> bytes:
         """Serialize sample to protobuf format."""
         import struct
+
         result = b""
         if self.value != 0.0:
             result += b'\x09' + struct.pack('<d', self.value)
@@ -56,10 +57,10 @@ class Sample:
     def _encode_varint(value: int) -> bytes:
         """Encode integer as varint."""
         result = b""
-        while value > 0x7f:
-            result += bytes([0x80 | (value & 0x7f)])
+        while value > 0x7F:
+            result += bytes([0x80 | (value & 0x7F)])
             value >>= 7
-        result += bytes([value & 0x7f])
+        result += bytes([value & 0x7F])
         return result
 
 
@@ -85,10 +86,10 @@ class TimeSeries:
     def _encode_varint(value: int) -> bytes:
         """Encode integer as varint."""
         result = b""
-        while value > 0x7f:
-            result += bytes([0x80 | (value & 0x7f)])
+        while value > 0x7F:
+            result += bytes([0x80 | (value & 0x7F)])
             value >>= 7
-        result += bytes([value & 0x7f])
+        result += bytes([value & 0x7F])
         return result
 
 
@@ -110,8 +111,8 @@ class WriteRequest:
     def _encode_varint(value: int) -> bytes:
         """Encode integer as varint."""
         result = b""
-        while value > 0x7f:
-            result += bytes([0x80 | (value & 0x7f)])
+        while value > 0x7F:
+            result += bytes([0x80 | (value & 0x7F)])
             value >>= 7
-        result += bytes([value & 0x7f])
+        result += bytes([value & 0x7F])
         return result

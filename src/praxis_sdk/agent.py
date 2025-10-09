@@ -68,8 +68,7 @@ class PraxisAgent:
         self._init_kv_stores()
 
         self.metrics_collector = MetricsCollector(
-            agent_name=self.agent_name,
-            environment=self.config.environment
+            agent_name=self.agent_name, environment=self.config.environment
         )
 
         self.metrics_pusher = MetricsPusher(
@@ -237,10 +236,9 @@ class PraxisAgent:
             await self._start_optional_components()
             logger.info("Optional components startup complete")
 
-
             # Start metrics pusher in background
             await self._start_metrics_pusher()
-            
+
             # Mark startup complete
             self._startup_complete = True
 
@@ -415,7 +413,9 @@ class PraxisAgent:
                 )
 
                 # Log peer information if available
-                logger.success(f"Simplified P2P service started successfully on port {self.config.p2p.port}")
+                logger.success(
+                    f"Simplified P2P service started successfully on port {self.config.p2p.port}"
+                )
 
                 # Log peer information if available and update metrics
                 peer_id = self.p2p_service.get_peer_id()
@@ -490,7 +490,9 @@ class PraxisAgent:
             return
 
         try:
-            logger.info(f"Starting metrics pusher (interval: {self.config.metrics.push_interval}s, endpoint: {self.config.metrics.remote_write_url})...")
+            logger.info(
+                f"Starting metrics pusher (interval: {self.config.metrics.push_interval}s, endpoint: {self.config.metrics.remote_write_url})..."
+            )
 
             self._metrics_pusher_task = asyncio.create_task(self.metrics_pusher.run())
             self._health_status["metrics_pusher"] = True

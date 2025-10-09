@@ -38,7 +38,7 @@ keyring = "^25.5.0"
 pytest-trio = "^0.8.0"
 prometheus-client = "^0.21.0"
 python-snappy = "^0.7.3"
-protobuf = "^5.28.3"
+protobuf = ">=6.30,<7"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

@@ -198,12 +198,12 @@ class PraxisAPIServer:
                 metrics_data = self._agent.metrics_collector.serialize()
                 return Response(
                     content=metrics_data,
-                    media_type="text/plain; version=0.0.4; charset=utf-8"
+                    media_type="text/plain; version=0.0.4; charset=utf-8",
                 )
             else:
                 return Response(
                     content=b"# Metrics not available\n",
-                    media_type="text/plain; version=0.0.4; charset=utf-8"
+                    media_type="text/plain; version=0.0.4; charset=utf-8",
                 )
 
         @app.post("/a2a/v1")

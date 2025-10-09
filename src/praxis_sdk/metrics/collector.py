@@ -4,7 +4,13 @@ Collects and manages Prometheus metrics.
 """
 
 from typing import Dict, Optional, Any
-from prometheus_client import Counter, Gauge, Histogram, CollectorRegistry, generate_latest
+from prometheus_client import (
+    Counter,
+    Gauge,
+    Histogram,
+    CollectorRegistry,
+    generate_latest,
+)
 from loguru import logger
 
 
@@ -57,7 +63,9 @@ class MetricsCollector:
         self._init_mcp_metrics()
         self._init_system_metrics()
 
-        logger.debug(f"MetricsCollector initialized for agent '{agent_name}' with peer_id '{self.libp2p_peer_id}'")
+        logger.debug(
+            f"MetricsCollector initialized for agent '{agent_name}' with peer_id '{self.libp2p_peer_id}'"
+        )
 
     def _init_health_metrics(self) -> None:
         """Initialize health check related metrics."""
@@ -362,7 +370,22 @@ class MetricsCollector:
         name: str,
         documentation: str,
         labelnames: Optional[list] = None,
-        buckets: tuple = (0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0),
+        buckets: tuple = (
+            0.005,
+            0.01,
+            0.025,
+            0.05,
+            0.075,
+            0.1,
+            0.25,
+            0.5,
+            0.75,
+            1.0,
+            2.5,
+            5.0,
+            7.5,
+            10.0,
+        ),
     ) -> Histogram:
         """Create and register a histogram metric."""
         if name in self._histograms:
@@ -478,8 +501,7 @@ class MetricsCollector:
             duration: Duration of health check in seconds
         """
         self.increment_counter(
-            "praxis_agent_health_checks_total",
-            labels={"status": status}
+            "praxis_agent_health_checks_total", labels={"status": status}
         )
         self.observe_histogram(
             "praxis_agent_health_check_duration_seconds",
