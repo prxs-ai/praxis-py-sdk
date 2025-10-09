@@ -224,6 +224,18 @@ class LoggingConfig(BaseModel):
     output: str | None = None
 
 
+class MetricsConfig(BaseModel):
+    """Metrics and monitoring configuration."""
+
+    enabled: bool = True
+    push_interval: int = 15  # seconds
+    remote_write_url: str = "https://monitoring.prxs.ai/prometheus/api/v1/write"
+    job_name: str = "praxis-agent"
+    basic_auth_username: Optional[str] = None
+    basic_auth_password: Optional[str] = None
+    additional_labels: Dict[str, str] = Field(default_factory=dict)
+
+
 class A2ACardEndpoint(BaseModel):
     """A2A card endpoint configuration."""
 
@@ -333,6 +345,7 @@ class PraxisConfig(BaseSettings):
     websocket: WebSocketConfig | None = None
     a2a: A2AConfig | None = None
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    metrics: MetricsConfig = Field(default_factory=MetricsConfig)
     dagger: DaggerConfig = Field(default_factory=DaggerConfig)
 
     # Agent-level configuration (for single agent configs)

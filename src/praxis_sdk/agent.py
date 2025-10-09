@@ -44,6 +44,8 @@ from .mcp.server import MCPServer
 from .p2p import SimplifiedP2PService, create_simplified_p2p_service
 from .p2p.discovery import P2PDiscovery
 from .storage import EncryptedKVStore
+from .metrics.collector import MetricsCollector
+from .metrics.pusher import MetricsPusher
 
 
 class PraxisAgent:
@@ -65,11 +67,29 @@ class PraxisAgent:
         self.kv_stores: dict[str, EncryptedKVStore] = {}
         self._init_kv_stores()
 
+        self.metrics_collector = MetricsCollector(
+            agent_name=self.agent_name,
+            environment=self.config.environment
+        )
+
+        self.metrics_pusher = MetricsPusher(
+            collector=self.metrics_collector,
+            remote_write_url=self.config.metrics.remote_write_url,
+            job_name=self.config.metrics.job_name,
+            instance=self.agent_name,
+            push_interval=self.config.metrics.push_interval,
+            basic_auth_username=self.config.metrics.basic_auth_username,
+            basic_auth_password=self.config.metrics.basic_auth_password,
+            labels=self.config.metrics.additional_labels,
+        )
+
         # Component state
         self._running = False
         self._startup_complete = False
         self._shutdown_in_progress = False
+
         self._health_status: dict[str, bool] = {}
+        self._health_status: Dict[str, bool] = {}
 
         # Core components
         self.event_bus = event_bus
@@ -217,6 +237,10 @@ class PraxisAgent:
             await self._start_optional_components()
             logger.info("Optional components startup complete")
 
+
+            # Start metrics pusher in background
+            await self._start_metrics_pusher()
+            
             # Mark startup complete
             self._startup_complete = True
 
@@ -391,10 +415,15 @@ class PraxisAgent:
                 )
 
                 # Log peer information if available
+                logger.success(f"Simplified P2P service started successfully on port {self.config.p2p.port}")
+
+                # Log peer information if available and update metrics
                 peer_id = self.p2p_service.get_peer_id()
                 listen_addrs = self.p2p_service.get_listen_addresses()
                 if peer_id:
                     logger.info(f"P2P Peer ID: {peer_id}")
+                    # Update metrics collector with real peer_id
+                    self.metrics_collector.update_libp2p_peer_id(peer_id)
                 if listen_addrs:
                     logger.info(f"P2P listening on: {listen_addrs}")
 
@@ -453,6 +482,23 @@ class PraxisAgent:
         except Exception as e:
             logger.error(f"Failed to start API server: {e}")
 
+    async def _start_metrics_pusher(self):
+        """Start the metrics pusher in background."""
+        if not self.config.metrics.enabled:
+            logger.info("Metrics pusher disabled in configuration")
+            self._health_status["metrics_pusher"] = False
+            return
+
+        try:
+            logger.info(f"Starting metrics pusher (interval: {self.config.metrics.push_interval}s, endpoint: {self.config.metrics.remote_write_url})...")
+
+            self._metrics_pusher_task = asyncio.create_task(self.metrics_pusher.run())
+            self._health_status["metrics_pusher"] = True
+            logger.info("Metrics pusher started successfully")
+        except Exception as e:
+            logger.error(f"Failed to start metrics pusher: {e}")
+            self._health_status["metrics_pusher"] = False
+
     async def stop(self):
         """Stop the Praxis Agent and all subsystems gracefully."""
         if not self._running or self._shutdown_in_progress:
@@ -469,6 +515,17 @@ class PraxisAgent:
         )
 
         # Stop components in reverse order
+
+        # Stop metrics pusher
+        if self._metrics_pusher_task:
+            logger.info("Stopping metrics pusher...")
+            self.metrics_pusher.stop()
+            self._metrics_pusher_task.cancel()
+            try:
+                await self._metrics_pusher_task
+            except asyncio.CancelledError:
+                pass
+            logger.info("Metrics pusher stopped")
 
         # Stop execution engines
         await self._stop_execution_engines()

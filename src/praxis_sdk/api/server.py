@@ -34,6 +34,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketDisconnect
 from loguru import logger
@@ -189,6 +190,21 @@ class PraxisAPIServer:
         @app.get("/health")
         async def health_check():
             return await get_request_handlers().handle_health_check()
+
+        @app.get("/metrics")
+        async def metrics():
+            """Expose Prometheus metrics in text format."""
+            if self._agent and hasattr(self._agent, 'metrics_collector'):
+                metrics_data = self._agent.metrics_collector.serialize()
+                return Response(
+                    content=metrics_data,
+                    media_type="text/plain; version=0.0.4; charset=utf-8"
+                )
+            else:
+                return Response(
+                    content=b"# Metrics not available\n",
+                    media_type="text/plain; version=0.0.4; charset=utf-8"
+                )
 
         @app.post("/a2a/v1")
         async def a2a_jsonrpc_endpoint(request: dict[str, Any]):
