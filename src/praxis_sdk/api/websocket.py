@@ -1,5 +1,4 @@
-"""
-WebSocket Manager for Praxis Python SDK.
+"""WebSocket Manager for Praxis Python SDK.
 
 Provides comprehensive WebSocket connection management, event streaming,
 and real-time communication capabilities with trio_asyncio integration.
@@ -12,25 +11,26 @@ Go Backend Compatibility:
 """
 
 import json
-import trio
-import trio_asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, List, Optional, Set, Union, Callable, Awaitable
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Union
 from uuid import uuid4
 
+import trio
+import trio_asyncio
 from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from praxis_sdk.bus import Event, EventType, EventFilter, event_bus
-from praxis_sdk.a2a.models import Task, Message
+from praxis_sdk.a2a.models import Message, Task
+from praxis_sdk.bus import Event, EventFilter, EventType, event_bus
 
 
 class ConnectionState(Enum):
     """WebSocket connection states."""
+
     CONNECTING = "connecting"
     CONNECTED = "connected"
     DISCONNECTING = "disconnecting"
@@ -40,6 +40,7 @@ class ConnectionState(Enum):
 
 class MessageType(Enum):
     """WebSocket message types."""
+
     # Client to server
     DSL_COMMAND = "DSL_COMMAND"
     EXECUTE_WORKFLOW = "EXECUTE_WORKFLOW"
@@ -47,7 +48,7 @@ class MessageType(Enum):
     SUBSCRIBE_EVENTS = "SUBSCRIBE_EVENTS"
     UNSUBSCRIBE_EVENTS = "UNSUBSCRIBE_EVENTS"
     PING = "PING"
-    
+
     # Server to client
     DSL_PROGRESS = "dslProgress"
     DSL_RESULT = "dslResult"
@@ -66,43 +67,41 @@ class MessageType(Enum):
 @dataclass
 class WebSocketConnection:
     """WebSocket connection information."""
-    
+
     id: str
     websocket: WebSocket
     state: ConnectionState = ConnectionState.CONNECTING
     connected_at: datetime = field(default_factory=datetime.utcnow)
-    last_ping: Optional[datetime] = None
-    event_filter: Optional[EventFilter] = None
-    subscribed_events: Set[EventType] = field(default_factory=set)
-    send_channel: Optional[trio.MemorySendChannel] = None
-    receive_channel: Optional[trio.MemoryReceiveChannel] = None
-    user_id: Optional[str] = None
-    session_data: Dict[str, Any] = field(default_factory=dict)
+    last_ping: datetime | None = None
+    event_filter: EventFilter | None = None
+    subscribed_events: set[EventType] = field(default_factory=set)
+    send_channel: trio.MemorySendChannel | None = None
+    receive_channel: trio.MemoryReceiveChannel | None = None
+    user_id: str | None = None
+    session_data: dict[str, Any] = field(default_factory=dict)
     message_count: int = 0
     error_count: int = 0
 
 
 class WebSocketMessage(BaseModel):
-    """
-    WebSocket message structure - Go-compatible format.
-    
+    """WebSocket message structure - Go-compatible format.
+
     Simplified to {type, payload} format for compatibility with Go backend.
     Optional fields (id, timestamp, correlation_id) maintained for backward compatibility.
     """
-    
+
     type: str
-    payload: Dict[str, Any] = Field(default_factory=dict)
-    
+    payload: dict[str, Any] = Field(default_factory=dict)
+
     # Optional fields for backward compatibility
-    id: Optional[str] = None
-    timestamp: Optional[datetime] = None
-    correlation_id: Optional[str] = None
+    id: str | None = None
+    timestamp: datetime | None = None
+    correlation_id: str | None = None
 
 
 class WebSocketManager:
-    """
-    Comprehensive WebSocket connection manager with event streaming.
-    
+    """Comprehensive WebSocket connection manager with event streaming.
+
     Features:
     - Connection lifecycle management
     - Event filtering and subscription
@@ -111,15 +110,15 @@ class WebSocketManager:
     - Connection health monitoring
     - Trio-asyncio integration
     """
-    
+
     def __init__(self, max_connections: int = 100, heartbeat_interval: int = 30):
         self.max_connections = max_connections
         self.heartbeat_interval = heartbeat_interval
-        
+
         # Connection management
-        self.connections: Dict[str, WebSocketConnection] = {}
-        self.connection_handlers: Dict[MessageType, Callable] = {}
-        
+        self.connections: dict[str, WebSocketConnection] = {}
+        self.connection_handlers: dict[MessageType, Callable] = {}
+
         # Statistics
         self.stats = {
             "total_connections": 0,
@@ -129,16 +128,15 @@ class WebSocketManager:
             "broadcast_count": 0,
             "errors": 0,
         }
-        
+
         # Control
         self._running = False
-        self._nursery: Optional[trio.Nursery] = None
-        
+        self._nursery: trio.Nursery | None = None
+
         self._setup_handlers()
-    
+
     def _setup_handlers(self):
         """Setup message handlers for different message types."""
-        
         self.connection_handlers = {
             MessageType.DSL_COMMAND: self._handle_dsl_command,
             MessageType.EXECUTE_WORKFLOW: self._handle_execute_workflow,
@@ -147,59 +145,56 @@ class WebSocketManager:
             MessageType.UNSUBSCRIBE_EVENTS: self._handle_unsubscribe_events,
             MessageType.PING: self._handle_ping,
         }
-    
+
     async def start(self, nursery: trio.Nursery):
         """Start the WebSocket manager."""
         self._nursery = nursery
         self._running = True
-        
+
         # Start background tasks
         nursery.start_soon(self._heartbeat_monitor)
         nursery.start_soon(self._connection_cleanup)
-        
+
         logger.info("WebSocket manager started")
-    
+
     async def stop(self):
         """Stop the WebSocket manager."""
         self._running = False
-        
+
         # Close all connections
         for connection in list(self.connections.values()):
             await self._disconnect_client(connection.id, reason="Server shutdown")
-        
+
         logger.info("WebSocket manager stopped")
-    
+
     async def handle_connection(self, websocket: WebSocket) -> str:
-        """
-        Handle new WebSocket connection.
+        """Handle new WebSocket connection.
         Returns connection ID.
         """
         if len(self.connections) >= self.max_connections:
             await websocket.close(code=1008, reason="Maximum connections reached")
             raise ConnectionError("Maximum connections reached")
-        
+
         connection_id = str(uuid4())
-        
+
         try:
             await websocket.accept()
-            
+
             # Create connection object
             connection = WebSocketConnection(
-                id=connection_id,
-                websocket=websocket,
-                state=ConnectionState.CONNECTED
+                id=connection_id, websocket=websocket, state=ConnectionState.CONNECTED
             )
-            
+
             # Setup event streaming channels
             send_channel, receive_channel = trio.open_memory_channel(100)
             connection.send_channel = send_channel
             connection.receive_channel = receive_channel
-            
+
             # Register connection
             self.connections[connection_id] = connection
             self.stats["total_connections"] += 1
             self.stats["active_connections"] += 1
-            
+
             # Add to event bus WebSocket manager
             default_filter = EventFilter(
                 event_types={
@@ -217,91 +212,104 @@ class WebSocketManager:
                     EventType.LOG_STREAM,
                     EventType.TOOL_EXECUTED,
                     EventType.TOOL_FAILED,
-                    EventType.P2P_TOOL_RESPONSE
+                    EventType.P2P_TOOL_RESPONSE,
                 }
             )
-            event_bus.websocket_manager.add_connection(connection_id, send_channel, default_filter)
-            
+            event_bus.websocket_manager.add_connection(
+                connection_id, send_channel, default_filter
+            )
+
             logger.info(f"WebSocket client connected: {connection_id}")
-            
+
             # Send welcome message
-            await self.send_message(connection_id, WebSocketMessage(
-                type=MessageType.CHAT_RESPONSE.value,
-                payload={
-                    "content": "Connected to Praxis Agent",
-                    "sender": "system",
-                    "type": "system"
-                }
-            ))
-            
+            await self.send_message(
+                connection_id,
+                WebSocketMessage(
+                    type=MessageType.CHAT_RESPONSE.value,
+                    payload={
+                        "content": "Connected to Praxis Agent",
+                        "sender": "system",
+                        "type": "system",
+                    },
+                ),
+            )
+
             return connection_id
-            
+
         except Exception as e:
             logger.error(f"Error handling WebSocket connection: {e}")
             if connection_id in self.connections:
-                await self._disconnect_client(connection_id, reason=f"Connection error: {e}")
+                await self._disconnect_client(
+                    connection_id, reason=f"Connection error: {e}"
+                )
             raise
-    
+
     async def handle_client_messages(self, connection_id: str):
         """Handle messages from a WebSocket client."""
         connection = self.connections.get(connection_id)
         if not connection:
             return
-        
+
         try:
             while connection.state == ConnectionState.CONNECTED:
                 # Receive message from client
                 data = await connection.websocket.receive_text()
                 connection.message_count += 1
                 self.stats["messages_received"] += 1
-                
+
                 try:
                     message_data = json.loads(data)
-                    
+
                     # Ensure backward compatibility: handle both simplified and full formats
                     if "id" not in message_data and "timestamp" not in message_data:
                         # New simplified format from Go backend - add defaults for backward compatibility
                         message_data.setdefault("id", str(uuid4()))
-                        message_data.setdefault("timestamp", datetime.utcnow().isoformat())
-                    
+                        message_data.setdefault(
+                            "timestamp", datetime.utcnow().isoformat()
+                        )
+
                     message = WebSocketMessage(**message_data)
-                    
+
                     # Handle message
                     await self._route_message(connection_id, message)
-                    
+
                 except (json.JSONDecodeError, ValueError) as e:
                     logger.error(f"Invalid message from {connection_id}: {e}")
-                    await self._send_error(connection_id, f"Invalid message format: {e}")
+                    await self._send_error(
+                        connection_id, f"Invalid message format: {e}"
+                    )
                     connection.error_count += 1
-                
+
         except WebSocketDisconnect:
             logger.info(f"WebSocket client disconnected: {connection_id}")
             await self._disconnect_client(connection_id, reason="Client disconnected")
         except Exception as e:
             logger.error(f"Error handling messages from {connection_id}: {e}")
-            await self._disconnect_client(connection_id, reason=f"Message handling error: {e}")
-    
+            await self._disconnect_client(
+                connection_id, reason=f"Message handling error: {e}"
+            )
+
     async def handle_event_streaming(self, connection_id: str):
         """Handle event streaming to a WebSocket client."""
         connection = self.connections.get(connection_id)
         if not connection or not connection.receive_channel:
             return
-        
+
         try:
             async with connection.receive_channel:
                 async for event in connection.receive_channel:
                     if connection.state != ConnectionState.CONNECTED:
                         break
-                    
+
                     # Transform event to frontend-compatible format
                     frontend_message = self._transform_event_for_frontend(event)
                     if frontend_message:
                         await self._send_message_direct(connection, frontend_message)
-                    
+
         except Exception as e:
             logger.error(f"Error streaming events to {connection_id}: {e}")
-    
-    def _transform_event_for_frontend(self, event: Event) -> Optional[WebSocketMessage]:
+
+    def _transform_event_for_frontend(self, event: Event) -> WebSocketMessage | None:
         """Transform backend events to frontend-compatible WebSocket messages."""
         try:
             # Map backend event types to frontend message types (Go parity)
@@ -328,34 +336,36 @@ class WebSocketManager:
             # Handle special transformations for specific event types
             if event.type == EventType.DSL_COMMAND_PROGRESS:
                 return self._create_dsl_progress_message(event, frontend_type)
-            elif event.type == EventType.DSL_COMMAND_COMPLETED:
+            if event.type == EventType.DSL_COMMAND_COMPLETED:
                 return self._create_dsl_result_message(event, frontend_type)
-            elif event.type in (EventType.TASK_STARTED, EventType.WORKFLOW_STARTED):
+            if event.type in (EventType.TASK_STARTED, EventType.WORKFLOW_STARTED):
                 return self._create_workflow_start_message(event, frontend_type)
-            elif event.type in (EventType.TASK_PROGRESS, EventType.WORKFLOW_PROGRESS):
+            if event.type in (EventType.TASK_PROGRESS, EventType.WORKFLOW_PROGRESS):
                 return self._create_workflow_progress_message(event, frontend_type)
-            elif event.type in (EventType.TASK_COMPLETED, EventType.WORKFLOW_COMPLETED):
+            if event.type in (EventType.TASK_COMPLETED, EventType.WORKFLOW_COMPLETED):
                 return self._create_workflow_complete_message(event, frontend_type)
-            elif event.type in (EventType.TASK_FAILED,):
+            if event.type in (EventType.TASK_FAILED,):
                 return self._create_workflow_error_message(event, frontend_type)
-            elif event.type == EventType.NODE_STATUS_UPDATE:
+            if event.type == EventType.NODE_STATUS_UPDATE:
                 return self._create_node_status_update_message(event, frontend_type)
-            elif event.type in (EventType.LOG_ENTRY, EventType.LOG_STREAM):
+            if event.type in (EventType.LOG_ENTRY, EventType.LOG_STREAM):
                 return self._create_log_message(event, frontend_type)
-            elif event.type in (EventType.TOOL_EXECUTED, EventType.TOOL_FAILED, EventType.P2P_TOOL_RESPONSE):
+            if event.type in (
+                EventType.TOOL_EXECUTED,
+                EventType.TOOL_FAILED,
+                EventType.P2P_TOOL_RESPONSE,
+            ):
                 return self._create_tool_result_message(event, frontend_type)
-            else:
-                # Generic event transformation
-                return WebSocketMessage(
-                    type=frontend_type,
-                    payload=event.data or {}
-                )
-                
+            # Generic event transformation
+            return WebSocketMessage(type=frontend_type, payload=event.data or {})
+
         except Exception as e:
             logger.error(f"Error transforming event for frontend: {e}")
             return None
-    
-    def _create_dsl_progress_message(self, event: Event, message_type: str) -> WebSocketMessage:
+
+    def _create_dsl_progress_message(
+        self, event: Event, message_type: str
+    ) -> WebSocketMessage:
         """Create DSL progress message for frontend."""
         data = event.data or {}
         return WebSocketMessage(
@@ -363,11 +373,13 @@ class WebSocketManager:
             payload={
                 "stage": data.get("stage", "analyzing"),
                 "message": data.get("message", "Processing DSL command..."),
-                "details": data
-            }
+                "details": data,
+            },
         )
-    
-    def _create_dsl_result_message(self, event: Event, message_type: str) -> WebSocketMessage:
+
+    def _create_dsl_result_message(
+        self, event: Event, message_type: str
+    ) -> WebSocketMessage:
         """Create DSL result message for frontend."""
         data = event.data or {}
         return WebSocketMessage(
@@ -378,11 +390,13 @@ class WebSocketManager:
                 "matchedAgents": data.get("matched_agents", []),
                 "requiredMCPTools": data.get("required_tools", []),
                 "workflowSuggestion": data.get("workflow", {}),
-                "processTime": data.get("process_time", 0)
-            }
+                "processTime": data.get("process_time", 0),
+            },
         )
-    
-    def _create_workflow_start_message(self, event: Event, message_type: str) -> WebSocketMessage:
+
+    def _create_workflow_start_message(
+        self, event: Event, message_type: str
+    ) -> WebSocketMessage:
         """Create workflow start message for frontend."""
         data = event.data or {}
         return WebSocketMessage(
@@ -393,11 +407,13 @@ class WebSocketManager:
                 "nodes": data.get("nodes", []),
                 "edges": data.get("edges", []),
                 "metadata": data.get("metadata", {}),
-                "startTime": event.metadata.timestamp.isoformat() + "Z"
-            }
+                "startTime": event.metadata.timestamp.isoformat() + "Z",
+            },
         )
-    
-    def _create_workflow_progress_message(self, event: Event, message_type: str) -> WebSocketMessage:
+
+    def _create_workflow_progress_message(
+        self, event: Event, message_type: str
+    ) -> WebSocketMessage:
         """Create workflow progress message for frontend."""
         data = event.data or {}
         return WebSocketMessage(
@@ -409,11 +425,13 @@ class WebSocketManager:
                 "status": data.get("status", "running"),
                 "progress": data.get("progress", 0),
                 "message": data.get("message", "Processing..."),
-                "timestamp": event.metadata.timestamp.isoformat() + "Z"
-            }
+                "timestamp": event.metadata.timestamp.isoformat() + "Z",
+            },
         )
-    
-    def _create_workflow_complete_message(self, event: Event, message_type: str) -> WebSocketMessage:
+
+    def _create_workflow_complete_message(
+        self, event: Event, message_type: str
+    ) -> WebSocketMessage:
         """Create workflow completion message for frontend."""
         data = event.data or {}
         return WebSocketMessage(
@@ -424,11 +442,13 @@ class WebSocketManager:
                 "message": data.get("message", "Workflow completed successfully"),
                 "results": data.get("results", ""),
                 "duration": data.get("duration", 0),
-                "timestamp": event.metadata.timestamp.isoformat() + "Z"
-            }
+                "timestamp": event.metadata.timestamp.isoformat() + "Z",
+            },
         )
-    
-    def _create_workflow_error_message(self, event: Event, message_type: str) -> WebSocketMessage:
+
+    def _create_workflow_error_message(
+        self, event: Event, message_type: str
+    ) -> WebSocketMessage:
         """Create workflow error message for frontend."""
         data = event.data or {}
         return WebSocketMessage(
@@ -438,11 +458,13 @@ class WebSocketManager:
                 "executionId": data.get("execution_id", ""),
                 "nodeId": data.get("node_id"),
                 "error": data.get("error", "Workflow execution failed"),
-                "timestamp": event.metadata.timestamp.isoformat() + "Z"
-            }
+                "timestamp": event.metadata.timestamp.isoformat() + "Z",
+            },
         )
-    
-    def _create_node_status_update_message(self, event: Event, message_type: str) -> WebSocketMessage:
+
+    def _create_node_status_update_message(
+        self, event: Event, message_type: str
+    ) -> WebSocketMessage:
         """Create node status update message for frontend."""
         data = event.data or {}
         return WebSocketMessage(
@@ -451,10 +473,10 @@ class WebSocketManager:
                 "workflowId": data.get("workflow_id", ""),
                 "nodeId": data.get("node_id", ""),
                 "status": data.get("status", "idle"),
-                "timestamp": event.metadata.timestamp.isoformat() + "Z"
-            }
+                "timestamp": event.metadata.timestamp.isoformat() + "Z",
+            },
         )
-    
+
     def _create_chat_message(self, event: Event, message_type: str) -> WebSocketMessage:
         """Create chat message for frontend."""
         data = event.data or {}
@@ -464,8 +486,8 @@ class WebSocketManager:
                 "content": data.get("content", ""),
                 "sender": data.get("sender", "assistant"),
                 "type": data.get("message_type", "text"),
-                "metadata": data.get("metadata")
-            }
+                "metadata": data.get("metadata"),
+            },
         )
 
     def _create_log_message(self, event: Event, message_type: str) -> WebSocketMessage:
@@ -479,10 +501,12 @@ class WebSocketManager:
                 "message": data.get("message", ""),
                 "source": data.get("source"),
                 "nodeId": data.get("nodeId") or data.get("node_id"),
-            }
+            },
         )
 
-    def _create_tool_result_message(self, event: Event, message_type: str) -> WebSocketMessage:
+    def _create_tool_result_message(
+        self, event: Event, message_type: str
+    ) -> WebSocketMessage:
         """Create tool result message for frontend."""
         data = event.data or {}
         return WebSocketMessage(
@@ -492,57 +516,62 @@ class WebSocketManager:
                 "status": data.get("status", "completed"),
                 "result": data.get("result"),
                 "error": data.get("error"),
-                "metadata": data.get("metadata")
-            }
+                "metadata": data.get("metadata"),
+            },
         )
-    
+
     async def send_message(self, connection_id: str, message: WebSocketMessage):
         """Send message to specific connection."""
         connection = self.connections.get(connection_id)
         if not connection:
             logger.warning(f"Connection not found: {connection_id}")
             return False
-        
+
         return await self._send_message_direct(connection, message)
-    
-    async def broadcast_message(self, message: WebSocketMessage, filter_func: Optional[Callable[[WebSocketConnection], bool]] = None):
+
+    async def broadcast_message(
+        self,
+        message: WebSocketMessage,
+        filter_func: Callable[[WebSocketConnection], bool] | None = None,
+    ):
         """Broadcast message to all or filtered connections."""
         self.stats["broadcast_count"] += 1
-        
+
         tasks = []
         for connection in self.connections.values():
             if filter_func and not filter_func(connection):
                 continue
-                
+
             if connection.state == ConnectionState.CONNECTED:
                 tasks.append(self._send_message_direct(connection, message))
-        
+
         if tasks:
-            await trio_asyncio.aio_as_trio(lambda: trio.lowlevel.current_trio_token().run_sync_in_context_of(
-                lambda: [t for t in tasks]
-            ))()
-    
-    async def _send_message_direct(self, connection: WebSocketConnection, message: WebSocketMessage) -> bool:
+            await trio_asyncio.aio_as_trio(
+                lambda: trio.lowlevel.current_trio_token().run_sync_in_context_of(
+                    lambda: [t for t in tasks]
+                )
+            )()
+
+    async def _send_message_direct(
+        self, connection: WebSocketConnection, message: WebSocketMessage
+    ) -> bool:
         """Send message directly to connection in Go-compatible simplified format."""
         try:
             # Go-compatible simplified format: {type: string, payload: any}
-            frontend_message = {
-                "type": message.type,
-                "payload": message.payload
-            }
-            
+            frontend_message = {"type": message.type, "payload": message.payload}
+
             # Add optional fields only if present (backward compatibility)
             if message.id:
                 frontend_message["id"] = message.id
             if message.timestamp:
                 frontend_message["timestamp"] = (
-                    message.timestamp.isoformat() + "Z" 
-                    if hasattr(message.timestamp, 'isoformat') 
+                    message.timestamp.isoformat() + "Z"
+                    if hasattr(message.timestamp, "isoformat")
                     else message.timestamp
                 )
             if message.correlation_id:
                 frontend_message["correlation_id"] = message.correlation_id
-            
+
             await connection.websocket.send_text(json.dumps(frontend_message))
             self.stats["messages_sent"] += 1
             return True
@@ -550,46 +579,52 @@ class WebSocketManager:
             logger.error(f"Error sending message to {connection.id}: {e}")
             connection.error_count += 1
             self.stats["errors"] += 1
-            
+
             # Disconnect on send errors
             await self._disconnect_client(connection.id, reason=f"Send error: {e}")
             return False
-    
+
     async def _route_message(self, connection_id: str, message: WebSocketMessage):
         """Route message to appropriate handler."""
         try:
             message_type = MessageType(message.type)
             handler = self.connection_handlers.get(message_type)
-            
+
             if handler:
                 await handler(connection_id, message)
             else:
                 logger.warning(f"No handler for message type: {message.type}")
-                await self._send_error(connection_id, f"Unknown message type: {message.type}")
-                
+                await self._send_error(
+                    connection_id, f"Unknown message type: {message.type}"
+                )
+
         except ValueError:
             logger.error(f"Invalid message type: {message.type}")
-            await self._send_error(connection_id, f"Invalid message type: {message.type}")
+            await self._send_error(
+                connection_id, f"Invalid message type: {message.type}"
+            )
         except Exception as e:
             logger.error(f"Error routing message: {e}")
             await self._send_error(connection_id, f"Message routing error: {e}")
-    
+
     async def _handle_dsl_command(self, connection_id: str, message: WebSocketMessage):
         """Handle DSL command message."""
         command = message.payload.get("command", "")
-        
+
         await event_bus.publish_data(
             EventType.DSL_COMMAND_RECEIVED,
             {
                 "command": command,
                 "connection_id": connection_id,
-                "websocket_source": True
+                "websocket_source": True,
             },
             source="websocket_manager",
-            correlation_id=message.correlation_id or message.id
+            correlation_id=message.correlation_id or message.id,
         )
-    
-    async def _handle_execute_workflow(self, connection_id: str, message: WebSocketMessage):
+
+    async def _handle_execute_workflow(
+        self, connection_id: str, message: WebSocketMessage
+    ):
         """Handle workflow execution message (Go-compatible contract)."""
         payload = message.payload or {}
         workflow = payload.get("workflow")
@@ -612,9 +647,9 @@ class WebSocketManager:
                 "connection_id": connection_id,
             },
             source="websocket_manager",
-            correlation_id=workflow_id
+            correlation_id=workflow_id,
         )
-    
+
     async def _handle_chat_message(self, connection_id: str, message: WebSocketMessage):
         """Handle chat message."""
         content = message.payload.get("content", "")
@@ -622,221 +657,263 @@ class WebSocketManager:
 
         if sender == "user":
             if content:
-                await self.send_message(connection_id, WebSocketMessage(
-                    type=MessageType.CHAT_RESPONSE.value,
-                    payload={
-                        "content": f"Processing: {content}",
-                        "sender": "assistant",
-                    },
-                ))
+                await self.send_message(
+                    connection_id,
+                    WebSocketMessage(
+                        type=MessageType.CHAT_RESPONSE.value,
+                        payload={
+                            "content": f"Processing: {content}",
+                            "sender": "assistant",
+                        },
+                    ),
+                )
 
-            await self._handle_dsl_command(connection_id, WebSocketMessage(
-                type=MessageType.DSL_COMMAND.value,
-                payload={"command": content},
-                correlation_id=message.id
-            ))
-    
-    async def _handle_subscribe_events(self, connection_id: str, message: WebSocketMessage):
+            await self._handle_dsl_command(
+                connection_id,
+                WebSocketMessage(
+                    type=MessageType.DSL_COMMAND.value,
+                    payload={"command": content},
+                    correlation_id=message.id,
+                ),
+            )
+
+    async def _handle_subscribe_events(
+        self, connection_id: str, message: WebSocketMessage
+    ):
         """Handle event subscription request."""
         connection = self.connections.get(connection_id)
         if not connection:
             return
-        
+
         event_types = message.payload.get("event_types", [])
-        
+
         try:
             # Parse event types
             subscription_events = {EventType(et) for et in event_types}
             connection.subscribed_events.update(subscription_events)
-            
+
             # Update event filter
-            connection.event_filter = EventFilter(event_types=connection.subscribed_events)
-            
+            connection.event_filter = EventFilter(
+                event_types=connection.subscribed_events
+            )
+
             # Update event bus subscription
             if connection.send_channel:
                 event_bus.websocket_manager.add_connection(
-                    connection_id, 
-                    connection.send_channel, 
-                    connection.event_filter
+                    connection_id, connection.send_channel, connection.event_filter
                 )
-            
-            await self.send_message(connection_id, WebSocketMessage(
-                type=MessageType.CHAT_RESPONSE.value,
-                payload={
-                    "content": f"Subscribed to {len(subscription_events)} event types",
-                    "sender": "system",
-                    "type": "system"
-                }
-            ))
-            
+
+            await self.send_message(
+                connection_id,
+                WebSocketMessage(
+                    type=MessageType.CHAT_RESPONSE.value,
+                    payload={
+                        "content": f"Subscribed to {len(subscription_events)} event types",
+                        "sender": "system",
+                        "type": "system",
+                    },
+                ),
+            )
+
         except ValueError as e:
             await self._send_error(connection_id, f"Invalid event types: {e}")
-    
-    async def _handle_unsubscribe_events(self, connection_id: str, message: WebSocketMessage):
+
+    async def _handle_unsubscribe_events(
+        self, connection_id: str, message: WebSocketMessage
+    ):
         """Handle event unsubscription request."""
         connection = self.connections.get(connection_id)
         if not connection:
             return
-        
+
         event_types = message.payload.get("event_types", [])
-        
+
         try:
             # Parse and remove event types
             unsubscribe_events = {EventType(et) for et in event_types}
             connection.subscribed_events -= unsubscribe_events
-            
+
             # Update event filter
-            connection.event_filter = EventFilter(event_types=connection.subscribed_events)
-            
+            connection.event_filter = EventFilter(
+                event_types=connection.subscribed_events
+            )
+
             # Update event bus subscription
             if connection.send_channel:
                 event_bus.websocket_manager.add_connection(
-                    connection_id, 
-                    connection.send_channel, 
-                    connection.event_filter
+                    connection_id, connection.send_channel, connection.event_filter
                 )
-            
-            await self.send_message(connection_id, WebSocketMessage(
-                type=MessageType.CHAT_RESPONSE.value,
-                payload={
-                    "content": f"Unsubscribed from {len(unsubscribe_events)} event types",
-                    "sender": "system",
-                    "type": "system"
-                }
-            ))
-            
+
+            await self.send_message(
+                connection_id,
+                WebSocketMessage(
+                    type=MessageType.CHAT_RESPONSE.value,
+                    payload={
+                        "content": f"Unsubscribed from {len(unsubscribe_events)} event types",
+                        "sender": "system",
+                        "type": "system",
+                    },
+                ),
+            )
+
         except ValueError as e:
             await self._send_error(connection_id, f"Invalid event types: {e}")
-    
+
     async def _handle_ping(self, connection_id: str, message: WebSocketMessage):
         """Handle ping message."""
         connection = self.connections.get(connection_id)
         if connection:
             connection.last_ping = datetime.utcnow()
-        
-        await self.send_message(connection_id, WebSocketMessage(
-            type=MessageType.PONG.value,
-            payload={"timestamp": datetime.utcnow().isoformat() + "Z"},
-            correlation_id=message.id
-        ))
-    
+
+        await self.send_message(
+            connection_id,
+            WebSocketMessage(
+                type=MessageType.PONG.value,
+                payload={"timestamp": datetime.utcnow().isoformat() + "Z"},
+                correlation_id=message.id,
+            ),
+        )
+
     async def _send_error(self, connection_id: str, error_message: str):
         """Send error message to connection."""
-        await self.send_message(connection_id, WebSocketMessage(
-            type=MessageType.ERROR.value,
-            payload={
-                "message": error_message,
-                "code": "WEBSOCKET_ERROR",
-                "timestamp": datetime.utcnow().isoformat() + "Z"
-            }
-        ))
-    
+        await self.send_message(
+            connection_id,
+            WebSocketMessage(
+                type=MessageType.ERROR.value,
+                payload={
+                    "message": error_message,
+                    "code": "WEBSOCKET_ERROR",
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                },
+            ),
+        )
+
     async def _disconnect_client(self, connection_id: str, reason: str = "Unknown"):
         """Disconnect and cleanup client connection."""
         connection = self.connections.pop(connection_id, None)
         if not connection:
             return
-        
+
         try:
             connection.state = ConnectionState.DISCONNECTING
-            
+
             # Close WebSocket
             if connection.websocket:
                 await connection.websocket.close(reason=reason)
-            
+
             # Close channels
             if connection.send_channel:
                 connection.send_channel.close()
-            
+
             # Remove from event bus
             event_bus.websocket_manager.remove_connection(connection_id)
-            
+
             connection.state = ConnectionState.DISCONNECTED
-            self.stats["active_connections"] = max(0, self.stats["active_connections"] - 1)
-            
-            logger.info(f"WebSocket client disconnected: {connection_id} (reason: {reason})")
-            
+            self.stats["active_connections"] = max(
+                0, self.stats["active_connections"] - 1
+            )
+
+            logger.info(
+                f"WebSocket client disconnected: {connection_id} (reason: {reason})"
+            )
+
         except Exception as e:
             logger.error(f"Error disconnecting client {connection_id}: {e}")
             connection.state = ConnectionState.ERROR
-    
+
     async def _heartbeat_monitor(self):
         """Monitor connection health with periodic heartbeats."""
         while self._running:
             try:
                 current_time = datetime.utcnow()
-                
+
                 # Check for stale connections
                 stale_connections = []
                 for connection in self.connections.values():
                     if connection.last_ping:
-                        time_since_ping = (current_time - connection.last_ping).total_seconds()
-                        if time_since_ping > self.heartbeat_interval * 3:  # 3x heartbeat interval
+                        time_since_ping = (
+                            current_time - connection.last_ping
+                        ).total_seconds()
+                        if (
+                            time_since_ping > self.heartbeat_interval * 3
+                        ):  # 3x heartbeat interval
                             stale_connections.append(connection.id)
-                
+
                 # Disconnect stale connections
                 for connection_id in stale_connections:
-                    await self._disconnect_client(connection_id, reason="Heartbeat timeout")
-                
+                    await self._disconnect_client(
+                        connection_id, reason="Heartbeat timeout"
+                    )
+
                 # Wait for next check
                 await trio.sleep(self.heartbeat_interval)
-                
+
             except Exception as e:
                 logger.error(f"Error in heartbeat monitor: {e}")
                 await trio.sleep(5)  # Brief pause on error
-    
+
     async def _connection_cleanup(self):
         """Periodic cleanup of dead connections."""
         while self._running:
             try:
                 dead_connections = []
-                
+
                 for connection in self.connections.values():
-                    if connection.state in [ConnectionState.DISCONNECTED, ConnectionState.ERROR]:
+                    if (
+                        connection.state
+                        in [ConnectionState.DISCONNECTED, ConnectionState.ERROR]
+                        or connection.error_count > 10
+                    ):
                         dead_connections.append(connection.id)
-                    elif connection.error_count > 10:  # Too many errors
-                        dead_connections.append(connection.id)
-                
+
                 # Remove dead connections
                 for connection_id in dead_connections:
-                    await self._disconnect_client(connection_id, reason="Connection cleanup")
-                
+                    await self._disconnect_client(
+                        connection_id, reason="Connection cleanup"
+                    )
+
                 # Wait for next cleanup
                 await trio.sleep(60)  # Cleanup every minute
-                
+
             except Exception as e:
                 logger.error(f"Error in connection cleanup: {e}")
                 await trio.sleep(10)
-    
-    def get_connection_info(self, connection_id: str) -> Optional[Dict[str, Any]]:
+
+    def get_connection_info(self, connection_id: str) -> dict[str, Any] | None:
         """Get information about a connection."""
         connection = self.connections.get(connection_id)
         if not connection:
             return None
-        
+
         return {
             "id": connection.id,
             "state": connection.state.value,
             "connected_at": connection.connected_at.isoformat(),
-            "last_ping": connection.last_ping.isoformat() if connection.last_ping else None,
+            "last_ping": connection.last_ping.isoformat()
+            if connection.last_ping
+            else None,
             "message_count": connection.message_count,
             "error_count": connection.error_count,
             "subscribed_events": [et.value for et in connection.subscribed_events],
             "user_id": connection.user_id,
         }
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """Get WebSocket manager statistics."""
         return {
             **self.stats,
             "connection_states": {
-                state.value: sum(1 for conn in self.connections.values() if conn.state == state)
+                state.value: sum(
+                    1 for conn in self.connections.values() if conn.state == state
+                )
                 for state in ConnectionState
             },
             "total_errors": sum(conn.error_count for conn in self.connections.values()),
             "average_messages_per_connection": (
-                sum(conn.message_count for conn in self.connections.values()) / len(self.connections)
-                if self.connections else 0
+                sum(conn.message_count for conn in self.connections.values())
+                / len(self.connections)
+                if self.connections
+                else 0
             ),
         }
 

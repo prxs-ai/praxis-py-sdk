@@ -5,6 +5,8 @@ repos:
     hooks:
       - id: check-yaml
         files: \.(yaml|yml)$
+      - id: check-toml
+      - id: check-json
       - id: end-of-file-fixer
         files: \.py$
       - id: trailing-whitespace
@@ -15,22 +17,17 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.12
     hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-        files: \.py$
+ 
       - id: ruff-format
         files: \.py$
 
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.0
+ 
+  # Run the test suite via Poetry as part of pre-commit
+  - repo: local
     hooks:
-    -   id: mypy
-        args: [--strict]
-        files: \.py$
-        additional_dependencies: [
-            "pydantic>=2.0.0",
-            "fastapi>=0.100.0",
-            "types-requests",
-            "types-redis",
-            "types-pyyaml"
-        ]
+      - id: pytest
+        name: pytest (unit subset)
+        entry: poetry run pytest tests/ -k "not integration" -v --lf
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

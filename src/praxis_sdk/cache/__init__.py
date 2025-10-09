@@ -1,5 +1,4 @@
-"""
-Cache Management for Praxis Python SDK.
+"""Cache Management for Praxis Python SDK.
 
 Provides caching functionality, statistics, and cache management operations.
 """

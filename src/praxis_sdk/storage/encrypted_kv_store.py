@@ -12,8 +12,7 @@ from ..keyring_manager import get_keyring_manager
 
 
 class EncryptedKVStore:
-    """
-    Encrypted key-value store.
+    """Encrypted key-value store.
 
     Data is encrypted at rest using Fernet symmetric encryption.
     Each agent can have multiple namespaces for organizing data.
@@ -25,15 +24,15 @@ class EncryptedKVStore:
         self,
         agent_name: str,
         namespace: str = "default",
-        storage_dir: Optional[Path] = None,
+        storage_dir: Path | None = None,
     ):
-        """
-        Initialize encrypted KV store.
+        """Initialize encrypted KV store.
 
         Args:
             agent_name: Name of the agent (used for directory isolation)
             namespace: Namespace for this store instance
             storage_dir: Base directory for storage (default: ./data/encrypted_store)
+
         """
         self.agent_name = agent_name
         self.namespace = namespace
@@ -45,9 +44,9 @@ class EncryptedKVStore:
         self.namespace_file = self.agent_dir / f"{namespace}.enc"
 
         self.keyring_manager = get_keyring_manager()
-        self._fernet: Optional[Fernet] = None
+        self._fernet: Fernet | None = None
         self._lock = asyncio.Lock()
-        self._cache: Dict[str, Any] = {}
+        self._cache: dict[str, Any] = {}
         self._loaded = False
 
         logger.info(
@@ -68,8 +67,7 @@ class EncryptedKVStore:
         logger.debug(f"KV store initialized: {self.namespace_file}")
 
     def _get_or_create_master_key(self) -> bytes:
-        """
-        Get or create master encryption key.
+        """Get or create master encryption key.
 
         Priority:
         1. KeyringManager (system keyring)
@@ -77,8 +75,7 @@ class EncryptedKVStore:
         3. Generate new key and store in keyring
         """
         key_str = self.keyring_manager.get_credential(
-            self.MASTER_KEY_NAME,
-            fallback_env="PRAXIS_MASTER_KEY"
+            self.MASTER_KEY_NAME, fallback_env="PRAXIS_MASTER_KEY"
         )
 
         if key_str:
@@ -99,10 +96,8 @@ class EncryptedKVStore:
 
         return new_key
 
-    async def _load_data(self) -> Dict[str, Any]:
-        """
-        Load and decrypt data from disk.
-        """
+    async def _load_data(self) -> dict[str, Any]:
+        """Load and decrypt data from disk."""
         await self._ensure_initialized()
 
         if not self.namespace_file.exists():
@@ -133,10 +128,8 @@ class EncryptedKVStore:
             logger.error(f"Error loading data from {self.namespace_file}: {e}")
             return {}
 
-    async def _save_data(self, data: Dict[str, Any]) -> None:
-        """
-        Encrypt and save data to disk.
-        """
+    async def _save_data(self, data: dict[str, Any]) -> None:
+        """Encrypt and save data to disk."""
         await self._ensure_initialized()
 
         try:
@@ -164,10 +157,8 @@ class EncryptedKVStore:
                     self._cache = await self._load_data()
                     self._loaded = True
 
-    async def get(self, key: str) -> Optional[Any]:
-        """
-        Get value by key.
-        """
+    async def get(self, key: str) -> Any | None:
+        """Get value by key."""
         await self._ensure_loaded()
         value = self._cache.get(key)
 
@@ -179,9 +170,7 @@ class EncryptedKVStore:
         return value
 
     async def set(self, key: str, value: Any) -> None:
-        """
-        Set key-value pair.
-        """
+        """Set key-value pair."""
         await self._ensure_loaded()
 
         async with self._lock:
@@ -191,9 +180,7 @@ class EncryptedKVStore:
         logger.debug(f"KV set: {self.namespace}/{key}")
 
     async def delete(self, key: str) -> bool:
-        """
-        Delete key-value pair.
-        """
+        """Delete key-value pair."""
         await self._ensure_loaded()
 
         async with self._lock:
@@ -202,21 +189,16 @@ class EncryptedKVStore:
                 await self._save_data(self._cache)
                 logger.debug(f"KV delete: {self.namespace}/{key} -> deleted")
                 return True
-            else:
-                logger.debug(f"KV delete: {self.namespace}/{key} -> not found")
-                return False
+            logger.debug(f"KV delete: {self.namespace}/{key} -> not found")
+            return False
 
     async def exists(self, key: str) -> bool:
-        """
-        Check if key exists.
-        """
+        """Check if key exists."""
         await self._ensure_loaded()
         return key in self._cache
 
-    async def list_keys(self) -> List[str]:
-        """
-        List all keys in namespace.
-        """
+    async def list_keys(self) -> list[str]:
+        """List all keys in namespace."""
         await self._ensure_loaded()
         keys = list(self._cache.keys())
         logger.debug(f"KV list_keys: {self.namespace} -> {len(keys)} keys")
@@ -230,19 +212,17 @@ class EncryptedKVStore:
 
         logger.info(f"KV clear_namespace: {self.namespace}")
 
-    async def get_all(self) -> Dict[str, Any]:
-        """
-        Get all key-value pairs in namespace.
-        """
+    async def get_all(self) -> dict[str, Any]:
+        """Get all key-value pairs in namespace."""
         await self._ensure_loaded()
         return dict(self._cache)
 
-    async def update(self, data: Dict[str, Any]) -> None:
-        """
-        Update multiple key-value pairs at once.
+    async def update(self, data: dict[str, Any]) -> None:
+        """Update multiple key-value pairs at once.
 
         Args:
             data: Dictionary of key-value pairs to update
+
         """
         await self._ensure_loaded()
 
@@ -253,23 +233,19 @@ class EncryptedKVStore:
         logger.debug(f"KV update: {self.namespace} -> {len(data)} keys updated")
 
     async def size(self) -> int:
-        """
-        Get number of keys in namespace.
-        """
+        """Get number of keys in namespace."""
         await self._ensure_loaded()
         return len(self._cache)
 
     def get_storage_path(self) -> Path:
-        """
-        Get path to encrypted storage file.
-        """
+        """Get path to encrypted storage file."""
         return self.namespace_file
 
     @staticmethod
-    async def list_namespaces(agent_name: str, storage_dir: Optional[Path] = None) -> List[str]:
-        """
-        List all namespaces for an agent.
-        """
+    async def list_namespaces(
+        agent_name: str, storage_dir: Path | None = None
+    ) -> list[str]:
+        """List all namespaces for an agent."""
         if storage_dir is None:
             storage_dir = Path("data") / "encrypted_store"
 
@@ -288,13 +264,9 @@ class EncryptedKVStore:
 
     @staticmethod
     async def delete_namespace(
-        agent_name: str,
-        namespace: str,
-        storage_dir: Optional[Path] = None
+        agent_name: str, namespace: str, storage_dir: Path | None = None
     ) -> bool:
-        """
-        Completely delete a namespace file.
-        """
+        """Completely delete a namespace file."""
         if storage_dir is None:
             storage_dir = Path("data") / "encrypted_store"
 
@@ -304,6 +276,5 @@ class EncryptedKVStore:
             namespace_file.unlink()
             logger.info(f"Deleted namespace: {agent_name}/{namespace}")
             return True
-        else:
-            logger.debug(f"Namespace not found: {agent_name}/{namespace}")
-            return False
+        logger.debug(f"Namespace not found: {agent_name}/{namespace}")
+        return False

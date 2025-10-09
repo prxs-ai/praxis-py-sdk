@@ -1,21 +1,136 @@
 #!/usr/bin/env python3
-import os
 import json
+import os
 import re
 from collections import Counter
 from datetime import datetime
 
-
 RU_STOP = {
-    "и","в","во","не","что","он","на","я","с","со","как","а","то","все","она","так","его","но","да",
-    "ты","к","у","же","вы","за","бы","по","только","ее","мне","было","вот","от","меня","еще","нет","о",
-    "из","ему","теперь","когда","даже","ну","вдруг","ли","если","уже","или","ни","быть","был","него","до","вас",
-    "нибудь","опять","уж","вам","ведь","там","потом","себя","ничего","ей","может","они","тут","где","есть","надо",
-    "ней","для","мы","тебя","их","чем","была","сам","чтоб","без","будто","чего","раз","тоже","себе","под","будет",
+    "и",
+    "в",
+    "во",
+    "не",
+    "что",
+    "он",
+    "на",
+    "я",
+    "с",
+    "со",
+    "как",
+    "а",
+    "то",
+    "все",
+    "она",
+    "так",
+    "его",
+    "но",
+    "да",
+    "ты",
+    "к",
+    "у",
+    "же",
+    "вы",
+    "за",
+    "бы",
+    "по",
+    "только",
+    "ее",
+    "мне",
+    "было",
+    "вот",
+    "от",
+    "меня",
+    "еще",
+    "нет",
+    "о",
+    "из",
+    "ему",
+    "теперь",
+    "когда",
+    "даже",
+    "ну",
+    "вдруг",
+    "ли",
+    "если",
+    "уже",
+    "или",
+    "ни",
+    "быть",
+    "был",
+    "него",
+    "до",
+    "вас",
+    "нибудь",
+    "опять",
+    "уж",
+    "вам",
+    "ведь",
+    "там",
+    "потом",
+    "себя",
+    "ничего",
+    "ей",
+    "может",
+    "они",
+    "тут",
+    "где",
+    "есть",
+    "надо",
+    "ней",
+    "для",
+    "мы",
+    "тебя",
+    "их",
+    "чем",
+    "была",
+    "сам",
+    "чтоб",
+    "без",
+    "будто",
+    "чего",
+    "раз",
+    "тоже",
+    "себе",
+    "под",
+    "будет",
 }
 EN_STOP = {
-    "the","and","to","of","a","in","that","is","for","on","with","as","it","by","at","from","this","be","are",
-    "was","or","an","we","you","they","he","she","but","not","have","has","had","will","can","about","into",
+    "the",
+    "and",
+    "to",
+    "of",
+    "a",
+    "in",
+    "that",
+    "is",
+    "for",
+    "on",
+    "with",
+    "as",
+    "it",
+    "by",
+    "at",
+    "from",
+    "this",
+    "be",
+    "are",
+    "was",
+    "or",
+    "an",
+    "we",
+    "you",
+    "they",
+    "he",
+    "she",
+    "but",
+    "not",
+    "have",
+    "has",
+    "had",
+    "will",
+    "can",
+    "about",
+    "into",
 }
 
 
@@ -25,7 +140,9 @@ def tokenize(text: str):
 
 def extract_keywords(text: str, top_n: int = 5):
     tokens = tokenize(text)
-    filtered = [t for t in tokens if t not in RU_STOP and t not in EN_STOP and len(t) > 2]
+    filtered = [
+        t for t in tokens if t not in RU_STOP and t not in EN_STOP and len(t) > 2
+    ]
     freq = Counter(filtered)
     return freq.most_common(max(1, top_n))
 
@@ -38,11 +155,16 @@ def main():
         top_n = 5
 
     if not text:
-        print(json.dumps({
-            "status": "error",
-            "error": "No input text provided (env 'text')",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
-        }, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "error": "No input text provided (env 'text')",
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                },
+                ensure_ascii=False,
+            )
+        )
         return
 
     kw = extract_keywords(text, top_n)
@@ -54,11 +176,10 @@ def main():
             "text_length": len(text),
             "top_n": top_n,
         },
-        "keywords": [{"token": t, "count": c} for t, c in kw]
+        "keywords": [{"token": t, "count": c} for t, c in kw],
     }
     print(json.dumps(out, ensure_ascii=False))
 
 
 if __name__ == "__main__":
     main()
-

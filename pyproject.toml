@@ -35,6 +35,7 @@ python-multipart = "^0.0.20"
 opentelemetry-exporter-otlp-proto-grpc = "^1.36.0"
 gql = "3.5.0"
 keyring = "^25.5.0"
+pytest-trio = "^0.8.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -68,7 +69,13 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 
 [tool.ruff]
-select = ["E", "F", "I", "N", "W", "UP"]
-ignore = []
-line-length = 88
 target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "ASYNC", "B", "C4", "PIE", "PT"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "preserve"
+indent-style = "space"
