@@ -275,16 +275,6 @@ api:
   docs_enabled: true
   health_check_interval: 30
 
-# Logging Configuration
-logging:
-  level: "INFO"
-  file_enabled: true
-  file_path: "logs/worker-filesystem.log"
-  file_rotation: "10 MB"
-  file_retention: "1 week"
-  json_logs: false
-
-environment: development
 debug: true
 
 http:
@@ -368,4 +358,3 @@ monitoring:
     timeout: 10
 
 environment: "production"
-debug: false
