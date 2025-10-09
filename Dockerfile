@@ -61,6 +61,9 @@ RUN pip install --no-cache-dir \
     jinja2 \
     click \
     keyring==25.5.0 \
+    prometheus_client \
+    python-snappy \
+    protobuf \
     python-multipart \
     docker \
     gql[all]==3.5.0 \
