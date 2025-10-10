@@ -96,38 +96,29 @@ class MetricsPusher:
                 labels = []
 
                 # Add metric name
-                labels.append(remote_pb2.Label(
-                    name="__name__",
-                    value=sample.name
-                ))
+                labels.append(remote_pb2.Label(name="__name__", value=sample.name))
 
                 # Add sample labels
                 for label_name, label_value in sample.labels.items():
-                    labels.append(remote_pb2.Label(
-                        name=label_name,
-                        value=label_value
-                    ))
+                    labels.append(remote_pb2.Label(name=label_name, value=label_value))
 
                 # Add default labels
                 for label_name, label_value in self.labels.items():
                     # Don't override existing labels
                     if label_name not in sample.labels:
-                        labels.append(remote_pb2.Label(
-                            name=label_name,
-                            value=label_value
-                        ))
+                        labels.append(
+                            remote_pb2.Label(name=label_name, value=label_value)
+                        )
 
                 # Create sample
-                samples = [remote_pb2.Sample(
-                    value=sample.value,
-                    timestamp=timestamp_ms
-                )]
+                samples = [
+                    remote_pb2.Sample(value=sample.value, timestamp=timestamp_ms)
+                ]
 
                 # Create timeseries
-                timeseries_list.append(remote_pb2.TimeSeries(
-                    labels=labels,
-                    samples=samples
-                ))
+                timeseries_list.append(
+                    remote_pb2.TimeSeries(labels=labels, samples=samples)
+                )
 
         # Build write request
         write_request = remote_pb2.WriteRequest(timeseries=timeseries_list)

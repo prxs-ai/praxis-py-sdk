@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import os
 import json
+import os
 import sys
 from datetime import datetime
 
@@ -15,7 +15,7 @@ def create_openai_client():
     Supports Azure via AzureOpenAI if AZURE_* env vars provided.
     """
     try:
-        from openai import OpenAI, AzureOpenAI
+        from openai import AzureOpenAI, OpenAI
     except Exception as e:
         jprint({"status": "error", "error": f"Failed to import openai client: {e}"})
         sys.exit(0)
@@ -25,9 +25,16 @@ def create_openai_client():
     az_version = os.environ.get("AZURE_OPENAI_API_VERSION") or "2024-02-15-preview"
     if az_endpoint and az_key:
         try:
-            return AzureOpenAI(api_key=az_key, api_version=az_version, azure_endpoint=az_endpoint)
+            return AzureOpenAI(
+                api_key=az_key, api_version=az_version, azure_endpoint=az_endpoint
+            )
         except Exception as e:
-            jprint({"status": "error", "error": f"Failed to initialize AzureOpenAI client: {e}"})
+            jprint(
+                {
+                    "status": "error",
+                    "error": f"Failed to initialize AzureOpenAI client: {e}",
+                }
+            )
             sys.exit(0)
 
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -46,7 +53,9 @@ def create_openai_client():
 
 def main():
     topic = os.environ.get("topic") or os.environ.get("TOPIC") or ""
-    primary_keyword = os.environ.get("primary_keyword") or os.environ.get("PRIMARY_KEYWORD") or ""
+    primary_keyword = (
+        os.environ.get("primary_keyword") or os.environ.get("PRIMARY_KEYWORD") or ""
+    )
     model = os.environ.get("model") or os.environ.get("OPENAI_MODEL") or "gpt-4o"
 
     if not topic:
@@ -88,7 +97,11 @@ def main():
             "status": "success",
             "tool": "gpt_outline",
             "timestamp": datetime.utcnow().isoformat() + "Z",
-            "input": {"topic": topic, "primary_keyword": primary_keyword, "model": model},
+            "input": {
+                "topic": topic,
+                "primary_keyword": primary_keyword,
+                "model": model,
+            },
             "result": result,
         }
 
@@ -101,9 +114,19 @@ def main():
             with open(fpath, "w", encoding="utf-8") as f:
                 json.dump(payload, f, ensure_ascii=False, indent=2)
             payload["saved_to_path"] = fpath
-            print(json.dumps({"status":"info","message":"REPORT SAVED","path":fpath}, ensure_ascii=False))
+            print(
+                json.dumps(
+                    {"status": "info", "message": "REPORT SAVED", "path": fpath},
+                    ensure_ascii=False,
+                )
+            )
         except Exception as _e:
-            print(json.dumps({"status":"warn","message":f"Could not save report: {_e}"}, ensure_ascii=False))
+            print(
+                json.dumps(
+                    {"status": "warn", "message": f"Could not save report: {_e}"},
+                    ensure_ascii=False,
+                )
+            )
 
         jprint(payload)
     except Exception as e:

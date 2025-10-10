@@ -1,17 +1,17 @@
-"""
-DSL Types and Data Structures for Advanced DSL Processing Engine.
+"""DSL Types and Data Structures for Advanced DSL Processing Engine.
 Based on Go SDK analyzer.go implementation with Python enhancements.
 """
 
 import json
-from enum import Enum
-from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 
 class TokenType(str, Enum):
     """Token types for DSL parsing."""
+
     COMMAND = "command"
     OPERATOR = "operator"
     VALUE = "value"
@@ -19,6 +19,7 @@ class TokenType(str, Enum):
 
 class NodeType(str, Enum):
     """AST node types matching Go SDK implementation."""
+
     COMMAND = "command"
     WORKFLOW = "workflow"
     TASK = "task"
@@ -31,29 +32,29 @@ class NodeType(str, Enum):
 
 @dataclass
 class Token:
-    """
-    Token representation for DSL parsing.
+    """Token representation for DSL parsing.
     Matches Go SDK Token struct.
     """
+
     type: TokenType
     value: str
-    args: List[str] = field(default_factory=list)
+    args: list[str] = field(default_factory=list)
 
 
 @dataclass
 class ASTNode:
-    """
-    AST node representation matching Go SDK ASTNode struct.
+    """AST node representation matching Go SDK ASTNode struct.
     Enhanced with Python-specific features.
     """
+
     type: NodeType
     value: str
-    tool_name: Optional[str] = None
-    args: Dict[str, Any] = field(default_factory=dict)
-    children: List["ASTNode"] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    tool_name: str | None = None
+    args: dict[str, Any] = field(default_factory=dict)
+    children: list["ASTNode"] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert node to dictionary for JSON serialization."""
         return {
             "type": self.type.value,
@@ -61,11 +62,11 @@ class ASTNode:
             "tool_name": self.tool_name,
             "args": self.args,
             "children": [child.to_dict() for child in self.children],
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ASTNode":
+    def from_dict(cls, data: dict[str, Any]) -> "ASTNode":
         """Create node from dictionary."""
         children = [cls.from_dict(child) for child in data.get("children", [])]
         return cls(
@@ -74,71 +75,71 @@ class ASTNode:
             tool_name=data.get("tool_name"),
             args=data.get("args", {}),
             children=children,
-            metadata=data.get("metadata", {})
+            metadata=data.get("metadata", {}),
         )
 
 
 @dataclass
 class AST:
-    """
-    Abstract Syntax Tree representation.
+    """Abstract Syntax Tree representation.
     Matches Go SDK AST struct with enhancements.
     """
-    nodes: List[ASTNode] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    nodes: list[ASTNode] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert AST to dictionary for JSON serialization."""
         return {
             "nodes": [node.to_dict() for node in self.nodes],
             "metadata": self.metadata,
-            "created_at": self.created_at.isoformat()
+            "created_at": self.created_at.isoformat(),
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "AST":
+    def from_dict(cls, data: dict[str, Any]) -> "AST":
         """Create AST from dictionary."""
         nodes = [ASTNode.from_dict(node) for node in data.get("nodes", [])]
-        created_at = datetime.fromisoformat(data.get("created_at", datetime.now().isoformat()))
+        created_at = datetime.fromisoformat(
+            data.get("created_at", datetime.now().isoformat())
+        )
         return cls(
-            nodes=nodes,
-            metadata=data.get("metadata", {}),
-            created_at=created_at
+            nodes=nodes, metadata=data.get("metadata", {}), created_at=created_at
         )
 
 
 @dataclass
 class ExecutionContext:
-    """
-    Execution context for DSL commands.
+    """Execution context for DSL commands.
     Contains runtime information and state.
     """
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
-    variables: Dict[str, Any] = field(default_factory=dict)
-    agent_capabilities: List[str] = field(default_factory=list)
-    p2p_peers: List[str] = field(default_factory=list)
-    timeout: Optional[int] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    user_id: str | None = None
+    session_id: str | None = None
+    variables: dict[str, Any] = field(default_factory=dict)
+    agent_capabilities: list[str] = field(default_factory=list)
+    p2p_peers: list[str] = field(default_factory=list)
+    timeout: int | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class ExecutionResult:
-    """
-    Result of DSL execution.
+    """Result of DSL execution.
     Comprehensive result structure for analysis and reporting.
     """
+
     success: bool
     data: Any = None
-    error: Optional[str] = None
-    execution_time: Optional[float] = None
-    tool_calls: List[Dict[str, Any]] = field(default_factory=list)
+    error: str | None = None
+    execution_time: float | None = None
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
     cache_hit: bool = False
-    executed_by: Optional[str] = None  # local or peer_id
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    executed_by: str | None = None  # local or peer_id
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert result to dictionary."""
         return {
             "success": self.success,
@@ -148,16 +149,16 @@ class ExecutionResult:
             "tool_calls": self.tool_calls,
             "cache_hit": self.cache_hit,
             "executed_by": self.executed_by,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
 
 @dataclass
 class CacheEntry:
-    """
-    Cache entry for tool execution results.
+    """Cache entry for tool execution results.
     Based on Go SDK ToolCacheEntry.
     """
+
     key: str
     value: Any
     created_at: datetime = field(default_factory=datetime.now)
@@ -168,37 +169,35 @@ class CacheEntry:
 
 class DSLSyntaxError(Exception):
     """Custom exception for DSL syntax errors."""
-    
-    def __init__(self, message: str, line_number: Optional[int] = None, position: Optional[int] = None):
+
+    def __init__(
+        self, message: str, line_number: int | None = None, position: int | None = None
+    ):
         self.message = message
         self.line_number = line_number
         self.position = position
         super().__init__(self._format_message())
-    
+
     def _format_message(self) -> str:
         """Format error message with context."""
         if self.line_number is not None and self.position is not None:
             return f"DSL Syntax Error at line {self.line_number}, position {self.position}: {self.message}"
-        elif self.line_number is not None:
+        if self.line_number is not None:
             return f"DSL Syntax Error at line {self.line_number}: {self.message}"
-        else:
-            return f"DSL Syntax Error: {self.message}"
+        return f"DSL Syntax Error: {self.message}"
 
 
 class DSLValidationError(Exception):
     """Custom exception for DSL validation errors."""
-    pass
 
 
 class DSLExecutionError(Exception):
     """Custom exception for DSL execution errors."""
-    pass
 
 
 # Utility functions for cache key generation matching Go implementation
-def generate_cache_key(tool_name: str, args: Dict[str, Any]) -> str:
-    """
-    Generate cache key for tool execution.
+def generate_cache_key(tool_name: str, args: dict[str, Any]) -> str:
+    """Generate cache key for tool execution.
     Matches Go SDK GenerateCacheKey function.
     """
     try:
@@ -229,12 +228,27 @@ DSL_COMMAND_PATTERNS = {
 # Tool name to parameter mapping for backward compatibility
 TOOL_PARAMETER_MAPPING = {
     "read_file": {"primary_arg": "filename", "params": ["filename", "encoding"]},
-    "write_file": {"primary_arg": "filename", "params": ["filename", "content", "encoding"]},
+    "write_file": {
+        "primary_arg": "filename",
+        "params": ["filename", "content", "encoding"],
+    },
     "delete_file": {"primary_arg": "filename", "params": ["filename"]},
-    "list_files": {"primary_arg": "directory", "params": ["directory", "pattern", "recursive"]},
-    "list_directory": {"primary_arg": "directory", "params": ["directory", "pattern", "recursive"]},
-    "create_directory": {"primary_arg": "directory", "params": ["directory", "recursive"]},
+    "list_files": {
+        "primary_arg": "directory",
+        "params": ["directory", "pattern", "recursive"],
+    },
+    "list_directory": {
+        "primary_arg": "directory",
+        "params": ["directory", "pattern", "recursive"],
+    },
+    "create_directory": {
+        "primary_arg": "directory",
+        "params": ["directory", "recursive"],
+    },
     "move_file": {"primary_arg": "source", "params": ["source", "destination"]},
     "copy_file": {"primary_arg": "source", "params": ["source", "destination"]},
-    "search_files": {"primary_arg": "pattern", "params": ["pattern", "directory", "recursive"]},
+    "search_files": {
+        "primary_arg": "pattern",
+        "params": ["pattern", "directory", "recursive"],
+    },
 }

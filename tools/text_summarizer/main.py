@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import os
 import json
+import os
 import re
 from datetime import datetime
 
@@ -53,4 +53,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

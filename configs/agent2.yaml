@@ -16,8 +16,6 @@ agent:
     - "http://host.docker.internal:3002/mcp"
     - "http://mcp-filesystem:3002/mcp"
   
-  # No manual tools - all will be auto-discovered
-  tools: []
   
   # Register telegram_poster only on agent-2 to enforce P2P routing from agent-1
   tools:

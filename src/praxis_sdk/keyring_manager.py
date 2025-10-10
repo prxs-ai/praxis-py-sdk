@@ -1,10 +1,12 @@
 import os
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from loguru import logger
 
 try:
     import keyring
     from keyring.errors import KeyringError
+
     KEYRING_AVAILABLE = True
 except ImportError:
     KEYRING_AVAILABLE = False
@@ -16,29 +18,34 @@ class KeyringManager:
 
     SERVICE_NAME = "praxis-agent"
 
-    def __init__(self, service_name: Optional[str] = None):
-        """
-        Initialize keyring manager.
+    def __init__(self, service_name: str | None = None):
+        """Initialize keyring manager.
 
         Args:
             service_name: Custom service name for keyring storage (default: "praxis-agent")
+
         """
         self.service_name = service_name or self.SERVICE_NAME
         self.available = KEYRING_AVAILABLE
 
         if not self.available:
-            logger.warning("Keyring not available. Credentials will fall back to environment variables.")
+            logger.warning(
+                "Keyring not available. Credentials will fall back to environment variables."
+            )
         else:
             try:
                 keyring.get_keyring()
-                logger.info(f"Keyring initialized: {keyring.get_keyring().__class__.__name__}")
+                logger.info(
+                    f"Keyring initialized: {keyring.get_keyring().__class__.__name__}"
+                )
             except Exception as e:
-                logger.warning(f"Keyring initialization failed: {e}. Falling back to environment variables.")
+                logger.warning(
+                    f"Keyring initialization failed: {e}. Falling back to environment variables."
+                )
                 self.available = False
 
     def set_credential(self, key: str, value: str) -> bool:
-        """
-        Store a credential in the system keyring.
+        """Store a credential in the system keyring.
 
         Args:
             key: Credential key/identifier
@@ -46,6 +53,7 @@ class KeyringManager:
 
         Returns:
             True if stored successfully, False otherwise
+
         """
         if not self.available:
             logger.warning(f"Keyring not available. Cannot store credential: {key}")
@@ -62,9 +70,8 @@ class KeyringManager:
             logger.error(f"Unexpected error storing credential {key}: {e}")
             return False
 
-    def get_credential(self, key: str, fallback_env: Optional[str] = None) -> Optional[str]:
-        """
-        Retrieve a credential from the system keyring with environment variable fallback.
+    def get_credential(self, key: str, fallback_env: str | None = None) -> str | None:
+        """Retrieve a credential from the system keyring with environment variable fallback.
 
         Args:
             key: Credential key/identifier
@@ -72,6 +79,7 @@ class KeyringManager:
 
         Returns:
             Credential value or None if not found
+
         """
         if self.available:
             try:
@@ -99,14 +107,14 @@ class KeyringManager:
         return None
 
     def delete_credential(self, key: str) -> bool:
-        """
-        Delete a credential from the system keyring.
+        """Delete a credential from the system keyring.
 
         Args:
             key: Credential key/identifier
 
         Returns:
             True if deleted successfully, False otherwise
+
         """
         if not self.available:
             logger.warning(f"Keyring not available. Cannot delete credential: {key}")
@@ -123,12 +131,12 @@ class KeyringManager:
             logger.error(f"Unexpected error deleting credential {key}: {e}")
             return False
 
-    def list_credentials(self) -> Dict[str, bool]:
-        """
-        List all known credential keys and their availability.
+    def list_credentials(self) -> dict[str, bool]:
+        """List all known credential keys and their availability.
 
         Returns:
             Dictionary mapping credential keys to availability status
+
         """
         known_keys = [
             "OPENAI_API_KEY",
@@ -145,15 +153,15 @@ class KeyringManager:
 
         return status
 
-    def migrate_from_env(self, keys: Optional[list[str]] = None) -> Dict[str, bool]:
-        """
-        Migrate credentials from environment variables to keyring.
+    def migrate_from_env(self, keys: list[str] | None = None) -> dict[str, bool]:
+        """Migrate credentials from environment variables to keyring.
 
         Args:
             keys: List of environment variable names to migrate (default: common keys)
 
         Returns:
             Dictionary mapping keys to migration success status
+
         """
         if keys is None:
             keys = [
@@ -175,15 +183,15 @@ class KeyringManager:
 
         return results
 
-    def get_api_key(self, provider: str = "openai") -> Optional[str]:
-        """
-        Convenience method to get API key for a specific provider.
+    def get_api_key(self, provider: str = "openai") -> str | None:
+        """Convenience method to get API key for a specific provider.
 
         Args:
             provider: Provider name (e.g., "openai", "anthropic")
 
         Returns:
             API key or None
+
         """
         key_map = {
             "openai": "OPENAI_API_KEY",
@@ -198,18 +206,18 @@ class KeyringManager:
         return self.get_credential(key)
 
 
-_keyring_manager: Optional[KeyringManager] = None
+_keyring_manager: KeyringManager | None = None
 
 
-def get_keyring_manager(service_name: Optional[str] = None) -> KeyringManager:
-    """
-    Get or create the global keyring manager instance.
+def get_keyring_manager(service_name: str | None = None) -> KeyringManager:
+    """Get or create the global keyring manager instance.
 
     Args:
         service_name: Custom service name (default: "praxis-agent")
 
     Returns:
         KeyringManager instance
+
     """
     global _keyring_manager
     if _keyring_manager is None:
