@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.3](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.2...praxis-py-sdk-v0.2.3) (2025-10-10)
+
+
+### Features
+
+* : [PRXS-371] :: Add metrics to /health route and push them to Prometheus ([#18](https://github.com/prxs-ai/praxis-py-sdk/issues/18)) ([a3b2364](https://github.com/prxs-ai/praxis-py-sdk/commit/a3b236433aa8ac0f4b0c1f25754872e61a0b8580))
+
+
+### Bug Fixes
+
+* **tests:** fix tests and add ci ([#20](https://github.com/prxs-ai/praxis-py-sdk/issues/20)) ([3f5a88c](https://github.com/prxs-ai/praxis-py-sdk/commit/3f5a88cd5f5619995bb7e99390b235b3ee8596e7))
+
 ## [0.2.2](https://github.com/prxs-ai/praxis-py-sdk/compare/praxis-py-sdk-v0.2.1...praxis-py-sdk-v0.2.2) (2025-10-01)
 
 
