@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
+import time
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Query
 from loguru import logger
@@ -106,13 +107,27 @@ class RequestHandlers:
 
     async def handle_get_agent_card(self) -> A2AAgentCard:
         """Handle agent card retrieval."""
+        start_time = time.time()
+
         self.stats["total_requests"] += 1
 
         if not self.agent_card:
             self.stats["failed_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("GET", "/agent/card", 503, duration)
+
             raise HTTPException(status_code=503, detail="Agent card not available")
 
         self.stats["successful_requests"] += 1
+
+        # Record metrics
+        if self.agent and hasattr(self.agent, 'metrics_collector'):
+            duration = time.time() - start_time
+            self.agent.metrics_collector.record_http_request("GET", "/agent/card", 200, duration)
+
         return self.agent_card
 
     async def handle_execute_command(
@@ -123,6 +138,8 @@ class RequestHandlers:
         """Handle command execution requests.
         Supports both legacy DSL format and A2A JSON-RPC format.
         """
+        start_time = time.time()
+
         self.stats["total_requests"] += 1
 
         try:
@@ -131,21 +148,63 @@ class RequestHandlers:
                 if "jsonrpc" in request:
                     # A2A JSON-RPC format
                     jsonrpc_request = JSONRPCRequest(**request)
-                    return await self._handle_jsonrpc_request(
+                    result = await self._handle_jsonrpc_request(
                         jsonrpc_request, background_tasks
                     )
+
+                    # Record metrics
+                    if self.agent and hasattr(self.agent, 'metrics_collector'):
+                        duration = time.time() - start_time
+                        self.agent.metrics_collector.record_http_request("POST", "/execute", 200, duration)
+
+                    return result
                 if "dsl" in request:
                     # Legacy DSL format
-                    return await self._handle_legacy_dsl_request(
+                    result = await self._handle_legacy_dsl_request(
                         request["dsl"], background_tasks
                     )
+
+                    # Record metrics
+                    if self.agent and hasattr(self.agent, 'metrics_collector'):
+                        duration = time.time() - start_time
+                        self.agent.metrics_collector.record_http_request("POST", "/execute", 200, duration)
+
+                    return result
+
+                # Record metrics for bad request
+                if self.agent and hasattr(self.agent, 'metrics_collector'):
+                    duration = time.time() - start_time
+                    self.agent.metrics_collector.record_http_request("POST", "/execute", 400, duration)
+
                 raise HTTPException(status_code=400, detail="Invalid request format")
             if isinstance(request, JSONRPCRequest):
-                return await self._handle_jsonrpc_request(request, background_tasks)
+                result = await self._handle_jsonrpc_request(request, background_tasks)
+
+                # Record metrics
+                if self.agent and hasattr(self.agent, 'metrics_collector'):
+                    duration = time.time() - start_time
+                    self.agent.metrics_collector.record_http_request("POST", "/execute", 200, duration)
+
+                return result
+
+            # Record metrics for unsupported format
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("POST", "/execute", 400, duration)
+
             raise HTTPException(status_code=400, detail="Unsupported request format")
 
+        except HTTPException:
+            self.stats["failed_requests"] += 1
+            raise
         except Exception as e:
             self.stats["failed_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("POST", "/execute", 500, duration)
+
             logger.error(f"Error executing command: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -445,14 +504,28 @@ class RequestHandlers:
 
     async def handle_get_task(self, task_id: str) -> Task:
         """Handle single task retrieval."""
+        start_time = time.time()
+
         self.stats["total_requests"] += 1
 
         task = self.tasks.get(task_id)
         if not task:
             self.stats["failed_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("GET", f"/tasks/{task_id}", 404, duration)
+
             raise HTTPException(status_code=404, detail="Task not found")
 
         self.stats["successful_requests"] += 1
+
+        # Record metrics
+        if self.agent and hasattr(self.agent, 'metrics_collector'):
+            duration = time.time() - start_time
+            self.agent.metrics_collector.record_http_request("GET", f"/tasks/{task_id}", 200, duration)
+
         return task
 
     async def handle_list_tasks(
@@ -462,6 +535,8 @@ class RequestHandlers:
         offset: int = Query(default=0, ge=0),
     ) -> dict[str, Any]:
         """Handle task list requests."""
+        start_time = time.time()
+
         self.stats["total_requests"] += 1
 
         try:
@@ -479,6 +554,12 @@ class RequestHandlers:
             paginated_tasks = filtered_tasks[offset : offset + limit]
 
             self.stats["successful_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("GET", "/tasks", 200, duration)
+
             return {
                 "tasks": [task.dict() for task in paginated_tasks],
                 "total": total,
@@ -489,6 +570,12 @@ class RequestHandlers:
 
         except Exception as e:
             self.stats["failed_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("GET", "/tasks", 500, duration)
+
             logger.error(f"Error listing tasks: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -496,6 +583,8 @@ class RequestHandlers:
         self, message: Message, background_tasks: BackgroundTasks
     ) -> Task:
         """Handle task creation requests."""
+        start_time = time.time()
+
         self.stats["total_requests"] += 1
         self.stats["task_creations"] += 1
 
@@ -530,17 +619,37 @@ class RequestHandlers:
             )
 
             self.stats["successful_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("POST", "/tasks", 200, duration)
+                self.agent.metrics_collector.record_task_event("received", "message", "api")
+
             return task
 
         except Exception as e:
             self.stats["failed_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("POST", "/tasks", 500, duration)
+
             logger.error(f"Error creating task: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def handle_list_tools(self) -> dict[str, Any]:
         """Handle tools list requests."""
+        start_time = time.time()
+
         self.stats["total_requests"] += 1
         self.stats["successful_requests"] += 1
+
+        # Record metrics
+        if self.agent and hasattr(self.agent, 'metrics_collector'):
+            duration = time.time() - start_time
+            self.agent.metrics_collector.record_http_request("GET", "/tools", 200, duration)
 
         return {
             "tools": [tool.dict() for tool in self.available_tools],
@@ -557,6 +666,8 @@ class RequestHandlers:
         background_tasks: BackgroundTasks = None,
     ) -> dict[str, Any]:
         """Handle tool invocation requests."""
+        start_time = time.time()
+
         self.stats["total_requests"] += 1
         self.stats["tool_invocations"] += 1
 
@@ -565,12 +676,24 @@ class RequestHandlers:
             tool = next((t for t in self.available_tools if t.name == tool_name), None)
             if not tool:
                 self.stats["failed_requests"] += 1
+
+                # Record metrics
+                if self.agent and hasattr(self.agent, 'metrics_collector'):
+                    duration = time.time() - start_time
+                    self.agent.metrics_collector.record_http_request("POST", f"/tools/{tool_name}/invoke", 404, duration)
+
                 raise HTTPException(
                     status_code=404, detail=f"Tool '{tool_name}' not found"
                 )
 
             if not tool.enabled:
                 self.stats["failed_requests"] += 1
+
+                # Record metrics
+                if self.agent and hasattr(self.agent, 'metrics_collector'):
+                    duration = time.time() - start_time
+                    self.agent.metrics_collector.record_http_request("POST", f"/tools/{tool_name}/invoke", 400, duration)
+
                 raise HTTPException(
                     status_code=400, detail=f"Tool '{tool_name}' is disabled"
                 )
@@ -605,6 +728,12 @@ class RequestHandlers:
             )
 
             self.stats["successful_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("POST", f"/tools/{tool_name}/invoke", 200, duration)
+
             return {
                 "task_id": task.id,
                 "status": "submitted",
@@ -617,6 +746,12 @@ class RequestHandlers:
             raise
         except Exception as e:
             self.stats["failed_requests"] += 1
+
+            # Record metrics
+            if self.agent and hasattr(self.agent, 'metrics_collector'):
+                duration = time.time() - start_time
+                self.agent.metrics_collector.record_http_request("POST", f"/tools/{tool_name}/invoke", 500, duration)
+
             logger.error(f"Error invoking tool '{tool_name}': {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
