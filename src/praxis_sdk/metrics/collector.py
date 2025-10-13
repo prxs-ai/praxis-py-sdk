@@ -508,6 +508,148 @@ class MetricsCollector:
             duration,
         )
 
+    def record_http_request(
+        self, method: str, endpoint: str, status_code: int, duration: float
+    ) -> None:
+        """
+        Record an HTTP request event.
+
+        Args:
+            method: HTTP method (GET, POST, etc.)
+            endpoint: API endpoint path
+            status_code: HTTP response status code
+            duration: Request duration in seconds
+        """
+        self.increment_counter(
+            "praxis_http_requests_total",
+            labels={"method": method, "endpoint": endpoint, "status_code": str(status_code)},
+        )
+        self.observe_histogram(
+            "praxis_http_request_duration_seconds",
+            duration,
+            labels={"method": method, "endpoint": endpoint},
+        )
+
+    def record_task_event(
+        self, event_type: str, task_type: str = "generic", source: str = "unknown"
+    ) -> None:
+        """
+        Record a task management event.
+
+        Args:
+            event_type: Type of event (received, completed, failed, etc.)
+            task_type: Type of task being processed
+            source: Source of the task (api, p2p, internal, etc.)
+        """
+        if event_type == "received":
+            self.increment_counter(
+                "praxis_tasks_received_total",
+                labels={"task_type": task_type, "source": source},
+            )
+        elif event_type == "completed":
+            self.increment_counter(
+                "praxis_tasks_completed_total",
+                labels={"task_type": task_type, "status": "success"},
+            )
+        elif event_type == "failed":
+            self.increment_counter(
+                "praxis_tasks_completed_total",
+                labels={"task_type": task_type, "status": "failed"},
+            )
+
+    def record_task_duration(self, task_type: str, duration: float) -> None:
+        """
+        Record task execution duration.
+
+        Args:
+            task_type: Type of task
+            duration: Task duration in seconds
+        """
+        self.observe_histogram(
+            "praxis_task_duration_seconds",
+            duration,
+            labels={"task_type": task_type},
+        )
+
+    def record_tool_execution(
+        self, tool_name: str, engine: str, status: str, duration: float
+    ) -> None:
+        """
+        Record a tool execution event.
+
+        Args:
+            tool_name: Name of the tool
+            engine: Execution engine used
+            status: Execution status (success, failed)
+            duration: Execution duration in seconds
+        """
+        self.increment_counter(
+            "praxis_tool_executions_total",
+            labels={"tool_name": tool_name, "engine": engine, "status": status},
+        )
+        self.observe_histogram(
+            "praxis_tool_execution_duration_seconds",
+            duration,
+            labels={"tool_name": tool_name, "engine": engine},
+        )
+
+    def record_p2p_message(
+        self, direction: str, protocol: str, message_type: str, size_bytes: int = 0
+    ) -> None:
+        """
+        Record a P2P message event.
+
+        Args:
+            direction: Message direction (sent, received)
+            protocol: P2P protocol used
+            message_type: Type of message
+            size_bytes: Message size in bytes
+        """
+        if direction == "sent":
+            self.increment_counter(
+                "praxis_p2p_messages_sent_total",
+                labels={"protocol": protocol, "message_type": message_type},
+            )
+        elif direction == "received":
+            self.increment_counter(
+                "praxis_p2p_messages_received_total",
+                labels={"protocol": protocol, "message_type": message_type},
+            )
+
+        if size_bytes > 0:
+            self.observe_histogram(
+                "praxis_p2p_message_size_bytes",
+                size_bytes,
+                labels={"direction": direction, "protocol": protocol},
+            )
+
+    def record_websocket_connection(self, connected: bool) -> None:
+        """
+        Record WebSocket connection change.
+
+        Args:
+            connected: True if connecting, False if disconnecting
+        """
+        current = self._gauges.get("praxis_websocket_connections")
+        if current:
+            if connected:
+                current.labels(**self._default_labels).inc()
+            else:
+                current.labels(**self._default_labels).dec()
+
+    def record_websocket_message(self, direction: str, message_type: str) -> None:
+        """
+        Record a WebSocket message event.
+
+        Args:
+            direction: Message direction (sent, received)
+            message_type: Type of message
+        """
+        self.increment_counter(
+            "praxis_websocket_messages_total",
+            labels={"direction": direction, "message_type": message_type},
+        )
+
     def serialize(self) -> bytes:
         """
         Serialize all metrics to Prometheus text format.
